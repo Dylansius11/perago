@@ -1,0 +1,30 @@
+# Dependencies and build output
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+dist/
+build/
+coverage/
+out/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Deployment and generated state
+.vercel/
+.railway/
+broadcast/
+cache/
+out/
+
+# Local tooling
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
