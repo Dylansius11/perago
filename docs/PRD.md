@@ -307,7 +307,7 @@ Do not add ERC-8004 solely for category coverage. It enters scope only if a targ
 | R-001 | Risk | A post-execution verifier may detect failure after an irreversible protocol effect. | Verify enforceable minimums inside the adapter call; use post-verification for evidence, not as the only economic guard. |
 | R-002 | Risk | RPC/quote state can move after simulation. | Bind block context, quote deadline, max input, and min output; reject stale simulation and tolerate safe favorable drift only. |
 | R-003 | Risk | An approved adapter can become unsafe or protocol behavior can change. | Bind adapter implementation, keep the initial set minimal, pause new authorizations on incident, and document admin posture. |
-| R-004 | Risk | Two onchain transitions (`authorize`, `execute`) add latency. | Accept the cost to preserve one-use terminal failure; use sponsored UserOperations where safe and expose every hash. |
+| R-004 | Risk | Separate `authorize`, `beginExecution`, and `perform` checkpoints add latency. | Accept the cost to preserve one-use terminal failure; use sponsored UserOperations where safe and expose every hash. |
 | R-005 | Risk | Bundler, paymaster, or Wallet API outage could block the smart-account path. | Keep standard ERC-4337 semantics and an owner-funded public-bundler path; never fall back to an unrestricted server wallet. |
 | A-001 | Assumption | BSC supports the required EVM typed-data, ERC-1271/ERC-4337, contract, and event behavior. | Prove with focused BSC Testnet deployment, UserOperation, and replay tests. |
 | A-002 | Assumption | The selected swap pools have adequate testnet liquidity or can be seeded transparently. | Phase 1 integration probe; otherwise run a mainnet fork and label it, never fabricate liquidity. |

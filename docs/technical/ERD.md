@@ -153,7 +153,7 @@ Constraints:
 - `ACTIVE` requires activation transaction/block and onchain active hash equality;
 - `SUPERSEDED`/`REVOKED` require `terminal_at`.
 
-Daily cap usage is computed from confirmed `SUCCEEDED` and economically spent `FAILED` receipt evidence in a rolling 24-hour window. Do not maintain a mutable counter without a rebuild path.
+Daily cap usage is derived from confirmed `SUCCEEDED` and economically spent `FAILED` receipt evidence for the policy's declared day window. The corresponding smart-account permission uses the same token ceiling and expiry as an onchain backstop. Do not maintain an unbounded or non-rebuildable mutable counter.
 
 ### 5.3 `tasks`
 

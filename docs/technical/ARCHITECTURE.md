@@ -64,7 +64,7 @@ The AI planner, browser, API process, executor, session key, bundler, paymaster,
 apps/
   web/       Wallet connection, policy/mandate review, status and receipt reading
   api/       Intent API, compiler, policy engine, simulation, lifecycle, receipt queries
-  executor/  Queue consumer, chain reconciliation, authorize/execute/settle worker
+  executor/  Queue consumer, chain reconciliation, authorize/begin/perform/settle worker
 packages/
   sdk/       Domain schemas, canonical encoders/hashes, ABIs, typed clients
   contracts/ Foundry contracts, scripts, unit/fuzz/invariant/fork tests
@@ -251,10 +251,10 @@ The executor cannot provide a boolean that causes payment. The evaluator derives
 ### 5.5 Revoke and expire
 
 - **Before authorization:** the root owner submits a direct or sponsored smart-account call that invalidates a nonce/nonce range or changes the active policy hash; the old signature can no longer authorize.
-- **After authorization, before execution:** the root owner calls `revoke(mandateHash)` through the smart account. The contract accepts the first valid terminal transition between revoke, expiry, and execute.
-- **After expiry:** anyone may call `finalizeExpired(mandateHash)` for an `AUTHORIZED` mandate. Execution checks expiry itself and cannot race successfully after the boundary.
-- **During execution:** one UserOperation transaction owns the state transition; a revoke cannot interleave inside it.
-- **After a terminal state:** revoke, execute, and expiry calls revert or return existing status without external side effects, as specified by the ABI.
+- **After authorization, before `beginExecution`:** the root owner calls `revoke(mandateHash)` through the smart account. The contract accepts the first valid terminal transition between revoke, expiry, and begin.
+- **After expiry while authorized:** anyone may call `finalizeExpired(mandateHash)`. `beginExecution` checks expiry and cannot race successfully after the boundary.
+- **After `beginExecution`:** revoke is no longer allowed; the exact UserOperation either records success/failure or the immutable timeout finalizes `FAILED`.
+- **After a terminal state:** revoke, begin, perform, and expiry calls revert or return existing status without external side effects, as specified by the ABI.
 
 ## 6. State machines
 

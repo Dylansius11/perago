@@ -8,14 +8,15 @@ Onchain agents are useful only when convenience does not require wallet-wide tru
 
 Perago separates interpretation from authority:
 
-1. The user sets a persistent Wallet Policy.
-2. AI translates one outcome into a typed plan.
-3. Deterministic policy intersection and simulation expose the exact limits.
-4. The user signs one bounded Task Mandate.
-5. A constrained executor calls only an approved adapter.
-6. An adapter-specific verifier proves the postcondition.
-7. A public Execution Receipt records consumed authority and evidence.
-8. ERC-8183 payment releases only after deterministic success.
+1. A self-custodial owner controls an ERC-4337 smart account with narrowly scoped executor permissions.
+2. The user activates a persistent Wallet Policy on that account.
+3. AI translates one outcome into a typed plan.
+4. Deterministic policy intersection and simulation expose the exact limits.
+5. The root owner signs one bounded Task Mandate.
+6. A constrained executor commits one attempt and the smart account calls only the approved path.
+7. An adapter-specific verifier proves the postcondition.
+8. A public Execution Receipt records consumed authority and evidence.
+9. ERC-8183 payment releases only after deterministic success.
 
 The MVP targets one approved BSC swap adapter and one approved BSC staking adapter. No arbitrary calldata, unrestricted keys, cross-chain execution, leverage, or agent marketplace.
 
