@@ -74,20 +74,20 @@ Field ownership and persistence are canonical in [`technical/ERD.md`](technical/
 
 ## 6. Core journey
 
-1. The user connects a self-custodial wallet on BSC.
-2. The user creates or activates a versioned Wallet Policy.
+1. The user connects a self-custodial owner wallet and derives or deploys its BSC smart account.
+2. The user creates or activates a versioned Wallet Policy; the smart account records the active policy hash and narrowly scopes any executor session permission.
 3. The user states one swap or stake outcome in natural language.
 4. The AI produces a typed plan and an explanation.
 5. Deterministic code normalizes the plan and intersects it with the active Wallet Policy.
 6. Perago rejects any conflict; it never silently broadens either the plan or policy.
 7. The exact action is simulated against a recorded block context.
 8. The user reviews maximum spend, minimum output, protocol, recipient, expiry, risks, and deterministic postcondition.
-9. The user signs one EIP-712 Task Mandate.
+9. The root owner signs one EIP-712 Task Mandate binding both owner and smart account.
 10. The executor authorizes the mandate onchain, permanently consuming its nonce for this attempt.
-11. The executor chooses only among routes encoded by the signed action commitment and calls the approved adapter.
+11. A narrowly permissioned ERC-4337 UserOperation lets the smart account call only the committed execution path; the executor chooses only among routes encoded by the signed action commitment.
 12. The adapter-specific verifier checks the signed postcondition.
 13. The mandate reaches `SUCCEEDED`, `FAILED`, `EXPIRED`, or `REVOKED`; no terminal mandate can execute again.
-14. An Execution Receipt records commitments and transaction evidence.
+14. An Execution Receipt records commitments, UserOperation/transaction evidence, and consumed authority.
 15. A bound ERC-8183 job is completed only for a successful, deterministically verified receipt; otherwise it is rejected or refunded under its own lifecycle.
 
 ## 7. State transitions
@@ -116,7 +116,7 @@ EXECUTING
 
 ### 7.2 Wallet Policy lifecycle
 
-Policies are immutable versions. Exactly one version per owner and chain may be `ACTIVE`. Activating a new version makes the prior version `SUPERSEDED`. A revoked policy cannot authorize a new plan. A mandate already signed against an older policy is valid only if the mandate enforcement path still accepts its policy hash and all signed bounds; the MVP defaults to rejecting authorization when its policy version is no longer active.
+Policies are immutable versions. Exactly one version per smart account and chain may be `ACTIVE`. Activating a new version makes the prior version `SUPERSEDED`. A revoked policy cannot authorize a new plan. A mandate already signed against an older policy is valid only if the mandate enforcement path still accepts its policy hash and owner epoch; the MVP rejects authorization when its policy version is no longer active.
 
 ## 8. Wallet Policy behavior
 
@@ -137,9 +137,10 @@ Policy evaluation is deterministic and produces a structured decision containing
 
 ## 9. Task Mandate behavior
 
-The user signs one typed mandate after simulation. The mandate binds at least:
+The root owner signs one typed mandate after simulation. The mandate binds at least:
 
-- owner and authorized executor;
+- root owner, asset-holding smart account, and authorized executor/session public key;
+- smart-account implementation/owner epoch where required for replay protection;
 - chain and verifying contract through both fields and EIP-712 domain separation;
 - nonce and expiry;
 - policy, intent, plan, simulation, action, and postcondition commitments;
@@ -147,7 +148,7 @@ The user signs one typed mandate after simulation. The mandate binds at least:
 - input/output assets, maximum input, minimum output, recipient;
 - ERC-8183 job binding when payment is enabled.
 
-Authorization and execution are separate onchain transitions so an attempted action can end in `FAILED` without rolling back nonce consumption. A signature is not a reusable session. Any terminal outcome ends its authority.
+The smart-account session permission is transport authority only: it may submit the already user-authorized call path, but it cannot create a root-owner Task Mandate, change policy, upgrade the account, install modules, or call arbitrary targets. Authorization and execution are separate onchain transitions so an attempted action can end in `FAILED` without rolling back nonce consumption. A signature is not a reusable session. Any terminal outcome ends its authority.
 
 ## 10. AI and deterministic boundaries
 
@@ -183,14 +184,15 @@ Authorization and execution are separate onchain transitions so an attempted act
 
 ### Included
 
-- BSC Testnet-first wallet connection and chain enforcement.
-- Versioned Wallet Policy for swap/stake, assets, protocols, amounts, daily caps, slippage, recipient, and expiry.
+- BSC Testnet-first external wallet connection with an ERC-4337 smart account controlled by the user's self-custodial root signer.
+- Alchemy Modular Account V2 with BNB Testnet bundling/gas sponsorship, subject to deployment and EntryPoint bytecode validation.
+- Versioned Wallet Policy for swap/stake, assets, protocols, amounts, daily caps, slippage, recipient, expiry, and executor-session scope.
 - One natural-language intent producing exactly one executable action.
 - Swap via one approved PancakeSwap adapter.
 - Stake via one approved, pre-validated BSC staking adapter.
 - Exact-action simulation and stale-simulation rejection.
 - EIP-712 Task Mandate, one-use authorization, revocation, expiry, and terminal failure.
-- Constrained executor with idempotent retries.
+- Constrained executor with idempotent UserOperation/transaction reconciliation.
 - Adapter-specific verification and public Execution Receipt.
 - ERC-8183 job linkage and settlement after successful verification.
 
@@ -215,22 +217,23 @@ Authorization and execution are separate onchain transitions so an attempted act
 
 | ID | Requirement |
 | --- | --- |
-| PRD-F-001 | A user can connect a self-custodial wallet and the system rejects unsupported or mismatched chains. |
+| PRD-F-001 | A user can connect a self-custodial owner wallet, derive or deploy its supported BSC smart account, and reject unsupported/mismatched chains or account implementations. |
 | PRD-F-002 | A user can create, activate, supersede, and revoke immutable Wallet Policy versions. |
-| PRD-F-003 | A Wallet Policy supports protected/active assets, services, protocols, per-task/day caps, slippage, recipients, and task lifetime. |
+| PRD-F-003 | A Wallet Policy supports protected/active assets, services, protocols, per-task/day caps, slippage, recipients, task lifetime, and executor-session scope. |
 | PRD-F-004 | A user can submit a natural-language swap or stake outcome that becomes a closed typed `CompiledPlan`. |
 | PRD-F-005 | Deterministic policy intersection returns a complete rule-by-rule decision and rejects broader plans. |
 | PRD-F-006 | The exact compiled action is simulated and reports balances, max spend, minimum output, protocol, recipient, expiry, risks, block context, and freshness. |
-| PRD-F-007 | The user can sign exactly one EIP-712 Task Mandate only from a policy-passing, fresh simulation. |
-| PRD-F-008 | The executor can authorize and execute a signed mandate only through its approved adapter and action schema. |
+| PRD-F-007 | The root owner can sign exactly one EIP-712 Task Mandate only from a policy-passing, fresh simulation. |
+| PRD-F-008 | The executor can authorize and execute a signed mandate only through the smart account's scoped ERC-4337 path, approved adapter, and action schema. |
 | PRD-F-009 | The swap adapter executes an exact-input swap subject to signed maximum input, minimum output, recipient, route, and deadline. |
 | PRD-F-010 | The staking adapter stakes no more than the signed input and proves the recipient's resulting position or receipt-token increase. |
 | PRD-F-011 | An adapter-specific verifier emits a structured `VerificationResult` for every execution attempt. |
-| PRD-F-012 | A public `ExecutionReceipt` links the intent, policy, plan, simulation, mandate, transaction evidence, verification, and consumed authority. |
+| PRD-F-012 | A public `ExecutionReceipt` links the intent, policy, plan, simulation, mandate, UserOperation/transaction evidence, verification, and consumed authority. |
 | PRD-F-013 | The user can revoke an authorized but unexecuted mandate; expired mandates can be finalized without executor cooperation. |
 | PRD-F-014 | A bound ERC-8183 job pays the provider only after a successful deterministic verification and remains refundable/rejectable otherwise. |
-| PRD-F-015 | The executor resumes safely after restart and treats duplicate work delivery as an idempotent no-op or status read. |
+| PRD-F-015 | The executor resumes safely after restart and treats duplicate work delivery as an idempotent reconciliation or status read. |
 | PRD-F-016 | Every terminal state exposes a stable machine-readable reason code and human-readable explanation. |
+| PRD-F-017 | Policy activation and revocation support sponsored or batched ERC-4337 UserOperations without granting the paymaster, bundler, or executor root ownership. |
 
 ### Security and trust requirements
 
@@ -238,16 +241,17 @@ Authorization and execution are separate onchain transitions so an attempted act
 | --- | --- |
 | PRD-S-001 | AI output can only narrow policy and cannot directly authorize execution. |
 | PRD-S-002 | Protected assets are rejected as spend inputs in policy evaluation and mandate execution. |
-| PRD-S-003 | Every target, adapter entry selector, asset, amount, recipient, executor, chain, nonce, and expiry is signed and enforced. |
+| PRD-S-003 | Every smart account, root owner, target, adapter entry selector, asset, amount, recipient, executor, chain, nonce, and expiry is signed and enforced. |
 | PRD-S-004 | A mandate nonce is consumed once; success, terminal failure, expiry, or revoke prevents any later execution. |
 | PRD-S-005 | ERC-20 allowances are exact and temporary; unlimited approvals are forbidden and adapter allowance is cleared after an attempt. |
-| PRD-S-006 | Replay across chain, deployment, owner, executor, or action is rejected. |
+| PRD-S-006 | Replay across chain, deployment, smart account, owner epoch, executor, or action is rejected. |
 | PRD-S-007 | Payment eligibility is decided by deterministic adapter verification, never model output or executor assertion. |
 | PRD-S-008 | Secrets never enter model context, source control, telemetry, public receipts, or application logs. |
-| PRD-S-009 | Simulation/action drift, stale quotes, and changed policy invalidate signing or execution. |
+| PRD-S-009 | Simulation/action drift, stale quotes, changed policy, changed account owner, or changed account implementation invalidates signing or execution. |
 | PRD-S-010 | Adapter and verifier implementations are immutable or governed by an explicit, observable admin policy; a mandate binds the selected implementation. |
 | PRD-S-011 | Onchain events are the authority for execution/receipt status; offchain data is rebuildable and reconciled under reorgs. |
 | PRD-S-012 | ERC-8183 settlement cannot complete from an unverified, failed, expired, revoked, or mismatched receipt. |
+| PRD-S-013 | Account-abstraction permissions are defense in depth: no executor/session key may sign a root Task Mandate, change root ownership/policy, install or upgrade modules, or call outside its exact target/function/spend/time limits. |
 
 ### Operational requirements
 
@@ -302,10 +306,11 @@ Do not add ERC-8004 solely for category coverage. It enters scope only if a targ
 | R-001 | Risk | A post-execution verifier may detect failure after an irreversible protocol effect. | Verify enforceable minimums inside the adapter call; use post-verification for evidence, not as the only economic guard. |
 | R-002 | Risk | RPC/quote state can move after simulation. | Bind block context, quote deadline, max input, and min output; reject stale simulation and tolerate safe favorable drift only. |
 | R-003 | Risk | An approved adapter can become unsafe or protocol behavior can change. | Bind adapter implementation, keep the initial set minimal, pause new authorizations on incident, and document admin posture. |
-| R-004 | Risk | Two onchain transitions (`authorize`, `execute`) add latency. | Accept the cost to preserve one-use terminal failure; executor pays gas and exposes both hashes. |
-| A-001 | Assumption | BSC supports the required EVM typed-data, contract, and event behavior. | Prove with focused BSC Testnet deployment and replay tests. |
+| R-004 | Risk | Two onchain transitions (`authorize`, `execute`) add latency. | Accept the cost to preserve one-use terminal failure; use sponsored UserOperations where safe and expose every hash. |
+| R-005 | Risk | Bundler, paymaster, or Wallet API outage could block the smart-account path. | Keep standard ERC-4337 semantics and an owner-funded public-bundler path; never fall back to an unrestricted server wallet. |
+| A-001 | Assumption | BSC supports the required EVM typed-data, ERC-1271/ERC-4337, contract, and event behavior. | Prove with focused BSC Testnet deployment, UserOperation, and replay tests. |
 | A-002 | Assumption | The selected swap pools have adequate testnet liquidity or can be seeded transparently. | Phase 1 integration probe; otherwise run a mainnet fork and label it, never fabricate liquidity. |
-| D-001 | Decision gate | Whether Altana/EIP-7702 session policy alone enforces one-use plus full calldata/effect bounds. | Treat as unproven until source audit and adversarial test; default to the minimal Mandate Executor. |
+| D-001 | Resolved | Account abstraction provider and mandate-enforcement split. | Use Alchemy Modular Account V2 and BNB-supported bundler/paymaster APIs for ERC-4337 UX. Keep the minimal Mandate Executor as the authoritative one-use/effect boundary; provider permissions are defense in depth, not a substitute. |
 | D-002 | Decision gate | Which staking deployment is live and deterministic enough for the demo. | Validate selected PancakeSwap CAKE Pool bytecode, asset flow, and withdraw/read methods on chain 97 before implementation; use a labeled fork contingency if unavailable. |
 | D-003 | Decision gate | Which ERC-8183 deployment and payment token are live on target BSC network. | Resolve from the upstream deployment manifest at implementation time and pin chain/address/bytecode; no hard-coded unverified address. |
 | D-004 | Decision gate | Whether a third-party simulation service is required for balance state diffs. | Begin with adapter quote + `eth_call` + explicit balance reads; add a provider only if the Phase 3 smoke test cannot produce judge-verifiable evidence. |
@@ -314,11 +319,11 @@ Do not add ERC-8004 solely for category coverage. It enters scope only if a targ
 
 | Requirement IDs | Acceptance evidence |
 | --- | --- |
-| PRD-F-001–003 | A connected test wallet activates a policy; protected/unsupported inputs and invalid chains are rejected with stable reason codes. |
+| PRD-F-001–003, PRD-F-017, PRD-S-013 | A self-custodial root wallet controls the expected BSC smart account; policy activation/revoke works through ERC-4337, while forbidden executor-session calls, account upgrades, and owner changes are rejected. |
 | PRD-F-004–005, PRD-S-001–002 | The same intent produces a schema-valid plan; a broader AI field is rejected by deterministic intersection and never reaches simulation. |
-| PRD-F-006–007, PRD-S-009 | A signed digest can be recomputed from stored canonical fields; stale block/quote/policy/action changes invalidate signing or authorization. |
-| PRD-F-008–010, PRD-S-003–006, PRD-S-010 | Focused contract tests and BSC evidence prove exact target/selector/value/recipient enforcement, exact temporary approvals, one-use consumption, and both supported actions. |
-| PRD-F-011–012, PRD-S-007, PRD-S-011 | Each attempt yields one deterministic verification and receipt whose hashes reconcile to chain events and whose cache can be rebuilt. |
+| PRD-F-006–007, PRD-S-009 | A signed digest can be recomputed from stored canonical fields; stale block/quote/policy/account/action changes invalidate signing or authorization. |
+| PRD-F-008–010, PRD-S-003–006, PRD-S-010 | Focused contract tests and BSC evidence prove exact account/target/selector/value/recipient enforcement, exact temporary approvals, one-use consumption, and both supported actions. |
+| PRD-F-011–012, PRD-S-007, PRD-S-011 | Each attempt yields one deterministic verification and receipt whose hashes reconcile to UserOperation, transaction, and chain events and whose cache can be rebuilt. |
 | PRD-F-013, PRD-S-004 | Revoke and expiry races have one terminal winner; subsequent execute calls fail without protocol side effects. |
 | PRD-F-014, PRD-S-012 | ERC-8183 completes only from a matching `SUCCEEDED` receipt; failed/revoked/expired/mismatched evidence cannot release payment. |
 | PRD-F-015–016, PRD-O-001–003 | Restart and duplicate-delivery smoke scenarios preserve one onchain attempt and expose traceable terminal reason/evidence. |
