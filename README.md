@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Documentation foundation only. Nothing is implemented or deployed.** Product code begins after this documentation is reviewed. UI and design direction will be supplied separately; this repository intentionally contains no generated UI or design system.
+**Phase 1 bootstrap complete.** The repository now pins its workspace/toolchain and package manifests, but contains no Perago application implementation, mandate contract, live endpoint, deployment, or transaction evidence. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
 
 ## Planned repository map
 
@@ -37,7 +37,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Only `docs/` exists during the foundation phase.
+This phase adds only workspace configuration, dependency pins, and a pinned OpenZeppelin submodule. Product source begins with the next approved Phase 1 task.
 
 ## Documentation
 

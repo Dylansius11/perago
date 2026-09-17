@@ -1,0 +1,10 @@
+{
+  "name": "@perago/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "viem": "2.56.7",
+    "zod": "4.6.5"
+  }
+}

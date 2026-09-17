@@ -38,8 +38,8 @@ The versions below are a verified planning baseline, not installed dependencies 
 | Viem | `2.56.7` | npm registry stable tag. |
 | Wagmi | `3.7.7` | npm registry stable tag. |
 | TanStack Query | `5.103.1` | npm registry stable tag; use only where Wagmi/client state requires it. |
-| Alchemy Wallet APIs | `5.2.6` | npm registry stable tag. |
-| Alchemy smart accounts | `5.2.6` | npm registry stable tag. |
+| Alchemy AA SDK (`@aa-sdk/core`) | `4.88.5` | npm registry stable tag; its `viem ^2.45.0` peer passes against Perago's pinned Viem baseline. |
+| Legacy Alchemy AA SDK (`@alchemy/aa-core`) | `3.19.0` | npm registry stable tag, but its exact `viem 2.8.6` peer conflicts with the selected Viem baseline; do not install it. |
 | Biome | `2.5.14` | npm registry stable tag. |
 | Vitest | `5.0.1` | npm registry stable tag; keep only behavior tests that meet root verification rules. |
 | Solidity | `0.8.37` | `solc` npm stable tag; Foundry config pins exact compiler and optimizer settings. |
@@ -98,7 +98,7 @@ Selected for the future web client because it provides stable routing/build/depl
 
 - Wagmi supplies standard connector state and React wallet hooks.
 - Viem owns chain definitions, typed-data hashing, contract reads/writes, event decoding, and transaction simulation.
-- Alchemy Wallet APIs/`@alchemy/smart-accounts` own the selected Modular Account V2, bundler, paymaster, and scoped session integration.
+- Alchemy's current minimal AA SDK (`@aa-sdk/core`) establishes the selected Modular Account V2 client/type baseline. Defer broader Account Kit runtime modules until `P1-003` proves the exact BSC Testnet permission path; `packages/sdk` must not depend on them.
 - `packages/sdk` wraps only Perago domain behavior; it must not hide native Wagmi/Viem hooks behind an unnecessary custom client layer.
 - External wallet remains the root owner. No embedded-wallet dependency is added for MVP.
 

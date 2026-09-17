@@ -1,6 +1,6 @@
 # Perago Build Plan
 
-**Status:** Phase 0 accepted and merged; Phase 1 pending explicit approval
+**Status:** Phase 1 active; `P1-001` bootstrap complete
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
@@ -13,7 +13,7 @@ Check a task only after its acceptance criteria and verification evidence pass. 
   - [x] `P0-002` Product and technical specification
   - [x] `P0-003` Foundation review PR
 - [ ] **Phase 1 — typed domain and decision probes**
-  - [ ] `P1-001` Bootstrap exact stable workspace
+  - [x] `P1-001` Bootstrap exact stable workspace
   - [ ] `P1-002` Implement canonical domain schemas and hashes
   - [ ] `P1-003` Prove account-abstraction path
   - [ ] `P1-004` Resolve protocol deployments
