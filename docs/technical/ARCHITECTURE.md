@@ -1,8 +1,8 @@
 # Perago Architecture
 
-**Status:** Proposed MVP architecture  
-**Product requirements:** [`../PRD.md`](../PRD.md)  
-**Data ownership:** [`ERD.md`](ERD.md)  
+**Status:** Proposed MVP architecture
+**Product requirements:** [`../PRD.md`](../PRD.md)
+**Data ownership:** [`ERD.md`](ERD.md)
 **Contract details:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Architectural objective

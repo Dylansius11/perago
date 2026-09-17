@@ -1,7 +1,7 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Evidence-backed foundation; no Perago deployment or live integration proof exists yet  
-**Reviewed:** 2026-09-17  
+**Status:** Evidence-backed foundation; no Perago deployment or live integration proof exists yet
+**Reviewed:** 2026-09-17
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Evidence policy and statuses

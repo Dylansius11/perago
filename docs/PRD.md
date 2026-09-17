@@ -1,7 +1,7 @@
 # Perago Product Requirements
 
-**Status:** Foundation specification for review  
-**Product line:** Intent, carried through.  
+**Status:** Foundation specification for review
+**Product line:** Intent, carried through.
 **Supporting line:** Give the goal, not the wallet.
 
 ## 1. Executive summary
