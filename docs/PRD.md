@@ -83,12 +83,13 @@ Field ownership and persistence are canonical in [`technical/ERD.md`](technical/
 7. The exact action is simulated against a recorded block context.
 8. The user reviews maximum spend, minimum output, protocol, recipient, expiry, risks, and deterministic postcondition.
 9. The root owner signs one EIP-712 Task Mandate binding both owner and smart account.
-10. The executor authorizes the mandate onchain, permanently consuming its nonce for this attempt.
-11. A narrowly permissioned ERC-4337 UserOperation lets the smart account call only the committed execution path; the executor chooses only among routes encoded by the signed action commitment.
-12. The adapter-specific verifier checks the signed postcondition.
-13. The mandate reaches `SUCCEEDED`, `FAILED`, `EXPIRED`, or `REVOKED`; no terminal mandate can execute again.
-14. An Execution Receipt records commitments, UserOperation/transaction evidence, and consumed authority.
-15. A bound ERC-8183 job is completed only for a successful, deterministically verified receipt; otherwise it is rejected or refunded under its own lifecycle.
+10. The executor authorizes the mandate onchain, permanently consuming its nonce.
+11. When ready, the executor calls `beginExecution`; this commits the single accepted attempt before protocol interaction.
+12. A narrowly permissioned ERC-4337 UserOperation lets the smart account call only the committed `perform` path; the executor chooses only among routes encoded by the signed action commitment.
+13. The adapter-specific verifier checks the signed postcondition.
+14. The mandate reaches `SUCCEEDED`, `FAILED`, `EXPIRED`, or `REVOKED`; no terminal mandate can execute again.
+15. An Execution Receipt records commitments, UserOperation/transaction evidence, and consumed authority.
+16. A bound ERC-8183 job is completed only for a successful, deterministically verified receipt; otherwise it is rejected or refunded under its own lifecycle.
 
 ## 7. State transitions
 

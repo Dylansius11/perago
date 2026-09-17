@@ -215,23 +215,24 @@ The API persists the raw user intent and the normalized plan separately. It neve
 
 ### 5.3 Authorize and execute
 
-Authorization is intentionally separate from execution. In a single reverting transaction, an external protocol failure would roll back nonce consumption and leave a reusable signature. Two transitions allow a failed attempt to remain terminal.
+Authorization and accepted execution are separate onchain checkpoints. A single reverting protocol transaction would roll back its nonce/status writes and make the signature reusable. `authorize` consumes the mandate nonce; `beginExecution` irreversibly commits the one accepted attempt before the smart-account protocol call.
 
 1. Executor leases the mandate and reads smart-account owner/module state, `activePolicyHash`, nonce state, and existing mandate status.
 2. If the mandate or UserOperation is already known onchain, it reconciles instead of resubmitting.
 3. Executor calls `authorize(mandate, rootSignature)` from its bound executor address. This transaction may be relayed, but the contract verifies the executor binding.
 4. Contract verifies domain, root signer, smart account, owner epoch, executor, active policy hash, chain, contract, nonce, expiry, adapter, selector, and commitment shape.
 5. Contract consumes the account nonce and records `AUTHORIZED` plus the mandate digest.
-6. After confirmation, executor prepares one UserOperation signed by the scoped executor/session key. The smart account calls the exact token approval (when needed) and `execute(mandate, action, executorProof)` path allowed by its installed modules.
-7. The bundler/paymaster only transports or sponsors the UserOperation; neither can alter calls without invalidating its signature and permission context.
-8. MandateExecutor verifies `msg.sender == signed account`, executor proof, fresh expiry, and `AUTHORIZED`, then sets `EXECUTING` before external interaction.
-9. Contract obtains no more than the signed input, grants the adapter an exact temporary allowance, and calls the fixed adapter entry point.
-10. Adapter constructs protocol calldata from its closed action type and enforces signed economic limits in the protocol call.
-11. Contract clears allowance, returns recoverable residual input, and invokes the bound verifier.
-12. The attempt becomes `SUCCEEDED` only when the call and verifier pass; otherwise it becomes `FAILED` with a reason commitment. Both are terminal.
-13. Contract emits execution and receipt events. Executor only reports the confirmed UserOperation transaction/event.
+6. When all external preconditions are ready, executor calls `beginExecution(mandateHash)`. The contract records `EXECUTING` and the immutable execution-window deadline before protocol interaction.
+7. After confirmation, executor prepares one UserOperation signed by the scoped executor/session key. The smart account calls the exact token approval (when needed) and `perform(mandate, action, executorProof)` path allowed by its installed modules.
+8. The bundler/paymaster only transports or sponsors the UserOperation; neither can alter calls without invalidating its signature and permission context.
+9. MandateExecutor verifies `msg.sender == signed account`, executor proof, fresh expiry/window, and stored `EXECUTING` state.
+10. An external self-call obtains no more than the signed input, grants the adapter an exact temporary allowance, and calls the fixed adapter entry point.
+11. Adapter constructs protocol calldata from its closed action type and enforces signed economic limits in the protocol call.
+12. The subcall clears allowance, returns recoverable residual input, and invokes the bound verifier.
+13. The outer call records `SUCCEEDED` only when the subcall and verifier pass; it catches expected token/protocol/verifier reverts and records `FAILED`. Both are terminal.
+14. Contract emits execution and receipt events. Executor only reports the confirmed UserOperation transaction/event.
 
-A pre-authorization validation revert is not an execution attempt and does not consume a nonce. Once `authorize` succeeds, no account-abstraction, bundler, paymaster, or protocol failure restores authority.
+A pre-authorization validation revert is not an execution attempt and does not consume a nonce. Once `beginExecution` succeeds, no account-abstraction, bundler, paymaster, or protocol failure restores authority. A missing/failed `perform` can only reach terminal `FAILED` through the immutable execution timeout.
 
 ### 5.4 Verify and settle
 
@@ -262,18 +263,18 @@ The executor cannot provide a boolean that causes payment. The evaluator derives
 ```mermaid
 stateDiagram-v2
   [*] --> AUTHORIZED: authorize + consume nonce
-  AUTHORIZED --> EXECUTING: execute before expiry
+  AUTHORIZED --> EXECUTING: beginExecution before expiry
   AUTHORIZED --> REVOKED: owner revoke
   AUTHORIZED --> EXPIRED: finalize after expiry
-  EXECUTING --> SUCCEEDED: call and verifier pass
-  EXECUTING --> FAILED: call or verifier fails
+  EXECUTING --> SUCCEEDED: atomic subcall and verifier pass
+  EXECUTING --> FAILED: caught failure or execution timeout
   SUCCEEDED --> [*]
   FAILED --> [*]
   REVOKED --> [*]
   EXPIRED --> [*]
 ```
 
-`EXECUTING` is observable within a transaction but should not remain after a successful transaction boundary. The implementation must catch anticipated adapter/protocol failures and commit `FAILED`; an unexpected whole-transaction revert leaves `AUTHORIZED` and is an infrastructure/contract defect that the executor surfaces, not an invitation to mutate signed input.
+`EXECUTING` persists between the confirmed `beginExecution` checkpoint and `perform`. Expected adapter/protocol/verifier failures are caught and committed as `FAILED`; a missing or wholly reverted UserOperation cannot return to `AUTHORIZED` and becomes `FAILED` after the immutable execution window.
 
 ### 6.2 Execution worker state
 
