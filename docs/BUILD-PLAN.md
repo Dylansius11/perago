@@ -1,7 +1,7 @@
 # Perago Build Plan
 
-**Status:** Phase 0 documentation foundation in review  
-**Requirement source:** [`PRD.md`](PRD.md)  
+**Status:** Phase 0 documentation foundation in review
+**Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
 ## 1. Execution rules
@@ -57,7 +57,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 4. Phase 1 — typed domain and decision probes
 
-**Dependencies:** accepted Phase 0 PR.  
+**Dependencies:** accepted Phase 0 PR.
 **Goal:** prove toolchain compatibility and external prerequisites before load-bearing contracts/apps.
 
 ### `P1-001` Bootstrap exact stable workspace
@@ -108,7 +108,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 5. Phase 2 — mandate contract and invariant tests
 
-**Dependencies:** Phase 1 manifests/interfaces.  
+**Dependencies:** Phase 1 manifests/interfaces.
 **Goal:** implement the provider-independent authority and terminal-state boundary.
 
 ### `P2-001` Implement account policy and mandate authorization
@@ -141,7 +141,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 6. Phase 3 — API, compiler, policy, and simulation
 
-**Dependencies:** Phase 2 ABI/fixtures.  
+**Dependencies:** Phase 2 ABI/fixtures.
 **Goal:** produce a user-signable mandate only from valid intent, active policy, exact action, and fresh simulation.
 
 ### `P3-001` Implement persistence and chain projections
@@ -182,7 +182,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 7. Phase 4 — executor and swap
 
-**Dependencies:** Phases 2–3 and validated Pancake deployment.  
+**Dependencies:** Phases 2–3 and validated Pancake deployment.
 **Goal:** execute one bounded PancakeSwap exact-input mandate autonomously and idempotently.
 
 ### `P4-001` Implement swap adapter and verifier
@@ -213,7 +213,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 8. Phase 5 — staking and verification
 
-**Dependencies:** Phase 4; validated staking deployment.  
+**Dependencies:** Phase 4; validated staking deployment.
 **Goal:** implement the second distinct closed action and prove its position-based postcondition.
 
 ### `P5-001` Implement staking adapter and verifier
@@ -238,7 +238,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 9. Phase 6 — receipts and ERC-8183 settlement
 
-**Dependencies:** successful swap and stake receipts.  
+**Dependencies:** successful swap and stake receipts.
 **Goal:** make execution evidence public/rebuildable and link agent payment to deterministic success.
 
 ### `P6-001` Implement receipt indexing and public query
@@ -293,7 +293,7 @@ Phase 1 integration probes may run independently after workspace bootstrap, but 
 
 ## 11. Phase 8 — end-to-end demo and deployment
 
-**Dependencies:** all prior gates.  
+**Dependencies:** all prior gates.
 **Goal:** deploy reproducibly and prove the complete judge story.
 
 ### `P8-001` Deploy reviewed environment

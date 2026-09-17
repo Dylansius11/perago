@@ -1,7 +1,7 @@
 # Perago Data Model
 
-**Status:** Proposed MVP data contract  
-**System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)  
+**Status:** Proposed MVP data contract
+**System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Ownership rule

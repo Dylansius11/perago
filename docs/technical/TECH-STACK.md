@@ -1,6 +1,6 @@
 # Perago Technology Stack
 
-**Status:** Approved foundation choices; dependency installation begins only after the documentation gate  
+**Status:** Approved foundation choices; dependency installation begins only after the documentation gate
 **Version snapshot:** Registry/official-source checks performed 2026-09-17
 
 ## 1. Version policy

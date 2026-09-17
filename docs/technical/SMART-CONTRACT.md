@@ -1,8 +1,8 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** Proposed; implementation blocked until Phase 1 decision probes pass  
-**Requirements:** [`../PRD.md`](../PRD.md)  
-**Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)  
+**Status:** Proposed; implementation blocked until Phase 1 decision probes pass
+**Requirements:** [`../PRD.md`](../PRD.md)
+**Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
 
 ## 1. Security objective
