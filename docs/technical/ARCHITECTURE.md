@@ -1,0 +1,410 @@
+# Perago Architecture
+
+**Status:** Proposed MVP architecture  
+**Product requirements:** [`../PRD.md`](../PRD.md)  
+**Data ownership:** [`ERD.md`](ERD.md)  
+**Contract details:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
+
+## 1. Architectural objective
+
+Carry one user intent through planning, constrained authorization, execution, deterministic verification, and outcome-linked settlement without giving an AI or worker reusable wallet authority.
+
+The architecture therefore optimizes for:
+
+1. closed action schemas over arbitrary calls;
+2. user-signed limits over model-generated permissions;
+3. onchain terminal state over worker memory;
+4. deterministic postconditions over subjective claims;
+5. recoverable projections over authoritative offchain status;
+6. a two-action MVP over generic protocol abstraction.
+
+## 2. System context and trust boundaries
+
+```mermaid
+flowchart LR
+  O[Self-custodial owner wallet] -->|root signatures| W[Perago web]
+  W -->|ERC-4337 UserOperations| SA[Alchemy Modular Account V2]
+  W -->|intent and signed mandate| A[Perago API]
+  A -->|typed prompt input| M[AI planner]
+  M -->|untrusted CompiledPlan candidate| A
+  A -->|quote and eth_call| R[BSC RPC]
+  A -->|authorized work item| X[Executor]
+  X -->|scoped UserOperation| SA
+  X -->|authorize / settle| C[Mandate contracts]
+  SA -->|policy / execute / revoke| C
+  C -->|closed call| P[Approved protocol]
+  C -->|receipt status| E[ERC-8183 evaluator / escrow]
+  C -->|events| I[Indexer]
+  I -->|derived projection| D[(Postgres)]
+  A --> D
+  A --> R
+  W -->|read status| A
+  AA[Alchemy bundler/paymaster] -. transports/sponsors .-> SA
+```
+
+### Trust boundaries
+
+| Boundary | Trusted input | Untrusted input | Required control |
+| --- | --- | --- | --- |
+| Owner wallet ↔ web | Root address, chain, root Task Mandate signature | Page state, injected provider errors | Recompute typed data, show exact limits, verify chain and recovered root signer. |
+| Web/executor ↔ account abstraction | Canonical UserOperation and permission context | Wallet API, bundler, paymaster availability/response | Pin EntryPoint/account implementation, simulate UserOperation, cap sponsorship, reconcile onchain inclusion. |
+| Smart account ↔ MandateExecutor | Root-owned account identity and narrowly scoped call | Session key or executor request | Account modules restrict target/function/spend/time; mandate contract independently verifies root signature and all task bounds. |
+| API ↔ AI planner | Closed schema and non-secret context | All generated fields and prose | Parse strictly, reject unknown fields, deterministic policy intersection and calldata compilation. |
+| API/executor ↔ RPC | Confirmed blocks after finality policy | RPC response, pending state, provider availability | Chain ID checks, redundant reads for critical state, block pinning, receipt confirmation. |
+| Executor ↔ contract | Signed mandate and approved worker identity | Queue payload, retry timing | Onchain account/owner/digest/executor/nonce/expiry/policy checks; idempotent reconciliation. |
+| Contract ↔ adapter/protocol | Immutable approved adapter and signed action | Token behavior, protocol revert/data | Exact temporary allowance, checks-effects-interactions, return/effect validation, reentrancy guard. |
+| Verifier ↔ settlement | Onchain execution and deterministic evidence | Worker/API success claim | Settlement contract reads matching terminal receipt; no executor-only attestation. |
+| Indexer ↔ database | Canonical confirmed event log | Reorged events, duplicate deliveries | Unique event key, confirmation depth, rollback/replay, append-only raw events. |
+
+The AI planner, browser, API process, executor, session key, bundler, paymaster, Wallet API, queue, database, indexer, RPC provider, and external protocol are never root authorization. The self-custodial root signature, smart-account ownership, and MandateExecutor checks form the authorization path; confirmed chain events are the execution-status root.
+
+## 3. Future monorepo and deployable shape
+
+```text
+apps/
+  web/       Wallet connection, policy/mandate review, status and receipt reading
+  api/       Intent API, compiler, policy engine, simulation, lifecycle, receipt queries
+  executor/  Queue consumer, chain reconciliation, authorize/execute/settle worker
+packages/
+  sdk/       Domain schemas, canonical encoders/hashes, ABIs, typed clients
+  contracts/ Foundry contracts, scripts, unit/fuzz/invariant/fork tests
+docs/
+```
+
+No package is created until its phase begins. Import boundaries are enforced by root [`AGENTS.md`](../../AGENTS.md).
+
+### `apps/web`
+
+- Connect a self-custodial external owner wallet and derive/deploy its supported Alchemy Modular Account V2 on the selected chain.
+- Request canonical root signatures, sponsored/batched UserOperations, and narrowly scoped executor permissions without exposing keys.
+- Collect Wallet Policy and TaskIntent inputs after user design direction exists.
+- Render API-produced policy and simulation facts without inventing authorization state.
+- Build typed data and account calls from `packages/sdk`.
+- Read terminal state and public receipt evidence.
+- Never hold keys, install broad session permissions, create arbitrary calldata, infer success, or become the only place policy is enforced.
+
+### `apps/api`
+
+- Authenticate wallet ownership for mutating offchain resources.
+- Version Wallet Policies and coordinate activation of the onchain policy hash.
+- Submit bounded context to the planner and parse a closed `CompiledPlan` union.
+- Normalize tokens/amounts, perform deterministic policy intersection, compile adapter actions, and simulate.
+- Store hashes and lifecycle projections, enqueue authorized work, and expose receipt queries.
+- Never sign for the user, execute arbitrary targets, or mark onchain success from worker assertions.
+
+### `apps/executor`
+
+- Lease one work item at a time by mandate hash.
+- Reconcile MandateExecutor, smart-account nonce, UserOperation, transaction, and session-permission state before every submission.
+- Submit root-signed mandate authorization, scoped execution UserOperations, expiry finalization, and settlement calls when their preconditions hold.
+- Persist UserOperation and transaction hashes immediately, wait for configured confirmations, and resume after restart.
+- Never change a signed field, substitute an uncommitted route, escalate a session permission, or retry terminal authority.
+
+### `packages/sdk`
+
+- Own Zod schemas and inferred TypeScript types for all seven domain concepts.
+- Own canonical JSON rules, hashes, EIP-712 definitions, ABIs, event decoders, reason codes, and API contracts.
+- Expose pure policy and commitment helpers reusable by web, API, executor, and tests.
+- Contain no database adapter, framework-specific request object, private key, or protocol network call.
+
+### `packages/contracts`
+
+- Own the policy-hash and mandate enforcement path, approved adapters, deterministic verifiers, receipt events, and ERC-8183 evaluator linkage.
+- Provide deployment manifests by chain and bytecode provenance.
+- Be non-upgradeable for the MVP unless the accepted security specification changes.
+
+### Database and indexer
+
+- Postgres stores user-authored offchain data, planner/simulation records, queue coordination, and chain-derived projections.
+- The indexer stores every confirmed relevant log once and projects materialized status.
+- A projection can be dropped and rebuilt from user-authored records plus chain logs.
+- No database row can turn a failed onchain mandate into success.
+
+## 4. Core component boundary
+
+```mermaid
+flowchart TB
+  subgraph Untrusted reasoning
+    L[Language model]
+  end
+  subgraph Deterministic offchain
+    S[Schema parser]
+    PE[Policy engine]
+    AC[Action compiler]
+    SIM[Simulator]
+    H[Canonical hasher]
+  end
+  subgraph User authority
+    WAL[Root owner wallet]
+    SA[ERC-4337 smart account]
+  end
+  subgraph Transport only
+    BP[Bundler / paymaster]
+    SK[Scoped executor key]
+  end
+  subgraph Deterministic onchain
+    ME[MandateExecutor]
+    AD[Approved adapter]
+    VF[Verifier]
+    EV[OutcomeEvaluator]
+  end
+
+  L --> S --> PE --> AC --> SIM --> H
+  H --> WAL
+  WAL -->|owns / signs| SA
+  SK --> BP --> SA
+  WAL -->|EIP-712 mandate| ME
+  SA -->|bounded execute| ME
+  ME --> AD --> VF --> ME
+  ME --> EV
+```
+
+An LLM candidate becomes executable only after every deterministic stage passes, the root owner signs the final digest, and the smart-account call satisfies both account-module permissions and MandateExecutor checks.
+
+## 5. End-to-end flows
+
+### 5.1 Policy setup and activation
+
+1. Web connects the user's external root wallet and deterministically derives the supported Modular Account V2 address for chain 97.
+2. Before first use, web/API validate EntryPoint, factory, implementation, validation module, and permission-module bytecode against the pinned deployment manifest.
+3. User provides policy fields; API validates addresses, decimals, enum values, duplicate assets/protocols, caps, slippage, recipients, expiry, and session ceiling.
+4. SDK canonicalizes the immutable policy document and computes `policyHash`.
+5. Web prepares one root-authorized UserOperation that registers/refreshes the root-owner epoch in MandateExecutor, sets `activePolicyHash`, and installs or replaces the executor permission with exact target/function/token/time ceilings. No root/global permission is allowed.
+6. The Alchemy bundler simulates and submits the UserOperation; a paymaster may sponsor it under a Perago policy capped by chain, method, account, and budget.
+7. API waits for configured confirmation depth and verifies smart account, root owner, EntryPoint, policy hash, permission configuration, chain, and events directly onchain.
+8. In one database transaction, the matching policy becomes `ACTIVE` and the previous active version becomes `SUPERSEDED`.
+9. Indexer later confirms the same events; reconciliation repairs any missed API write.
+
+A draft policy or provider-side permission record has no execution effect. Offchain `ACTIVE` is a projection of the confirmed onchain policy hash and account permission state.
+
+### 5.2 Compile, intersect, simulate, and sign
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant Web
+  participant API
+  participant AI as AI planner
+  participant RPC as BSC RPC
+  participant Owner as Root owner wallet
+  participant SA as Smart account
+
+  User->>Web: Natural-language TaskIntent
+  Web->>API: Intent + active policy version + account
+  API->>AI: Intent + closed action schema + allowed vocabulary
+  AI-->>API: CompiledPlan candidate
+  API->>API: Strict parse and normalize
+  API->>API: Intersect every plan field with WalletPolicy
+  alt conflict
+    API-->>Web: REJECTED_POLICY + rule results
+  else allowed
+    API->>RPC: Read account balances, nonce, policy hash, code hashes, quote block
+    API->>RPC: Quote + eth_call exact smart-account/adapter path
+    RPC-->>API: Results at pinned block
+    API->>API: Build SimulationResult and commitments
+    API-->>Web: Plan, limits, risks, expiry, simulation
+    Web->>Owner: Sign canonical EIP-712 TaskMandate
+    Owner-->>Web: Root signature
+    Web->>API: Signature + account + immutable hashes
+    API->>API: Recover root signer; verify account ownership and freshness
+    API-->>Web: SIGNED mandate accepted
+  end
+```
+
+The API persists the raw user intent and the normalized plan separately. It never treats model prose as an action. A simulation is valid only for the exact policy, plan, adapter implementation, nonce, block context, and expiry window recorded in its hash.
+
+### 5.3 Authorize and execute
+
+Authorization is intentionally separate from execution. In a single reverting transaction, an external protocol failure would roll back nonce consumption and leave a reusable signature. Two transitions allow a failed attempt to remain terminal.
+
+1. Executor leases the mandate and reads smart-account owner/module state, `activePolicyHash`, nonce state, and existing mandate status.
+2. If the mandate or UserOperation is already known onchain, it reconciles instead of resubmitting.
+3. Executor calls `authorize(mandate, rootSignature)` from its bound executor address. This transaction may be relayed, but the contract verifies the executor binding.
+4. Contract verifies domain, root signer, smart account, owner epoch, executor, active policy hash, chain, contract, nonce, expiry, adapter, selector, and commitment shape.
+5. Contract consumes the account nonce and records `AUTHORIZED` plus the mandate digest.
+6. After confirmation, executor prepares one UserOperation signed by the scoped executor/session key. The smart account calls the exact token approval (when needed) and `execute(mandate, action, executorProof)` path allowed by its installed modules.
+7. The bundler/paymaster only transports or sponsors the UserOperation; neither can alter calls without invalidating its signature and permission context.
+8. MandateExecutor verifies `msg.sender == signed account`, executor proof, fresh expiry, and `AUTHORIZED`, then sets `EXECUTING` before external interaction.
+9. Contract obtains no more than the signed input, grants the adapter an exact temporary allowance, and calls the fixed adapter entry point.
+10. Adapter constructs protocol calldata from its closed action type and enforces signed economic limits in the protocol call.
+11. Contract clears allowance, returns recoverable residual input, and invokes the bound verifier.
+12. The attempt becomes `SUCCEEDED` only when the call and verifier pass; otherwise it becomes `FAILED` with a reason commitment. Both are terminal.
+13. Contract emits execution and receipt events. Executor only reports the confirmed UserOperation transaction/event.
+
+A pre-authorization validation revert is not an execution attempt and does not consume a nonce. Once `authorize` succeeds, no account-abstraction, bundler, paymaster, or protocol failure restores authority.
+
+### 5.4 Verify and settle
+
+1. Adapter returns normalized execution evidence: spent amount, received/position delta, protocol transaction context, and adapter data hash.
+2. Verifier reads only committed action parameters and chain state/evidence.
+3. Verifier checks adapter-specific postconditions:
+   - swap: recipient output balance delta is at least signed `minOutput`, input spent is no more than `maxInput`, and the route/adapter commitment matches;
+   - stake: recipient position or receipt-token delta is at least signed `minPositionOut`, input spent is no more than `maxInput`, and the staking target matches.
+4. MandateExecutor emits one terminal `ExecutionReceiptRecorded` event with the verification commitment and evidence hashes.
+5. If an ERC-8183 job is bound, `OutcomeEvaluator.settle(jobId, mandateHash)` checks the job binding, mandate `SUCCEEDED` state, verifier ID, and unused settlement flag.
+6. OutcomeEvaluator calls the configured ERC-8183 completion path. Failed, expired, revoked, mismatched, or already-settled receipts revert.
+7. Indexer projects the receipt and settlement transaction; the public API exposes explorer links and raw commitments.
+
+The executor cannot provide a boolean that causes payment. The evaluator derives eligibility from contract state.
+
+### 5.5 Revoke and expire
+
+- **Before authorization:** the root owner submits a direct or sponsored smart-account call that invalidates a nonce/nonce range or changes the active policy hash; the old signature can no longer authorize.
+- **After authorization, before execution:** the root owner calls `revoke(mandateHash)` through the smart account. The contract accepts the first valid terminal transition between revoke, expiry, and execute.
+- **After expiry:** anyone may call `finalizeExpired(mandateHash)` for an `AUTHORIZED` mandate. Execution checks expiry itself and cannot race successfully after the boundary.
+- **During execution:** one UserOperation transaction owns the state transition; a revoke cannot interleave inside it.
+- **After a terminal state:** revoke, execute, and expiry calls revert or return existing status without external side effects, as specified by the ABI.
+
+## 6. State machines
+
+### 6.1 Mandate contract state
+
+```mermaid
+stateDiagram-v2
+  [*] --> AUTHORIZED: authorize + consume nonce
+  AUTHORIZED --> EXECUTING: execute before expiry
+  AUTHORIZED --> REVOKED: owner revoke
+  AUTHORIZED --> EXPIRED: finalize after expiry
+  EXECUTING --> SUCCEEDED: call and verifier pass
+  EXECUTING --> FAILED: call or verifier fails
+  SUCCEEDED --> [*]
+  FAILED --> [*]
+  REVOKED --> [*]
+  EXPIRED --> [*]
+```
+
+`EXECUTING` is observable within a transaction but should not remain after a successful transaction boundary. The implementation must catch anticipated adapter/protocol failures and commit `FAILED`; an unexpected whole-transaction revert leaves `AUTHORIZED` and is an infrastructure/contract defect that the executor surfaces, not an invitation to mutate signed input.
+
+### 6.2 Execution worker state
+
+```text
+QUEUED -> LEASED -> AUTHORIZING -> AUTHORIZED -> EXECUTING -> VERIFYING -> SETTLING -> TERMINAL
+                 \-> RECONCILING ------------------------------------------^
+                 \-> RETRY_WAIT (transport/confirmation uncertainty only)
+```
+
+Worker state is not product truth. Any restart begins with chain reconciliation. Retries are permitted only when transaction inclusion is unknown or before a terminal transition; they reuse identical calldata and transaction intent.
+
+### 6.3 ERC-8183 job state
+
+Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitted`, then `Completed`, `Rejected`, or `Expired`. Perago does not redefine this state machine. A mandate stores its bound `jobId` and commerce contract; the OutcomeEvaluator may complete only a submitted matching job after mandate success. Refund and expiry safety remain available under the chosen ERC-8183 implementation.
+
+## 7. Idempotency, replay, and consistency
+
+### Idempotency keys
+
+| Operation | Key |
+| --- | --- |
+| Create task intent | Smart-account address + client request ID |
+| Compile plan | Task ID + policy hash + compiler version |
+| Simulate | Plan hash + block number + account/adapter code hashes |
+| Submit mandate | Mandate EIP-712 digest |
+| Queue execution | Mandate digest |
+| Submit execution | Smart-account address + UserOperation nonce + mandate digest |
+| Store chain event | Chain ID + transaction hash + log index |
+| Settle job | Commerce contract + job ID + mandate digest |
+
+### Replay controls
+
+- EIP-712 domain binds chain ID and MandateExecutor address.
+- Struct binds root owner, smart account, owner epoch, executor, nonce, expiry, active policy hash, adapter, selector, economics, recipient, and all commitments.
+- `usedNonce[account][nonce]` is written at authorization before execution is possible.
+- Account-module permissions bind session key, EntryPoint/account, target, functions, spend, and expiry; they never replace mandate checks.
+- UserOperation signature/nonces prevent account-level replay; MandateExecutor nonce prevents semantic replay through another transport.
+- Adapter action bytes are re-hashed onchain and must equal `actionHash`.
+- Settlement records one consumed `(commerceContract, jobId)` binding.
+
+### Reorg handling
+
+- Raw events are stored with block hash and confirmation status.
+- Before configured confirmation depth, API status is `PENDING_CONFIRMATION`, not terminal.
+- If a block hash changes, indexer marks affected events orphaned, rewinds projections to the last canonical checkpoint, and replays.
+- The worker checks canonical transaction receipts before progressing to the next transition.
+
+## 8. Failure and degradation behavior
+
+| Failure | Behavior | User-visible result |
+| --- | --- | --- |
+| Planner unavailable/invalid output | Do not compile or infer a fallback action. | Retryable planning failure; no mandate. |
+| Policy conflict | Persist structured decision; do not simulate. | Exact rule/value conflict. |
+| Quote unavailable/stale | Do not sign; refresh from a new pinned block. | Simulation unavailable/stale. |
+| RPC disagreement | Stop critical transition and compare another endpoint or wait. | Chain data temporarily uncertain. |
+| Signature invalid | Reject before queueing. | Signer/domain/field mismatch reason. |
+| Authorization transaction uncertain | Reconcile digest/nonce and receipt; never create a new nonce automatically. | Pending confirmation. |
+| Adapter/protocol reverts | Contract catches expected call failure, clears authority path, records `FAILED`. | Terminal failed receipt; no payment. |
+| Verifier returns false/reverts | Record terminal `FAILED`; do not settle. | Failed postcondition evidence. |
+| Indexer down | Chain execution may continue; serve explicit stale projection or direct read. | Indexing delayed, never false success. |
+| Database down | Do not accept new offchain workflow; executor reconciles already durable jobs if safe. | Service unavailable; chain truth intact. |
+| Settlement unavailable | Keep successful receipt; retry identical settlement after reconciliation. | Execution succeeded, payment pending. |
+| Session provider unavailable | Use MandateExecutor path; never fall back to a raw key. | Session optimization unavailable. |
+
+No degradation mode widens authority, changes a signed action, or reports an unconfirmed success.
+
+## 9. Hackathon deployment topology
+
+```mermaid
+flowchart LR
+  Browser --> Web[Web deployment]
+  Web --> API[API service]
+  API --> PG[(Managed Postgres)]
+  API --> Q[(Postgres-backed queue)]
+  Executor[Single executor service] --> Q
+  Executor --> RPC1[BSC RPC primary]
+  API --> RPC1
+  API --> RPC2[BSC RPC fallback]
+  Indexer[Indexer process] --> RPC1
+  Indexer --> PG
+  Executor --> Contracts[BSC Testnet contracts]
+```
+
+MVP deployment choices:
+
+- web as a stateless deployment;
+- API, executor, and indexer as separate process commands, deployable together if platform limits require;
+- one Postgres instance and a database-backed leased-job queue; no separate message broker;
+- one active executor replica initially, with database leases and onchain idempotency allowing a second only when measured;
+- BSC Testnet as the default live environment; a pinned BSC mainnet fork is an explicitly labeled contingency for unavailable third-party testnet contracts;
+- secrets held in deployment secret stores, never web bundles or database rows.
+
+## 10. Observability
+
+Every offchain request and worker attempt carries `traceId`, `taskId`, and `mandateHash` when known. Structured logs include stage, chain ID, adapter ID, transaction hash, block number, attempt number, latency, and stable reason code. They exclude natural-language intent by default, signatures unless required for a redacted debug sample, authorization headers, key/session material, and raw provider payloads containing secrets.
+
+Minimum metrics:
+
+- compile and simulation latency/error rate;
+- policy rejection counts by rule ID;
+- queue age and lease recoveries;
+- authorization/execution/settlement submission and confirmation latency;
+- mandates by terminal state and reason code;
+- stale simulation and RPC disagreement count;
+- indexer head lag and reorg depth;
+- allowance cleanup failures and unexpected contract reverts.
+
+Minimum alerts for a hosted demo: executor queue age, indexer lag, repeated RPC errors, unexpected whole-transaction execution revert, and successful receipt with unsettled job beyond threshold.
+
+## 11. Architecture decisions
+
+| ID | Decision | Rationale | Rejected alternative |
+| --- | --- | --- | --- |
+| ADR-001 | Use Alchemy Modular Account V2 for ERC-4337 UX and keep a minimal MandateExecutor for task authority. | BNB Testnet bundler/sponsorship is officially supported, while one-use/effect verification remains provider-independent and product-critical. | Privy-native embedded smart wallets, unsupported BSC testnet providers, UI-only limits, or raw delegated keys. |
+| ADR-002 | Treat smart-account permissions as defense in depth, never mandate authorization. | A session key must not be able to create its own root Task Mandate or widen persistent policy. | Session-only enforcement. |
+| ADR-003 | Separate onchain authorization from execution. | External-call failure must not restore signature authority. | Single reverting execute transaction whose nonce write rolls back. |
+| ADR-004 | Use one closed adapter entry selector with typed action commitments. | Shrinks the callable surface and keeps protocol calldata out of AI control. | Arbitrary target/calldata allowlist. |
+| ADR-005 | Use adapter-specific verifiers. | Swap balance output and staking position output are different facts. | Generic LLM evaluator or transaction-success check. |
+| ADR-006 | Keep raw events append-only and projections rebuildable. | Chain is authoritative and reorgs/duplicate delivery are expected. | Mutable receipt rows as sole truth. |
+| ADR-007 | Use a Postgres-backed queue for MVP. | One datastore is sufficient and easier to operate. | Redis/Kafka before throughput requires them. |
+| ADR-008 | Defer ERC-8004. | Identity/reputation does not improve bounded authority or the initial demo. | Adding a registry only for standards count. |
+| ADR-009 | Bind, but do not over-persist, natural language onchain. | Hashes prove correspondence without publishing sensitive intent. | Raw intent text in contract storage/events. |
+| ADR-010 | Start simulation with protocol quote, pinned reads, UserOperation simulation, and `eth_call`. | Meets current actions with no extra simulation provider; evidence limits remain explicit. | Third-party simulator before a demonstrated need. |
+
+## 12. Open architecture decisions
+
+Only externally dependent choices remain open:
+
+1. `D-002`: live staking deployment and testnet behavior.
+2. `D-003`: target ERC-8183 deployment/payment token.
+3. Exact Alchemy EntryPoint/account/module deployments, permission encoding, and fallback public bundler behavior after BSC Testnet probe.
+4. Exact BSC confirmation depth and independent RPC pair after testnet measurement.
+
+Each is assigned a validation task in [`../BUILD-PLAN.md`](../BUILD-PLAN.md); none authorizes a placeholder implementation or fabricated integration claim.
