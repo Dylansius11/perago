@@ -1,14 +1,56 @@
 # Perago Build Plan
 
-**Status:** Phase 0 documentation foundation in review
+**Status:** Phase 0 accepted and merged; Phase 1 pending explicit approval
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
+
+## Progress tracker
+
+Check a task only after its acceptance criteria and verification evidence pass. A completed phase still requires its phase gate.
+
+- [x] **Phase 0 — documentation and governance**
+  - [x] `P0-001` Repository governance
+  - [x] `P0-002` Product and technical specification
+  - [x] `P0-003` Foundation review PR
+- [ ] **Phase 1 — typed domain and decision probes**
+  - [ ] `P1-001` Bootstrap exact stable workspace
+  - [ ] `P1-002` Implement canonical domain schemas and hashes
+  - [ ] `P1-003` Prove account-abstraction path
+  - [ ] `P1-004` Resolve protocol deployments
+  - [ ] `P1-005` Freeze contract interfaces and cross-stack fixtures
+- [ ] **Phase 2 — mandate contract and invariant tests**
+  - [ ] `P2-001` Implement account policy and mandate authorization
+  - [ ] `P2-002` Implement accepted-attempt and atomic failure boundary
+  - [ ] `P2-003` Prove contract invariants
+- [ ] **Phase 3 — API, compiler, policy, and simulation**
+  - [ ] `P3-001` Implement persistence and chain projections
+  - [ ] `P3-002` Implement wallet authentication and policy lifecycle
+  - [ ] `P3-003` Implement planner adapter and deterministic compiler
+  - [ ] `P3-004` Implement exact-action simulation and signing payload
+- [ ] **Phase 4 — executor and swap**
+  - [ ] `P4-001` Implement swap adapter and verifier
+  - [ ] `P4-002` Implement executor reconciliation and queue worker
+  - [ ] `P4-003` Prove swap end to end
+- [ ] **Phase 5 — staking and verification**
+  - [ ] `P5-001` Implement staking adapter and verifier
+  - [ ] `P5-002` Add staking compiler/simulation/executor path
+- [ ] **Phase 6 — receipts and ERC-8183 settlement**
+  - [ ] `P6-001` Implement receipt indexing and public query
+  - [ ] `P6-002` Implement deterministic ERC-8183 evaluator
+  - [ ] `P6-003` Automate settlement without changing truth
+- [ ] **Phase 7 — fresh web client**
+  - [ ] `P7-001` Translate approved design direction into accessible shell
+  - [ ] `P7-002` Implement policy, mandate, and receipt journey
+- [ ] **Phase 8 — end-to-end demo and deployment**
+  - [ ] `P8-001` Deploy reviewed environment
+  - [ ] `P8-002` Run judge-verifiable scenario matrix
+  - [ ] `P8-003` Final scope and claim audit
 
 ## 1. Execution rules
 
 - Phases run in order. A task may start only when its dependencies and prior phase gate pass.
 - Each task ID is stable. Change scope by editing its acceptance criteria, not renumbering history.
-- `main` receives reviewed PRs. Implementation starts from accepted `dev`; focused branches merge back to `dev` before the next phase gate.
+- `main` receives reviewed PRs using merge commits; never squash or rebase-merge. Implementation starts from accepted `dev`; focused branches merge back to `dev` before the next phase gate.
 - Commits follow the checkpoints below and remain coherent review units.
 - No placeholder integration, fake address, mocked “success,” or unchecked external claim may satisfy an acceptance criterion.
 - Exact stable tool/dependency versions are re-verified and pinned at Phase 1 bootstrap.
