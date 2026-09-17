@@ -94,7 +94,7 @@ When a contract or interface changes, migrate every caller and remove the obsole
 
 - `main` is protected release history.
 - Develop on `dev`; use focused feature branches from `dev` after the foundation phase when parallel review is useful.
-- Merge reviewed work into `main` through a PR.
+- Merge reviewed work into `main` through a PR using a merge commit; never squash or rebase-merge.
 - Never force-push shared branches.
 - Commit frequently at coherent review boundaries. A commit must leave its changed surface internally consistent and must not contain unrelated cleanup.
 - Keep the worktree clean at completed checkpoints.
