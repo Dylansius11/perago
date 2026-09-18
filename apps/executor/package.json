@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "probe:account-abstraction": "node src/probes/account-abstraction.ts",
+    "probe:integrations": "node src/probes/integrations.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
