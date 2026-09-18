@@ -1,78 +1,60 @@
 {
-  "schemaVersion": "1",
-  "status": "needs re-verification",
-  "chainId": "97",
-  "network": "BSC Testnet",
-  "retrievedAt": "2026-09-18T05:30:03Z",
-  "block": {
-    "number": "131694958",
-    "hash": "0x6e8f703fa856fae70f0d6baae1b93a552346b5f80a9509b35e6bc72d14a9fc36"
+  "chainId": 97,
+  "chainName": "BNB Smart Chain Testnet",
+  "verifiedAt": {
+    "blockNumber": "131778783",
+    "blockHash": "0x82cc5625158fc1d09cee3853fb50cc4ea26a98874216429d7abe86ccc5d3e834",
+    "blockTimestamp": "1789747118"
   },
-  "sources": {
-    "deployments": "https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses",
-    "entryPoint": "@aa-sdk/core@4.88.5 src/entrypoint/0.7.ts"
-  },
-  "contracts": [
-    {
-      "name": "EntryPoint v0.7",
-      "version": "0.7.0",
-      "address": "0x0000000071727de22e5e9d8baf0edac6f37da032",
-      "runtimeCodeHash": "0x8db5ff695839d655407cc8490bb7a5d82337a86a6b39c3f0258aa6c3b582fc58",
-      "runtimeCodeSize": 16035
+  "source": "https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses",
+  "entryPointVersion": "0.7",
+  "accountType": "SMA",
+  "notes": "The semi-modular account keeps the root owner as an immutable constructor argument, and the derived address depends on the implementation address.",
+  "contracts": {
+    "entryPoint": {
+      "address": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+      "codeHash": "0x8db5ff695839d655407cc8490bb7a5d82337a86a6b39c3f0258aa6c3b582fc58",
+      "role": "ERC-4337 EntryPoint v0.7 used to validate and execute Perago UserOperations."
     },
-    {
-      "name": "ModularAccount",
-      "version": "2.0.0",
-      "address": "0x00000000000002377b26b1eda7b0bc371c60dd4f",
-      "runtimeCodeHash": "0xe2faef06b17414c2025148d5daba1ad64f44b416e3d5bd1db8123b9f82fff05d",
-      "runtimeCodeSize": 23273
+    "entryPointSenderCreator": {
+      "address": "0xEFC2c1444eBCC4Db75e7613d20C6a62fF67A167C",
+      "codeHash": "0x283c9d14378f5f4c4e24045b87d621d48443fa5b4af7dd7180a599b3756a7689",
+      "role": "EntryPoint helper used to deploy Perago account senders during UserOperation handling."
     },
-    {
-      "name": "AccountFactory",
-      "version": "2.0.0",
-      "address": "0x00000000000017c61b5bee81050ec8efc9c6fecd",
-      "runtimeCodeHash": "0xd797dac2d304de879abba3ed87b60f9f141b2da869c3ce24c037feb5c5d60342",
-      "runtimeCodeSize": 6661
+    "factory": {
+      "address": "0x00000000000017c61b5bEe81050EC8eFc9c6fecd",
+      "codeHash": "0xd797dac2d304de879abba3ed87b60f9f141b2da869c3ce24c037feb5c5d60342",
+      "role": "SMA factory used to derive and deploy Perago Modular Account V2 instances."
     },
-    {
-      "name": "SingleSignerValidationModule",
-      "version": "1.0.0",
-      "address": "0x00000000000099de0bf6fa90deb851e2a2df7d83",
-      "runtimeCodeHash": "0x5c897ee551f50db31556c976e99742529a4b512d928db01829f15fd073e2d8ea",
-      "runtimeCodeSize": 3976
+    "semiModularAccountBytecode": {
+      "address": "0x000000000000c5A9089039570Dd36455b5C07383",
+      "codeHash": "0x3612f3fa5ac5e89b87b284024977e6082441e30ff05f9f8497cd280131a27e16",
+      "role": "SMA implementation used when deriving and deploying Perago accounts."
     },
-    {
-      "name": "AllowlistModule",
-      "version": "1.0.0",
-      "address": "0x00000000003e826473a313e600b5b9b791f5a59a",
-      "runtimeCodeHash": "0xef299f31bc7fdbfad47e69dec2c3f3b80c8f4223fab5baf21565c2f92f435bfd",
-      "runtimeCodeSize": 10336
+    "singleSignerValidationModule": {
+      "address": "0x00000000000099DE0BF6fA90dEB851E2A2df7d83",
+      "codeHash": "0x5c897ee551f50db31556c976e99742529a4b512d928db01829f15fd073e2d8ea",
+      "role": "Validation module Perago installs for the bounded session signer; the root owner uses the semi-modular fallback validation."
     },
-    {
-      "name": "NativeTokenLimitModule",
-      "version": "1.0.0",
-      "address": "0x00000000000001e541f0d090868fbe24b59fbe06",
-      "runtimeCodeHash": "0xf732e93b64bdc8393325b028480b86811f8feef87e6932fd745a85280c93fa41",
-      "runtimeCodeSize": 5093
+    "allowlistModule": {
+      "address": "0x00000000003E826473A313e600B5B9b791f5A59A",
+      "codeHash": "0xef299f31bc7fdbfad47e69dec2c3f3b80c8f4223fab5baf21565c2f92f435bfd",
+      "role": "Session validation module that allowlists Perago mandate targets and selectors."
     },
-    {
-      "name": "PaymasterGuardModule",
-      "version": "1.0.0",
-      "address": "0x0000000000001aa7a7f7e29abe0be06c72fd42a1",
-      "runtimeCodeHash": "0x4bfc1932168590333b58184419ab29a8931398e2d8549c79df4a1ad6b00c3093",
-      "runtimeCodeSize": 2097
+    "nativeTokenLimitModule": {
+      "address": "0x00000000000001e541f0D090868FBe24b59Fbe06",
+      "codeHash": "0xf732e93b64bdc8393325b028480b86811f8feef87e6932fd745a85280c93fa41",
+      "role": "Session validation module that enforces Perago native-token spend limits."
     },
-    {
-      "name": "TimeRangeModule",
-      "version": "1.0.0",
-      "address": "0x00000000000082b8e2012be914dfa4f62a0573ea",
-      "runtimeCodeHash": "0x9843dca9c23d7da2dc2d7413faee67101bfce30a2a8cc8c6c6255e84c5c79f31",
-      "runtimeCodeSize": 2504
+    "timeRangeModule": {
+      "address": "0x00000000000082B8e2012be914dFA4f62A0573eA",
+      "codeHash": "0x9843dca9c23d7da2dc2d7413faee67101bfce30a2a8cc8c6c6255e84c5c79f31",
+      "role": "Session validation module that enforces Perago mandate expiry."
     }
-  ],
-  "remainingAcceptanceEvidence": [
-    "Derive a Modular Account V2 from a disposable external EOA and verify ownership.",
-    "Submit one owner-funded and one sponsored UserOperation through the selected bundler.",
-    "Prove the narrow session permission rejects root, upgrade, module-install, unrelated target, excess-spend, and expired calls."
+  },
+  "status": "verified-code",
+  "pendingEvidence": [
+    "sponsored UserOperation on chain 97",
+    "owner-paid UserOperation on chain 97"
   ]
 }

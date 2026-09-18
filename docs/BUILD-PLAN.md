@@ -1,6 +1,6 @@
 # Perago Build Plan
 
-**Status:** Phase 1 active; `P1-001` complete; `P1-002`, `P1-003`, and `P1-005` in progress; `P1-004` blocked only at its live APEX lifecycle test asset.
+**Status:** Phase 1 active; `P1-001` complete; `P1-002`, `P1-003`, and `P1-005` in progress; `P1-003` session constraints proven locally with signed chain-97 operations still blocked; `P1-004` blocked only at its live APEX lifecycle test asset.
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
@@ -109,7 +109,7 @@ This record tracks live work without marking a task complete before all of its a
 | Task | Current evidence | Remaining acceptance or blocker |
 | --- | --- | --- |
 | `P1-002` | SDK and Solidity share the checked-in EIP-712 digest `0x9b204a82d741df2398ef74a699cc6a9b5cc4dae63aac247b0d69c29e4f206574`; SDK and Foundry fixture tests pass. | Complete the schema/hash acceptance audit before checking the task. |
-| `P1-003` | BSC Testnet account-address and bundler probes pass. The pinned SMA bytecode implementation `0x000000000000c5A9089039570Dd36455b5C07383` derives the undeployed counterfactual account `0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944`, which has a confirmed `0.01 tBNB` balance for owner-paid gas. | The browser relay currently exposes no injected wallet provider, so the owner cannot sign the required UserOperation matrix. No sponsored or owner-paid UserOperation has been submitted. |
+| `P1-003` | Session constraints are proven locally against the real deployed bytecode. `apps/executor/src/probes/account-session.ts` replays the code of EntryPoint v0.7, its `SenderCreator`, the factory, the semi-modular implementation, and the allowlist/native-limit/time-range/single-signer modules from chain 97 (block `131778783`) onto a local chain 97 node, asserts every code hash, then runs a disposable-key matrix: the allowlisted mandate-shaped call is accepted and delivers value, while unrelated target, unallowlisted selector, module install, `upgradeToAndCall`, account self-call, over-limit spend, expired permission, and revoked permission are all rejected or reverted. Perago's viem-only encoders are cross-checked against `@alchemy/smart-accounts@5.2.6` for address derivation, nonce key, signature envelope, and the full `installValidation` calldata. On BSC Testnet itself, the pinned implementation `0x000000000000c5A9089039570Dd36455b5C07383` derives the counterfactual account `0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944`, funded with `0.01 tBNB`, and the bundler advertises EntryPoint v0.7. | The browser relay exposes no injected wallet provider, so the owner EOA cannot sign; no sponsored or owner-paid UserOperation has landed on chain 97. Unblocking action: obtain one owner signature path (wallet on a browser that injects a provider, or a disposable funded root key) and submit both operations. |
 | `P1-004` | Read-only deployment probes are complete. | The live ERC-8183/APEX lifecycle needs a verified safe testnet payment-token funding or mint path. This is unrelated to Alchemy gas sponsorship or the smart account's tBNB balance. |
 | `P1-005` | `PeragoTypes`, adapter/verifier interfaces, and the shared SDK–Solidity digest fixture are committed and passing. | Keep interfaces provisional until the AA and protocol adapter decisions are resolved; then generate/export the final ABI/type surface and check the task. |
 
@@ -132,9 +132,9 @@ This record tracks live work without marking a task complete before all of its a
 ### `P1-003` Prove account-abstraction path
 
 - **Requirements:** PRD-F-001, PRD-F-017, PRD-S-003, PRD-S-006, PRD-S-008, PRD-S-013.
-- **Files/symbols:** `packages/sdk/src/account/modular-account.ts`; `apps/executor/src/probes/account-abstraction.ts`; `deployments/bsc-testnet.account.json` only after values are verified and contain no secrets.
+- **Files/symbols:** `packages/sdk/src/account/modular-account.ts`; `apps/executor/src/probes/{account-abstraction,account-address,account-session}.ts`; `deployments/bsc-testnet.account.json` only after values are verified and contain no secrets.
 - **Acceptance:** external EOA controls expected Modular Account V2; EntryPoint/factory/account/modules match official source/code hashes; one sponsored and one owner-paid UserOperation land on chain 97; narrow session permits intended MandateExecutor-shaped call and rejects root, upgrade, module-install, unrelated target, excess spend, and expired permission calls; no private/session key is committed/logged.
-- **Verification:** disposable-wallet testnet probe with UserOperation/transaction/block evidence and forbidden-call results.
+- **Verification:** repeatable local matrix against replayed chain-97 bytecode (`pnpm --filter @perago/sdk build`, then `anvil --chain-id 97` and `pnpm --filter @perago/executor probe:account-session`, which must pass twice against the same node), plus a disposable-wallet testnet probe with UserOperation/transaction/block evidence for the sponsored and owner-paid operations.
 - **Decision:** pin EntryPoint/account/module versions and fallback bundler, or block implementation with exact failed capability.
 - **Commit:** `spike(account): validate BSC account abstraction`.
 

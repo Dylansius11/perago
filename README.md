@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phase 1 bootstrap complete.** The repository now pins its workspace/toolchain and package manifests, but contains no Perago application implementation, mandate contract, live endpoint, deployment, or transaction evidence. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
+**Phase 1 in progress.** The workspace, toolchain, and package manifests are pinned. The SDK now carries the canonical mandate domain, its EIP-712 digest fixture, and the bounded Modular Account V2 session encoding; contract interfaces and fixtures are frozen provisionally. Account-abstraction constraints are proven locally against Modular Account V2 bytecode replayed from BNB Smart Chain Testnet, with code hashes recorded in [`deployments/bsc-testnet.account.json`](deployments/bsc-testnet.account.json). No mandate contract, live endpoint, deployment, or signed chain-97 transaction evidence exists yet. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
 
 ## Planned repository map
 
@@ -37,7 +37,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-This phase adds only workspace configuration, dependency pins, and a pinned OpenZeppelin submodule. Product source begins with the next approved Phase 1 task.
+Current source is limited to the SDK domain and account-encoding layer plus read-only executor probes. The API, web client, and contract implementation begin with their approved Phase 2 and Phase 3 tasks.
 
 ## Documentation
 
@@ -48,11 +48,12 @@ This phase adds only workspace configuration, dependency pins, and a pinned Open
 - [BNB and protocol integrations](docs/technical/INTEGRATION.md)
 - [Technology decisions](docs/technical/TECH-STACK.md)
 - [Phased build plan](docs/BUILD-PLAN.md)
+- [Lessons and verified preferences](docs/LESSONS.md)
 - [Agent operating contract](AGENTS.md)
 
 ## Honest limitations
 
-- Perago has no application code, contracts, live endpoints, deployments, or transaction evidence yet.
+- Perago has no mandate contract implementation, live endpoint, deployment, or signed onchain transaction evidence yet; the account-abstraction proof is local replay of verified chain-97 bytecode, not a submitted UserOperation.
 - ERC-8183 and ERC-8004 are draft standards; integration details can change.
 - Session-key, staking, payment-token, and testnet deployment capabilities remain gated on source and onchain validation described in the technical documents.
 - Simulation reduces execution risk but cannot guarantee future chain state.

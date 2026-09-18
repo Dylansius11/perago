@@ -13,7 +13,7 @@ Optimize for a judge-verifiable, security-first product. AI may propose and expl
 
 ## Current gate
 
-The repository is in the documentation-foundation phase. Do not implement application code, contracts, infrastructure, UI, visual assets, or a design system until the documentation PR is accepted and the user gives the next instruction.
+The repository is in Phase 1 implementation: typed domain, account-abstraction encoding, and decision probes. Implement only the current task in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md); do not start a later phase, and do not implement UI, visual assets, or a design system.
 
 The user will supply Perago's UI and design direction later. Do not invent screens, component systems, CSS, tokens, logos, mockups, or visual specifications before that direction arrives.
 

@@ -77,32 +77,38 @@ The official [BSC faucet guide](https://docs.bnbchain.org/bnb-smart-chain/develo
 
 Alchemy's official [Wallet APIs supported chains](https://www.alchemy.com/docs/wallets/supported-chains) lists BNB Mainnet and BNB Testnet with bundler, gas sponsorship, ERC-20 gas payments, and batch-send-operation support. Its [smart-contract deployment page](https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses/) states that account contracts use the same addresses across supported EVM chains.
 
-Documented Modular Account V2 contracts include:
+Perago pins these contracts. Code at every address below was read on chain 97 and hashed; the code hashes, the verification block, and the pending evidence live in the reviewed manifest [`deployments/bsc-testnet.account.json`](../../deployments/bsc-testnet.account.json), which owns those values.
 
-| Contract | Version | Documented address | Status |
+| Contract | Version | Address | Status |
 | --- | --- | --- | --- |
-| `ModularAccount` | `v2.0.0` | `0x00000000000002377B26b1EdA7b0BC371C60DD4f` | `needs re-verification` |
-| `AccountFactory` | `v2.0.0` | `0x00000000000017c61b5bEe81050EC8eFc9c6fecd` | `needs re-verification` |
-| `SingleSignerValidationModule` | `v1.0.0` | `0x00000000000099DE0BF6fA90dEB851E2A2df7d83` | `needs re-verification` |
-| `AllowlistModule` | `v1.0.0` | `0x00000000003e826473a313e600b5b9b791f5a59a` | `needs re-verification` |
-| `NativeTokenLimitModule` | `v1.0.0` | `0x00000000000001e541f0D090868FBe24b59Fbe06` | `needs re-verification` |
-| `PaymasterGuardModule` | `v1.0.0` | `0x0000000000001aA7A7F7E29abe0be06c72FD42A1` | `needs re-verification` |
-| `TimeRangeModule` | `v1.0.0` | `0x00000000000082B8e2012be914dFA4f62A0573eA` | `needs re-verification` |
+| `EntryPoint` | `v0.7` | `0x0000000071727De22E5E9d8BAf0edAc6f37da032` | `verified` code on chain 97 |
+| `SenderCreator` | `v0.7` | `0xEFC2c1444eBCC4Db75e7613d20C6a62fF67A167C` | `verified` code on chain 97; the EntryPoint's first `CREATE`, required for factory deployment |
+| `SemiModularAccountBytecode` | `v2.0.0` | `0x000000000000c5A9089039570Dd36455b5C07383` | `verified` code on chain 97; the implementation Perago derives accounts from |
+| `AccountFactory` | `v2.0.0` | `0x00000000000017c61b5bEe81050EC8eFc9c6fecd` | `verified` code on chain 97 |
+| `SingleSignerValidationModule` | `v1.0.0` | `0x00000000000099DE0BF6fA90dEB851E2A2df7d83` | `verified` code on chain 97 |
+| `AllowlistModule` | `v1.0.0` | `0x00000000003E826473A313e600B5B9b791f5A59A` | `verified` code on chain 97 |
+| `NativeTokenLimitModule` | `v1.0.0` | `0x00000000000001e541f0D090868FBe24b59Fbe06` | `verified` code on chain 97 |
+| `TimeRangeModule` | `v1.0.0` | `0x00000000000082B8e2012be914dFA4f62A0573eA` | `verified` code on chain 97 |
+| `ModularAccount` | `v2.0.0` | `0x00000000000002377B26b1EdA7b0BC371C60DD4f` | `proposed`; not used, Perago selects the semi-modular bytecode variant |
+| `PaymasterGuardModule` | `v1.0.0` | `0x0000000000001aA7A7F7E29abe0be06c72FD42A1` | `needs re-verification`; only if sponsorship guarding is adopted |
 
-These rows are documentation evidence, not a Perago manifest. Phase 1 must read code at each address on chain 97, identify EntryPoint version/address, verify factory output and external EOA ownership, and pin source commits/code hashes.
+The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership of the derived account and the sponsored and owner-paid UserOperations remain pending owner-signature evidence.
 
 ### 4.2 Session permission shape
 
 Alchemy's official [session-key permission reference](https://www.alchemy.com/docs/wallets/reference/wallet-apis-session-keys) documents expiry, ERC-20 cumulative allowance, gas limit, contract access, account-function, functions-on-contract, functions-on-all-contracts, and dangerous `root` permissions.
 
-Perago allows only the minimum combination that Phase 1 proves enforceable:
+Perago allows only the combination now proven enforceable on the deployed modules, encoded by `encodeInstallMandateSession` in `packages/sdk/src/account/modular-account.ts`:
 
-- account execution selector(s) required to carry a UserOperation;
-- MandateExecutor `perform` and, if necessary, narrow lifecycle selectors;
-- specific ERC-20 `approve` selector on approved input tokens with cumulative Wallet Policy ceiling;
-- time range no longer than active policy/session duration;
-- gas ceiling;
-- no `root`, wildcard contract, all-contract function, module install, upgrade, ownership, or arbitrary batch authority.
+- one single-signer validation scoped to the account's `execute` selector only, so no other account function is reachable through the session;
+- one pre-validation allowlist pinning exactly one target contract and its permitted selectors;
+- one pre-execution native spend cap;
+- one validation-time expiry window, which is always set;
+- no `root`, wildcard contract, all-contract function, module install, upgrade, ownership, batch, `performCreate`, runtime-validation, or ERC-20 `approve` authority. The SDK rejects any of those selectors at encode time, and the selector values are taken from the deployed account's dispatcher rather than from vendor constants.
+
+Locally replayed chain-97 bytecode confirms the enforcement: the allowlisted call is accepted, while an unrelated target and an unallowlisted selector fail the allowlist hook, `installValidation` and `upgradeToAndCall` fail validation lookup, an over-limit spend reverts before any value moves, and an expired or revoked session fails validation. The remaining evidence for this section is signed chain-97 execution, which is tracked in [`../BUILD-PLAN.md`](../BUILD-PLAN.md).
+
+Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. Token spend for a swap must therefore be authorized inside one account-executed call, or bounded by the AllowlistModule ERC-20 spend limit. That choice is decision gate `D-004` and is resolved with the swap adapter, not by widening the session.
 
 A contract/function allowlist can still permit malicious arguments. MandateExecutor independently validates the root Task Mandate, action hash, amount, recipient, protocol, nonce, and postcondition.
 
