@@ -4,6 +4,24 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-19 - A probe that writes onchain state must claim fresh state each run
+
+- Observed: the chain-97 session probe passed once, then failed on rerun with `AA10 sender already constructed`, and its fixed permission slot would next have collided with the expired session the earlier run left installed.
+- Root cause: the probe assumed a clean account: it always sent factory data and always reused entity ids `21` and `22`, so the first successful run made the second run invalid.
+- Rule: a state-writing probe reads current state before acting (send factory data only when the account has no code), claims a fresh permission slot per run, and uninstalls everything it installed; otherwise the evidence is unreproducible.
+
+### 2026-09-19 - Alchemy's bundler enforces a minimum gas-limit efficiency
+
+- Observed: `eth_sendUserOperation` rejected safely padded limits with `Verification gas limit efficiency too low. Required: 0.4, Actual: 0.15`, so generously over-provisioned limits fail even when the operation is valid and funded.
+- Root cause: the bundler prices reserved gas, not used gas, and rejects an operation whose used/limit ratio is below a per-field threshold; the error itself names the field and both ratios.
+- Rule: take limits from `eth_estimateUserOperationGas` with a small buffer, and on rejection parse the bundler's stated ratios to retune the named field rather than raising limits further.
+
+### 2026-09-19 - A sponsorship policy's transaction count is consumed by attempts
+
+- Observed: with a Bundler Sponsored Operations policy capped at one total and one per-wallet transaction, the sponsored UserOperation failed with `Policy max count exceeded` before any sponsored operation had been mined; raising the caps made the same call succeed with `actualGasCost` `0`.
+- Root cause: policy counting is not limited to mined successes, so failed or repeated attempts during development exhaust a tight cap.
+- Rule: size a testnet sponsorship policy for retries (a small spend ceiling with a generous count), and treat `Policy max count exceeded` as a policy-configuration fact rather than an account or bundler defect.
+
 ### 2026-09-18 - Vendor allowlists of privileged selectors can be stale
 
 - Observed: `@alchemy/smart-accounts@5.2.6` blocks `installExecution` as `0x1d37e7d6` and `uninstallExecution` as `0x0b7cad71`, but the deployed semi-modular account implementation `0x000000000000c5A9089039570Dd36455b5C07383` dispatches `0x001a63e9` and `0x93b1dc61`.

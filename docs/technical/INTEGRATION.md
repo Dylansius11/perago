@@ -77,7 +77,7 @@ The official [BSC faucet guide](https://docs.bnbchain.org/bnb-smart-chain/develo
 
 Alchemy's official [Wallet APIs supported chains](https://www.alchemy.com/docs/wallets/supported-chains) lists BNB Mainnet and BNB Testnet with bundler, gas sponsorship, ERC-20 gas payments, and batch-send-operation support. Its [smart-contract deployment page](https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses/) states that account contracts use the same addresses across supported EVM chains.
 
-Perago pins these contracts. Code at every address below was read on chain 97 and hashed; the code hashes, the verification block, and the pending evidence live in the reviewed manifest [`deployments/bsc-testnet.account.json`](../../deployments/bsc-testnet.account.json), which owns those values.
+Perago pins these contracts. Code at every address below was read on chain 97 and hashed; the code hashes, the verification block, and the signed execution evidence live in the reviewed manifest [`deployments/bsc-testnet.account.json`](../../deployments/bsc-testnet.account.json), which owns those values. `pnpm --filter @perago/executor probe:account-live` re-reads each address and fails if any live code hash drifts from the manifest.
 
 | Contract | Version | Address | Status |
 | --- | --- | --- | --- |
@@ -92,7 +92,7 @@ Perago pins these contracts. Code at every address below was read on chain 97 an
 | `ModularAccount` | `v2.0.0` | `0x00000000000002377B26b1EdA7b0BC371C60DD4f` | `proposed`; not used, Perago selects the semi-modular bytecode variant |
 | `PaymasterGuardModule` | `v1.0.0` | `0x0000000000001aA7A7F7E29abe0be06c72FD42A1` | `needs re-verification`; only if sponsorship guarding is adopted |
 
-The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership is now proven: the disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` deployed and drove account `0x2863167c8653b9369Ef51De203742A3429AC57E2` through the Alchemy bundler, with transaction hashes recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md). Only the sponsored UserOperation is still pending, blocked on the Gas Manager policy transaction-count limit.
+The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership and bounded execution are proven: the disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` deployed and drove account `0x2863167c8653b9369Ef51De203742A3429AC57E2` through the Alchemy bundler, including one owner-paid operation and one fully sponsored operation whose `actualGasCost` was `0`. Transaction hashes are recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and the manifest.
 
 ### 4.2 Session permission shape
 
@@ -106,7 +106,7 @@ Perago allows only the combination now proven enforceable on the deployed module
 - one validation-time expiry window, which is always set;
 - no `root`, wildcard contract, all-contract function, module install, upgrade, ownership, batch, `performCreate`, runtime-validation, or ERC-20 `approve` authority. The SDK rejects any of those selectors at encode time, and the selector values are taken from the deployed account's dispatcher rather than from vendor constants.
 
-Locally replayed chain-97 bytecode confirms the enforcement: the allowlisted call is accepted, while an unrelated target and an unallowlisted selector fail the allowlist hook, `installValidation` and `upgradeToAndCall` fail validation lookup, an over-limit spend reverts before any value moves, and an expired or revoked session fails validation. The remaining evidence for this section is signed chain-97 execution, which is tracked in [`../BUILD-PLAN.md`](../BUILD-PLAN.md).
+Both locally replayed chain-97 bytecode and signed chain-97 execution confirm the enforcement: the allowlisted call is accepted, while an unrelated target and an unallowlisted selector fail the allowlist hook, `installValidation` and a revoked session fail validation lookup, a self-call exceeds the account's self-call recursion guard, an over-limit spend reverts before any value moves, and an expired session fails the time-range window. Each rejection reason is decoded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md).
 
 Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. Token spend for a swap must therefore be authorized inside one account-executed call, or bounded by the AllowlistModule ERC-20 spend limit. That choice is decision gate `D-004` and is resolved with the swap adapter, not by widening the session.
 

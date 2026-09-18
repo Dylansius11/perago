@@ -52,14 +52,27 @@
       "role": "Session validation module that enforces Perago mandate expiry."
     }
   },
-  "status": "verified-code",
-  "ownerPaidUserOperation": {
+  "status": "verified",
+  "liveEvidence": {
     "account": "0x2863167c8653b9369Ef51De203742A3429AC57E2",
     "rootOwner": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
-    "userOpHash": "0x95a0cf331ebcc0012eef451834b6e5884e73a23dfaafdcf7d41f0dd226819834",
-    "transactionHash": "0x3182afdc31878abd6a9f0639e1533fd4602368ee766ba0689a0530a1b51eec05",
-    "blockNumber": "131788898",
-    "effect": "deployed the account and installed one bounded mandate session"
-  },
-  "pendingEvidence": ["sponsored UserOperation on chain 97"]
+    "probe": "pnpm --filter @perago/executor probe:account-live",
+    "ownerPaidUserOperation": {
+      "userOpHash": "0x6f1d29ec053945124c7a916aa681627078f8c3d03f156e96b963f9e1bd90c65d",
+      "transactionHash": "0xf33b27b978f0f3b676c3aa66d9aba8a2fb07393c8581a77d01db7e9a706edb31",
+      "blockNumber": "131790009",
+      "effect": "root owner installed one bounded mandate session"
+    },
+    "sponsoredUserOperation": {
+      "userOpHash": "0x0e5498793edb9d83fab5ad50cf730688533b036db88b55305e4ddf1554e93971",
+      "transactionHash": "0xeb5a84b01278515b6dc3f1eacf6c952098566ae285e34393d9af3cc5690efeb5",
+      "blockNumber": "131790024",
+      "actualGasCost": "0",
+      "effect": "session signer executed its single allowlisted call with Alchemy bundler sponsorship"
+    },
+    "accountDeployment": {
+      "transactionHash": "0x3182afdc31878abd6a9f0639e1533fd4602368ee766ba0689a0530a1b51eec05",
+      "blockNumber": "131788898"
+    }
+  }
 }

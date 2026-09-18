@@ -34,8 +34,9 @@ import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 
 const BSC_TESTNET_CHAIN_ID = 97;
-const SESSION_ENTITY_ID = 21;
-const EXPIRED_SESSION_ENTITY_ID = 22;
+/** Permission slots persist, so each run claims a pair no earlier run used. */
+const ENTITY_ID_FLOOR = 1_000;
+const ENTITY_ID_SPAN = 100_000;
 
 /** Verified BSC Testnet WBNB used as the single allowlisted session target. */
 const WBNB: Address = "0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F";
@@ -400,9 +401,14 @@ async function main() {
     );
   }
 
+  const entityIdBase =
+    ENTITY_ID_FLOOR + Number(BigInt(Date.now()) % BigInt(ENTITY_ID_SPAN));
+  const sessionEntityId = entityIdBase;
+  const expiredEntityId = entityIdBase + 1;
+
   const permission = {
     account,
-    entityId: SESSION_ENTITY_ID,
+    entityId: sessionEntityId,
     nativeSpendLimit: SESSION_NATIVE_LIMIT,
     selectors: [DEPOSIT_SELECTOR],
     sessionSigner: sessionSigner.address,
@@ -412,16 +418,18 @@ async function main() {
       Number((await client.getBlock()).timestamp) + SESSION_WINDOW_SECONDS,
   } as const;
 
-  // 2. Owner-paid UserOperation: deploy the account and install the session.
-  const deployment = await submit({
+  // 2. Owner-paid UserOperation: deploy the account if needed, install the session.
+  const priorCode = await client.getCode({ address: account });
+  const deployedThisRun = !priorCode || priorCode === "0x";
+  const sessionInstall = await submit({
     callData: encodeInstallMandateSession(permission),
     entityId: 0,
     isGlobalValidation: true,
     signer: owner,
-    withFactory: true,
+    withFactory: deployedThisRun,
   });
-  const deployedCode = await client.getCode({ address: account });
-  if (!deployedCode || deployedCode === "0x") {
+  const accountCode = await client.getCode({ address: account });
+  if (!accountCode || accountCode === "0x") {
     throw new Error("the owner-paid UserOperation did not deploy the account");
   }
 
@@ -447,7 +455,7 @@ async function main() {
       note: "Alchemy Bundler Sponsored Operation with zero UserOperation fees",
       result: await submit({
         callData: allowedCall,
-        entityId: SESSION_ENTITY_ID,
+        entityId: sessionEntityId,
         isGlobalValidation: false,
         signer: sessionSigner,
         sponsored: true,
@@ -459,7 +467,7 @@ async function main() {
       note: `sponsorship rejected: ${short(error instanceof Error ? error.message : error)}`,
       result: await submit({
         callData: allowedCall,
-        entityId: SESSION_ENTITY_ID,
+        entityId: sessionEntityId,
         isGlobalValidation: false,
         signer: sessionSigner,
       }),
@@ -495,7 +503,7 @@ async function main() {
     try {
       await submit({
         callData: params.callData,
-        entityId: params.entityId ?? SESSION_ENTITY_ID,
+        entityId: params.entityId ?? sessionEntityId,
         isGlobalValidation: false,
         signer: sessionSigner,
       });
@@ -534,7 +542,7 @@ async function main() {
   await expectRejected({
     callData: encodeInstallMandateSession({
       ...permission,
-      entityId: SESSION_ENTITY_ID + 100,
+      entityId: sessionEntityId + 100,
     }),
     name: "module install through the session",
   });
@@ -559,7 +567,7 @@ async function main() {
   const expiredInstall = await submit({
     callData: encodeInstallMandateSession({
       ...permission,
-      entityId: EXPIRED_SESSION_ENTITY_ID,
+      entityId: expiredEntityId,
       validUntil: Number((await client.getBlock()).timestamp) - 60,
     }),
     entityId: 0,
@@ -568,7 +576,7 @@ async function main() {
   });
   await expectRejected({
     callData: allowedCall,
-    entityId: EXPIRED_SESSION_ENTITY_ID,
+    entityId: expiredEntityId,
     name: "expired session permission",
   });
 
@@ -584,11 +592,23 @@ async function main() {
     name: "revoked session permission",
   });
 
+  // 6. Leave no residual permission behind, so the probe is safely repeatable.
+  const expiredRevocation = await submit({
+    callData: encodeUninstallMandateSession({
+      ...permission,
+      entityId: expiredEntityId,
+    }),
+    entityId: 0,
+    isGlobalValidation: true,
+    signer: owner,
+  });
+
   const endBalance = await client.getBalance({ address: account });
   console.log(
     JSON.stringify(
       {
         account,
+        accountDeployedThisRun: deployedThisRun,
         cases,
         chainId,
         gas: {
@@ -598,15 +618,16 @@ async function main() {
         ownerEoa: owner.address,
         session: {
           allowedSelectors: permission.selectors,
-          entityId: SESSION_ENTITY_ID,
+          entityId: sessionEntityId,
           nativeSpendLimit: formatEther(SESSION_NATIVE_LIMIT),
           signer: sessionSigner.address,
           target: WBNB,
         },
         userOperations: {
-          deployAndInstall: deployment,
           expiredSessionInstall: expiredInstall,
+          expiredSessionRevocation: expiredRevocation,
           sessionCall: { mode: sponsorship.mode, ...sponsorship.result },
+          sessionInstall,
           sessionRevocation: revocation,
         },
         wrappedBalance: {

@@ -406,7 +406,7 @@ Only externally dependent choices remain open:
 1. `D-002`: live staking deployment and testnet behavior.
 2. `D-003`: target ERC-8183 deployment/payment token.
 3. `D-004`: whether ERC-20 spend for a swap is authorized inside one account-executed call or bounded by the AllowlistModule ERC-20 spend limit; a session key never receives a bare `approve` selector.
-4. Signed chain-97 UserOperation evidence for the pinned Alchemy EntryPoint/account/module deployments and the fallback public bundler. Deployment code and session-permission encoding are already verified against chain 97; only owner-signed execution remains.
+4. Fallback public bundler capability. The pinned Alchemy EntryPoint/account/module deployments are no longer open: owner-paid and fully sponsored UserOperations, bounded session execution, and every forbidden-shape rejection are proven on chain 97 and recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and [`../../deployments/bsc-testnet.account.json`](../../deployments/bsc-testnet.account.json).
 5. Exact BSC confirmation depth and independent RPC pair after testnet measurement.
 
 Each is assigned a validation task in [`../BUILD-PLAN.md`](../BUILD-PLAN.md); none authorizes a placeholder implementation or fabricated integration claim.
