@@ -147,7 +147,7 @@ Conflicting product or security choices require user resolution. Tooling failure
 
 Newest entries first. Each entry records a root cause and a durable operating rule.
 
-- No entries yet.
+- Root cause: a third-party RPC client included the endpoint in an error string, exposing an Alchemy app key in a supervised-process log. Rule: redact URLs before logging caught provider errors; rotate a leaked credential before any retry.
 
 ## Self Insight Logs
 
