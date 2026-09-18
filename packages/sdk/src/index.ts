@@ -1,3 +1,24 @@
+export {
+  ACCOUNT_EXECUTE_SELECTOR,
+  buildUserOperationNonceKey,
+  deriveSemiModularAccountAddress,
+  EXECUTE_USER_OP_SELECTOR,
+  encodeAccountExecute,
+  encodeInstallMandateSession,
+  encodeSemiModularAccountFactoryData,
+  encodeUninstallMandateSession,
+  MAX_SESSION_ENTITY_ID,
+  type MandateSessionPermission,
+  MODULAR_ACCOUNT_V2_ADDRESSES,
+  type ModularAccountV2Addresses,
+  PRIVILEGED_SELECTORS,
+  packUserOperationSignature,
+  ROOT_OWNER_ENTITY_ID,
+  serializeHookConfig,
+  serializeModuleEntity,
+  serializeValidationConfig,
+  wrapExecuteUserOp,
+} from "./account/modular-account.js";
 export { canonicalJson } from "./canonical-json.js";
 export {
   type CompiledPlan,

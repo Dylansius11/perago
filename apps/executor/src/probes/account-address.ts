@@ -1,40 +1,13 @@
 import {
-  type Address,
-  createPublicClient,
-  encodePacked,
-  getAddress,
-  getContractAddress,
-  http,
-  keccak256,
-} from "viem";
+  deriveSemiModularAccountAddress,
+  MODULAR_ACCOUNT_V2_ADDRESSES,
+} from "@perago/sdk";
+import { createPublicClient, formatEther, getAddress, http } from "viem";
 
 const BSC_TESTNET_CHAIN_ID = 97;
 const DEFAULT_RPC_URL = "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
-const FACTORY_ADDRESS = "0x00000000000017c61b5bEe81050EC8eFc9c6fecd";
-const IMPLEMENTATION_ADDRESS = "0x000000000000c5A9089039570Dd36455b5C07383";
-const DEFAULT_SALT = 0n;
-const SMA_ENTITY_ID = 0xffffffff;
-
-export function deriveSemiModularAccountAddress(
-  ownerAddress: Address,
-): Address {
-  const owner = getAddress(ownerAddress);
-  const combinedSalt = keccak256(
-    encodePacked(
-      ["address", "uint256", "uint32"],
-      [owner, DEFAULT_SALT, SMA_ENTITY_ID],
-    ),
-  );
-  const bytecode =
-    `0x6100513d8160233d3973${IMPLEMENTATION_ADDRESS.slice(2)}60095155f3363d3d373d3d363d7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc545af43d6000803e6038573d6000fd5b3d6000f3${owner.slice(2)}` as const;
-
-  return getContractAddress({
-    from: FACTORY_ADDRESS,
-    opcode: "CREATE2",
-    salt: combinedSalt,
-    bytecode,
-  });
-}
+const DEPLOYMENT_SOURCE =
+  "https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses";
 
 async function main() {
   const configuredOwner = process.env.PERAGO_ROOT_OWNER_ADDRESS;
@@ -43,18 +16,21 @@ async function main() {
   }
 
   const owner = getAddress(configuredOwner);
-  const account = deriveSemiModularAccountAddress(owner);
+  const account = deriveSemiModularAccountAddress({ owner });
   const client = createPublicClient({
     transport: http(process.env.PERAGO_BSC_TESTNET_RPC ?? DEFAULT_RPC_URL, {
       retryCount: 0,
       timeout: 20_000,
     }),
   });
-  const [chainId, block, bytecode] = await Promise.all([
-    client.getChainId(),
-    client.getBlock(),
-    client.getCode({ address: account }),
-  ]);
+  const [chainId, block, bytecode, accountBalance, ownerBalance] =
+    await Promise.all([
+      client.getChainId(),
+      client.getBlock(),
+      client.getCode({ address: account }),
+      client.getBalance({ address: account }),
+      client.getBalance({ address: owner }),
+    ]);
 
   if (chainId !== BSC_TESTNET_CHAIN_ID) {
     throw new Error(
@@ -65,19 +41,21 @@ async function main() {
   console.log(
     JSON.stringify(
       {
-        source:
-          "https://github.com/alchemyplatform/aa-sdk/blob/main/packages/smart-accounts/src/ma-v2/predictAddress.ts",
+        source: DEPLOYMENT_SOURCE,
         chainId: chainId.toString(),
         blockNumber: block.number.toString(),
         blockHash: block.hash,
-        rootOwner: owner.toLowerCase(),
+        rootOwner: owner,
+        rootOwnerBalanceTbnb: formatEther(ownerBalance),
         account,
+        accountBalanceTbnb: formatEther(accountBalance),
         isDeployed: bytecode !== undefined && bytecode !== "0x",
         configuration: {
           accountType: "SMA",
-          factory: FACTORY_ADDRESS.toLowerCase(),
-          implementation: IMPLEMENTATION_ADDRESS.toLowerCase(),
-          salt: DEFAULT_SALT.toString(),
+          factory: MODULAR_ACCOUNT_V2_ADDRESSES.factory,
+          implementation:
+            MODULAR_ACCOUNT_V2_ADDRESSES.semiModularAccountBytecode,
+          salt: "0",
         },
       },
       null,
