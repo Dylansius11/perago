@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "probe:account-abstraction": "node src/probes/account-abstraction.ts",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
   "dependencies": {
     "@aa-sdk/core": "4.88.5",
     "@perago/sdk": "workspace:*",
