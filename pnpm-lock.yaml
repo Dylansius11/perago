@@ -208,6 +208,15 @@ importers:
       '@aa-sdk/core':
         specifier: 4.88.5
         version: 4.88.5(typescript@7.0.2)(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))
+      '@alchemy/aa-infra':
+        specifier: 5.2.6
+        version: 5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))
+      '@alchemy/common':
+        specifier: 5.2.6
+        version: 5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))
+      '@alchemy/smart-accounts':
+        specifier: 5.2.6
+        version: 5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))
       '@perago/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -262,6 +271,21 @@ packages:
 
   '@adraffy/ens-normalize@1.11.1':
     resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
+
+  '@alchemy/aa-infra@5.2.6':
+    resolution: {integrity: sha512-22HZeTPNFZfZ/nyH//UYdF4Q6QD8EWXf6Ir2dqus2eWbloKW/tfYuxTKV4RLmMsntwAEw0EYTKUj1/bcFlLyXA==}
+    peerDependencies:
+      viem: ^2.45.0
+
+  '@alchemy/common@5.2.6':
+    resolution: {integrity: sha512-EJZwhHcRLOObilCJGZpzDheQcx9ZVZoSe6EJpFtytp8r/imSuu9Jx2kjHX98jBbPVvuZCE8S8ukcKb0pA7D5VQ==}
+    peerDependencies:
+      viem: ^2.45.0
+
+  '@alchemy/smart-accounts@5.2.6':
+    resolution: {integrity: sha512-S56oCgXWcRsi/D4b201+GXtvnvt+SjTOeiF0MxKwFIs1dInUGRP8aRDYBLz+5KCmvTHfOjVnAIJRGf9/9jifBw==}
+    peerDependencies:
+      viem: ^2.45.0
 
   '@biomejs/biome@2.5.14':
     resolution: {integrity: sha512-0FabLIjd4M/dm8VFI86RMaLLdgepzbdfiAL2R8cr7V81OYYrP1w7Z73KfAwPK5h9SrEBXTzNG2y+mBwPo9xRnw==}
@@ -1483,6 +1507,21 @@ snapshots:
       - typescript
 
   '@adraffy/ens-normalize@1.11.1': {}
+
+  '@alchemy/aa-infra@5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))':
+    dependencies:
+      '@alchemy/common': 5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))
+      viem: 2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5)
+
+  '@alchemy/common@5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))':
+    dependencies:
+      viem: 2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5)
+      zod: 3.25.76
+
+  '@alchemy/smart-accounts@5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))':
+    dependencies:
+      '@alchemy/common': 5.2.6(viem@2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5))
+      viem: 2.56.7(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@6.0.6)(zod@4.6.5)
 
   '@biomejs/biome@2.5.14':
     optionalDependencies:

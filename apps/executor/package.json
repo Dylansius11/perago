@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@aa-sdk/core": "4.88.5",
+    "@alchemy/aa-infra": "5.2.6",
+    "@alchemy/common": "5.2.6",
+    "@alchemy/smart-accounts": "5.2.6",
     "@perago/sdk": "workspace:*",
     "viem": "2.56.7",
     "zod": "4.6.5"
