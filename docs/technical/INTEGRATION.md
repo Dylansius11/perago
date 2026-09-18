@@ -92,7 +92,7 @@ Perago pins these contracts. Code at every address below was read on chain 97 an
 | `ModularAccount` | `v2.0.0` | `0x00000000000002377B26b1EdA7b0BC371C60DD4f` | `proposed`; not used, Perago selects the semi-modular bytecode variant |
 | `PaymasterGuardModule` | `v1.0.0` | `0x0000000000001aA7A7F7E29abe0be06c72FD42A1` | `needs re-verification`; only if sponsorship guarding is adopted |
 
-The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership of the derived account and the sponsored and owner-paid UserOperations remain pending owner-signature evidence.
+The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership is now proven: the disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` deployed and drove account `0x2863167c8653b9369Ef51De203742A3429AC57E2` through the Alchemy bundler, with transaction hashes recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md). Only the sponsored UserOperation is still pending, blocked on the Gas Manager policy transaction-count limit.
 
 ### 4.2 Session permission shape
 

@@ -53,8 +53,13 @@
     }
   },
   "status": "verified-code",
-  "pendingEvidence": [
-    "sponsored UserOperation on chain 97",
-    "owner-paid UserOperation on chain 97"
-  ]
+  "ownerPaidUserOperation": {
+    "account": "0x2863167c8653b9369Ef51De203742A3429AC57E2",
+    "rootOwner": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+    "userOpHash": "0x95a0cf331ebcc0012eef451834b6e5884e73a23dfaafdcf7d41f0dd226819834",
+    "transactionHash": "0x3182afdc31878abd6a9f0639e1533fd4602368ee766ba0689a0530a1b51eec05",
+    "blockNumber": "131788898",
+    "effect": "deployed the account and installed one bounded mandate session"
+  },
+  "pendingEvidence": ["sponsored UserOperation on chain 97"]
 }
