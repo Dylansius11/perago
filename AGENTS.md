@@ -30,6 +30,7 @@ Each fact has one canonical owner. Link to it instead of duplicating it.
 | Chains, protocols, external capabilities | `docs/technical/INTEGRATION.md` |
 | Technology and deployment choices | `docs/technical/TECH-STACK.md` |
 | Delivery phases, task IDs, acceptance gates | `docs/BUILD-PLAN.md` |
+| Durable technical lessons and verified user preferences | `docs/LESSONS.md` |
 | Repository entry point and current status | `README.md` |
 
 Priority when sources disagree: current user instruction, accepted PRD, accepted technical specifications, build plan, implementation. Correct the lower-priority source in the same change.
@@ -107,6 +108,15 @@ When a contract or interface changes, migrate every caller and remove the obsole
 4. Resolve reachable decisions through code or primary sources. Record only genuinely external uncertainty as a decision gate with an owner and validation method.
 5. Reject work that bypasses an accepted requirement, security invariant, or phase hold point.
 
+### Documentation synchronization
+
+1. Every change that alters behavior, scope, evidence, status, or an external claim updates its canonical document in the same change; a documentation update is never deferred to a later commit.
+2. `docs/BUILD-PLAN.md` carries live task status, current evidence, and named blockers while work is in progress; acceptance checkboxes flip only when every acceptance criterion of the task passes.
+3. When an address, interface, dependency version, protocol status, or decision changes, update every canonical document that asserts it, and keep integration status values (`verified`, `proposed`, `needs re-verification`, `blocked`) accurate in `docs/technical/INTEGRATION.md`.
+4. Evidence recorded in documentation names the exact chain, address, block, transaction, command, or primary source, and distinguishes local, fork, testnet, and mainnet evidence.
+5. A durable lesson or verified user preference is appended to `docs/LESSONS.md` in the same change that produced it, newest first, using that file's dated entry format.
+6. Documentation must never claim an unperformed run or an unverified external behavior; an unfinished criterion is recorded as a blocker with its unblocking action and owner.
+
 ### Verification standards
 
 - **Documentation:** validate internal links, requirement/task/acceptance traceability, terminology, states, external source status, and absence of placeholders or stale product language.
@@ -143,18 +153,6 @@ When blocked:
 
 Conflicting product or security choices require user resolution. Tooling failures do not: investigate and repair them when safe.
 
-## Self Learning Logs
+## Lessons and insight
 
-Newest entries first. Each entry records a root cause and a durable operating rule.
-
-- Root cause: a third-party RPC client included the endpoint in an error string, exposing an Alchemy app key in a supervised-process log. Rule: redact URLs before logging caught provider errors; rotate a leaked credential before any retry.
-
-## Self Insight Logs
-
-Newest entries first. Each entry records a verified preference and how to apply it.
-
-- The user prefers deep, explicit documentation and acceptance criteria before implementation; make accepted requirements and gates executable before writing product code.
-- The user will provide Perago's design system later; do not invent UI or visual direction early.
-- The user rejects reuse of the reference product's UI and flow; reuse only audited technical primitives.
-- The user wants frequent coherent commits and `dev` development with PRs into protected `main`; checkpoint complete review units and avoid direct feature work on `main`.
-- The user expects the highest-quality output and informed action rather than timid scaffolding; investigate first, then deliver complete bounded work.
+Durable technical lessons and verified user preferences are recorded newest-first in `docs/LESSONS.md`. Every session appends there rather than inline.
