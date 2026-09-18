@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "probe:account-abstraction": "node --env-file-if-exists=../../.env src/probes/account-abstraction.ts",
+    "probe:account-address": "node --env-file-if-exists=../../.env src/probes/account-address.ts",
     "probe:integrations": "node --env-file-if-exists=../../.env src/probes/integrations.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
