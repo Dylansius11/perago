@@ -1,5 +1,5 @@
 import { TopBar } from "@/components/chrome/top-bar";
-import { SiteFooter, SiteFooterMobile } from "@/components/chrome/footer";
+import { SiteFooter } from "@/components/chrome/footer";
 import { Hero } from "@/components/sections/hero";
 import { LedgerStrip } from "@/components/sections/ledger-strip";
 import { Lifecycle } from "@/components/sections/lifecycle";
@@ -19,7 +19,7 @@ export default function Page() {
   return (
     <>
       <TopBar />
-      <main className="relative z-10">
+      <main>
         <Hero />
         <LedgerStrip />
         <Lifecycle />
@@ -28,10 +28,7 @@ export default function Page() {
         <Receipt />
         <Closing />
       </main>
-      {/* Desktop footer is a fixed layer revealed at page end; keep clear. */}
-      <div className="hidden h-56 md:block" aria-hidden />
       <SiteFooter />
-      <SiteFooterMobile />
     </>
   );
 }

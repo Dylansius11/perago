@@ -25,13 +25,10 @@ export function Closing() {
           <div className="mt-10 flex flex-wrap items-stretch gap-4">
             <a
               href="/"
-              className="group flex items-center gap-4 bg-ink px-7 py-4 text-paper transition-colors duration-200 hover:bg-panel active:scale-[0.98] motion-safe:transition-transform"
+              className="group pressable flex items-center gap-4 bg-ink px-7 py-4 text-paper hover:bg-panel"
             >
               Connect wallet
-              <span
-                aria-hidden
-                className="font-mono transition-transform duration-200 group-hover:translate-x-1"
-              >
+              <span aria-hidden className="arrow font-mono group-hover:translate-x-1">
                 &#8594;
               </span>
             </a>
@@ -39,13 +36,10 @@ export function Closing() {
               href="https://github.com/Dylansius11/perago"
               target="_blank"
               rel="noreferrer"
-              className="group flex items-center gap-3 border border-ink/40 px-7 py-4 text-ink transition-colors duration-200 hover:border-ink"
+              className="group pressable flex items-center gap-3 border border-ink/40 px-7 py-4 text-ink hover:border-ink"
             >
               Read the contracts
-              <span
-                aria-hidden
-                className="font-mono transition-transform duration-200 group-hover:translate-x-1"
-              >
+              <span aria-hidden className="arrow font-mono group-hover:translate-x-1">
                 &#8599;
               </span>
             </a>

@@ -51,7 +51,7 @@ export function FailureStates() {
         <div className="mt-12 grid gap-px border border-ruleinvert bg-ruleinvert md:grid-cols-2">
           {FAILURES.map((f, i) => (
             <RiseIn key={f.code} delay={i * 0.06} className="bg-ink">
-              <div className="rain flex h-full flex-col p-8 text-paper md:p-10">
+              <div className="rain pressable flex h-full flex-col p-8 text-paper hover:bg-panel md:p-10">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/50">
                     {f.code}

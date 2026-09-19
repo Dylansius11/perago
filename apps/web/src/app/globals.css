@@ -58,6 +58,40 @@
 }
 
 /*
+ * Interactive surfaces share one transition definition. Declaring the
+ * property list once prevents the classic bug where a second
+ * `transition-*` class silently narrows the list and a color change snaps
+ * instead of easing.
+ */
+@utility pressable {
+  transition-property: color, background-color, border-color, transform, opacity;
+  transition-duration: 220ms;
+  transition-timing-function: var(--ease-out-vivid);
+}
+
+.pressable:active {
+  transform: scale(0.98);
+}
+
+/* Arrow that leans into its direction of travel on group hover. */
+@utility arrow {
+  transition-property: transform;
+  transition-duration: 260ms;
+  transition-timing-function: var(--ease-out-vivid);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable,
+  .arrow {
+    transition-duration: 1ms;
+  }
+
+  .pressable:active {
+    transform: none;
+  }
+}
+
+/*
  * Browser chrome belongs to the design. Selection, focus, and the caret
  * inherit the world instead of shipping defaults.
  */

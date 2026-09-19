@@ -63,7 +63,7 @@ export function Receipt() {
                   ].map(([k, v]) => (
                     <div
                       key={k}
-                      className="flex items-baseline justify-between gap-6 px-6 py-3"
+                      className="flex items-baseline justify-between gap-6 px-6 py-3 transition-colors duration-200 ease-out-vivid hover:bg-paper/[0.04]"
                     >
                       <dt className="text-paper/50">{k}</dt>
                       <dd className="text-right text-paper/85">{v}</dd>

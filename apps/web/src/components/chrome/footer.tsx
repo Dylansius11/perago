@@ -1,10 +1,9 @@
-import Image from "next/image";
+import { Wordmark } from "@/components/brand/wordmark";
 
 /*
- * Footer: a half-height fixed ink layer revealed as the page scrolls past
- * its end. The page content has bottom padding equal to the layer height so
- * the last section never hides beneath it. Three cells on desktop, stacking
- * on mobile.
+ * Footer. A normal, in-flow block at the end of the document: it scrolls
+ * with the page and never follows the viewport. Three zones separated by
+ * hairlines: the mark, the navigation, and the release facts.
  */
 
 const NAV = [
@@ -16,67 +15,32 @@ const NAV = [
 
 export function SiteFooter() {
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-30 hidden h-56 border-t border-ruleinvert bg-ink text-paper md:block">
-      <div className="rain mx-auto grid h-full max-w-[1560px] grid-cols-[1fr_auto]">
-        <div className="flex min-w-0 flex-col justify-between py-6 pl-6">
-          <Image
-            src="/brand/primary-mark.png"
-            alt="Perago"
-            width={200}
-            height={102}
-            className="h-12 w-auto"
-          />
-          <nav aria-label="Footer" className="flex gap-7">
+    <footer className="rain border-t border-ruleinvert bg-ink text-paper">
+      <div className="mx-auto max-w-[1560px] px-6 py-14 md:px-10">
+        <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
+          <Wordmark tone="paper" size="lg" />
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-10 gap-y-4">
             {NAV.map(([label, href]) => (
               <a
                 key={label}
                 href={href}
-                className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60 transition-colors duration-200 hover:text-signal"
+                className="group pressable relative font-mono text-[12px] uppercase tracking-[0.16em] text-paper/60 hover:text-signal"
               >
                 {label}
+                <span
+                  aria-hidden
+                  className="absolute -bottom-1.5 left-0 h-px w-full origin-left scale-x-0 bg-signal transition-transform duration-300 ease-out-vivid group-hover:scale-x-100"
+                />
               </a>
             ))}
           </nav>
         </div>
 
-        <div className="flex flex-col justify-between border-l border-ruleinvert py-6 pr-6 text-right">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/50">
-            BSC Testnet &middot; Phase 2
-          </p>
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/50">
-            &copy; 2026 Perago
-          </p>
+        <div className="mt-14 flex flex-col gap-2 border-t border-ruleinvert pt-6 font-mono text-[11px] uppercase tracking-[0.16em] text-paper/45 md:flex-row md:items-center md:justify-between">
+          <span>&copy; 2026 Perago</span>
+          <span>BSC Testnet &middot; Phase 2</span>
         </div>
       </div>
-    </footer>
-  );
-}
-
-/** Mobile footer: static, since the fixed reveal is a desktop device. */
-export function SiteFooterMobile() {
-  return (
-    <footer className="border-t border-ruleinvert bg-ink px-6 py-10 text-paper md:hidden">
-      <Image
-        src="/brand/primary-mark.png"
-        alt="Perago"
-        width={200}
-        height={102}
-        className="h-12 w-auto"
-      />
-      <nav aria-label="Footer" className="mt-6 flex flex-col gap-3">
-        {NAV.map(([label, href]) => (
-          <a
-            key={label}
-            href={href}
-            className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60"
-          >
-            {label}
-          </a>
-        ))}
-      </nav>
-      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.16em] text-paper/50">
-        &copy; 2026 Perago &middot; BSC Testnet &middot; Phase 2
-      </p>
     </footer>
   );
 }
