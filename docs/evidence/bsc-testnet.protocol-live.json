@@ -1,0 +1,150 @@
+{
+  "account": "0x2863167c8653b9369Ef51De203742A3429AC57E2",
+  "chainId": 97,
+  "gas": {
+    "endBalance": "0.0028612015",
+    "startBalance": "0.0052612015"
+  },
+  "jobs": {
+    "completed": {
+      "budgetWei": "400000000000000000",
+      "jobId": "1258",
+      "operations": {
+        "complete": {
+          "actualGasCost": "0",
+          "blockNumber": "131856434",
+          "transactionHash": "0x57264534623660086dc3b2d01c427e90ccdb5c4f8ddcd0e83e2fe692df566b63",
+          "userOpHash": "0x0d58b9b60bef2d44c2b0b65269f34f915e14c1ba87828c5fe746968c3063b609"
+        },
+        "create": {
+          "actualGasCost": "0",
+          "blockNumber": "131856395",
+          "transactionHash": "0x61ee4d4098cb5a219348a43cf56a98d4063b3a173aa0240d4702238a7167946e",
+          "userOpHash": "0x26f7a2e0b3a4899e91c9ae50a3dfd8ead7790650d328c4a78b8ad7f0be89f84b"
+        },
+        "fund": {
+          "actualGasCost": "0",
+          "blockNumber": "131856409",
+          "transactionHash": "0xa3428caad9c05b32f29d54fb5192290bd6fba666b3da007c9de03dc9eb212480",
+          "userOpHash": "0xb44b66a073e8d38daaee69840502cd2d69a177a0661cd50a70f969b6ad447919"
+        },
+        "submit": {
+          "transactionHash": "0x24e9842e332f17edf0b91afdd50ef37e5b2a442443b0f12bd310c2a65994d6cb"
+        }
+      },
+      "outcome": "escrow released to provider 0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+      "statusPath": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "rejected": {
+      "budgetWei": "400000000000000000",
+      "jobId": "1259",
+      "operations": {
+        "create": {
+          "actualGasCost": "0",
+          "blockNumber": "131856447",
+          "transactionHash": "0xbf3d03d1cc9d471996c73e474b7f820610d940ff13a408394dd7b8466121f4d2",
+          "userOpHash": "0xcee8585f4e97ae2bdc58b70f6051ce745210fadb8a3757e9b123e75b8a12bc35"
+        },
+        "fund": {
+          "actualGasCost": "0",
+          "blockNumber": "131856459",
+          "transactionHash": "0xa9ecb7fa89bcd558d0d31ba0e41be059636f89dbe669e342a35e2fe72dcb3bfa",
+          "userOpHash": "0xde066ec779ab148bb66bc29d0104690fd996cb5f21b23e71d0f1f872b5610545"
+        },
+        "reject": {
+          "actualGasCost": "0",
+          "blockNumber": "131856471",
+          "transactionHash": "0x149ab35670880f2870acb829284333424e07c84ee3323cde0303f573a11a3171",
+          "userOpHash": "0xdd0821dc9bcf7c408bed86df3356bb4279655523fe5daced6d095f6645fba51b"
+        }
+      },
+      "outcome": "escrow refunded to the client before submission",
+      "statusPath": [
+        1,
+        4
+      ]
+    },
+    "expired": {
+      "budgetWei": "400000000000000000",
+      "jobId": "1260",
+      "operations": {
+        "claimRefund": {
+          "actualGasCost": "0",
+          "blockNumber": "131857200",
+          "transactionHash": "0x9470fd0087f6ad8a04d7dc0069f798ee5774b4eee1e99ba66e6bc0793c234fd7",
+          "userOpHash": "0x3288a423a6288b4c02da634388815d1e57aeb7c1b7366093c007dabfe0eeacb4"
+        },
+        "create": {
+          "actualGasCost": "0",
+          "blockNumber": "131856484",
+          "transactionHash": "0xba8f1962976e6e95189be1d7b4753dcc193132c128a7abd86446ca4ae3a53ff3",
+          "userOpHash": "0x7c4b9deb4ac18bff7bee6b00e639cd9a7e72b885a77171ea1482175f3a182ae7"
+        },
+        "fund": {
+          "actualGasCost": "0",
+          "blockNumber": "131856496",
+          "transactionHash": "0x283e3e205b007b766b02efcafda213e4b184f140372400ee688ffce5b2d85f87",
+          "userOpHash": "0x25d9cfa0b36da42b8a7de13ff334aeb679ec33d184c06bbec2c450aab1628f93"
+        }
+      },
+      "outcome": "escrow refunded after expiry without provider or evaluator action",
+      "statusPath": [
+        1,
+        5
+      ]
+    }
+  },
+  "provider": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+  "sponsorshipFallbacks": [],
+  "stake": {
+    "cakeReturnedWei": "31743379200592744851574047295",
+    "cakeStakedWei": "31775154354917688259102245144",
+    "deposit": {
+      "actualGasCost": "0",
+      "blockNumber": "131856344",
+      "transactionHash": "0x399b362f7dbce4cd1fdd80c27d3a036d46e0af5a6bfd53d1a08118c8d4333059",
+      "userOpHash": "0x5578e5b28a2ec5291a0093a0424ec1a83aff75eb0982a0e616ef0c28aa11a5dd"
+    },
+    "sharesWhileStaked": "771228114340296061597",
+    "withdraw": {
+      "actualGasCost": "0",
+      "blockNumber": "131856357",
+      "transactionHash": "0x69c8d0696f39f9fcb937770e335b6f2739696bbd0f571a581ecb50ed3c892838",
+      "userOpHash": "0xaa13873d2e9e0ebe0333537799344e76762d4eecfe2f6de0ddf629fdda0c4f3d"
+    }
+  },
+  "swap": {
+    "amountInWei": "800000000000000",
+    "amountOutWei": "31775154354917688259102245144",
+    "minimumOutWei": "30821899724270157611329177789",
+    "operation": {
+      "actualGasCost": "0",
+      "blockNumber": "131856336",
+      "transactionHash": "0x6329318347d05b355d12ed4ec537772fe864f82080abf954501e6421590fd85b",
+      "userOpHash": "0x4d1049be91177d3fc30bc50429674696125684dcc80899238de8add9d5794aa9"
+    },
+    "quotedOutWei": "31775154354917688259102245144"
+  },
+  "paymentTokenFunding": {
+    "amountInWei": "1000000000000000",
+    "balanceWei": "5365454942256137377",
+    "operation": {
+      "actualGasCost": "0",
+      "blockNumber": "131856370",
+      "transactionHash": "0x6a832f869a164490f63866b28e356444a509c44e309d03cb24f5fd7ed5c63729",
+      "userOpHash": "0xd2735145749c2b4e4dc9e64167cd2c0d2446d60191b44a0f91e0de4407bee9f6"
+    },
+    "providerGasFloat": {
+      "actualGasCost": "0",
+      "blockNumber": "131856383",
+      "transactionHash": "0xa43ae525913870889e6c7d95e95e876f32f2c2036830c0bc3dc81c9402cfb544",
+      "userOpHash": "0x5bed73938bb226cb659131bdbc245f9aa24b78e708a4e48985314d80aba7b4e5"
+    }
+  },
+  "ranAt": "2026-09-19T01:46:46.248Z"
+}

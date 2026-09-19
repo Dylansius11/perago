@@ -78,6 +78,15 @@
       "role": "Kernel paymentToken(); upstream labels it USDC, onchain it is United Stables (U).",
       "erc1967Implementation": "0x6b5c44cbd4bbddf11723557ba1b77ec5e33225cc",
       "implementationCodeHash": "0x72a63adfb9af6944c694e1ecb76b566fd921a10ce98754f2f841a821ff8fb16f"
+    },
+    "peragoAcpHook": {
+      "address": "0x64a807FceFb25ea710B2D3cb15Abf5e46f32cff0",
+      "codeHash": "0xd7cbd6ff6d1773be259d64b7cbdc12c402086f3d43d07ef6eb86f3d4f8d457c0",
+      "role": "Perago-owned inert IACPHook; the deployed kernel rejects jobs without a hook that answers interface id 0x7ff6bc9e.",
+      "source": "packages/contracts/src/hooks/PeragoAcpHook.sol",
+      "deploymentTransaction": "0xced1ecf0dd8854cc662d834ea0b521489e56ef42a0625137870d0fd655a6453a",
+      "deployer": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+      "commerce": "0xa206c0517B6371C6638CD9e4a42Cc9f02A33B0DE"
     }
   },
   "tokens": {

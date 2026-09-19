@@ -26,6 +26,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 
 import { required, short } from "../lib/environment.ts";
+import { writeEvidence } from "../lib/evidence.ts";
 import {
   createUserOperationClient,
   type SubmittedUserOperation,
@@ -46,7 +47,11 @@ const SLIPPAGE_BP = 300n;
 const BP_DENOMINATOR = 10_000n;
 const SWAP_DEADLINE_SECONDS = 600n;
 const LONG_JOB_SECONDS = 3_600;
-const EXPIRING_JOB_SECONDS = 120;
+/**
+ * The kernel rejects `expiredAt <= block.timestamp + 5 minutes` with
+ * `ExpiryTooShort()`, so the expiry path must outlive that floor.
+ */
+const EXPIRING_JOB_SECONDS = 360;
 const EXPIRY_POLL_INTERVAL_MS = 10_000;
 
 const JOB_STATUS = {
@@ -304,6 +309,11 @@ async function main() {
     functionName: "userInfo",
   });
   expect(position[0] > 0n, "the CAKE Pool recorded no shares for the account");
+  const cakeWhileStaked = await balanceOf(at("cake"), account);
+  expect(
+    cakeAfterSwap - cakeWhileStaked === cakeReceived,
+    "the deposit did not move exactly the staked amount",
+  );
   const residualAllowance = await client.readContract({
     abi: erc20Abi,
     address: at("cake"),
@@ -321,7 +331,7 @@ async function main() {
       encodeFunctionData({ abi: cakePoolAbi, functionName: "withdrawAll" }),
     ),
   ]);
-  const cakeAfterUnstake = await balanceOf(at("cake"), account);
+  const cakeReturned = (await balanceOf(at("cake"), account)) - cakeWhileStaked;
   const positionAfter = await client.readContract({
     abi: cakePoolAbi,
     address: at("cakePool"),
@@ -329,8 +339,10 @@ async function main() {
     functionName: "userInfo",
   });
   expect(positionAfter[0] === 0n, "the CAKE Pool position did not close");
+  // Withdrawing inside the fee window returns the stake minus the documented
+  // 0.1% early-withdrawal fee, so a full return would mean the fee vanished.
   expect(
-    cakeAfterUnstake > 0n && cakeAfterUnstake < cakeReceived,
+    cakeReturned > 0n && cakeReturned < cakeReceived,
     "unstaking did not return the staked asset minus the documented fee",
   );
 
@@ -391,7 +403,9 @@ async function main() {
             account,
             BigInt(params.expiredAt),
             params.description,
-            "0x0000000000000000000000000000000000000000",
+            // The deployed kernel rejects `hook == address(0)`; Perago supplies
+            // an inert hook so no third party can gate its job lifecycle.
+            at("peragoAcpHook"),
           ],
           functionName: "createJob",
         }),
@@ -623,45 +637,38 @@ async function main() {
     statusPath: [JOB_STATUS.Funded, expiryStatus],
   };
 
-  console.log(
-    JSON.stringify(
-      {
-        account,
-        chainId,
-        gas: {
-          endBalance: formatEther(
-            await client.getBalance({ address: account }),
-          ),
-          startBalance: formatEther(startBalance),
-        },
-        jobs,
-        provider: owner.address,
-        sponsorshipFallbacks,
-        stake: {
-          cakeReturnedWei: cakeAfterUnstake.toString(),
-          cakeStakedWei: cakeReceived.toString(),
-          deposit: stake,
-          sharesWhileStaked: position[0].toString(),
-          withdraw: unstake,
-        },
-        swap: {
-          amountInWei: CAKE_SWAP_IN.toString(),
-          amountOutWei: cakeReceived.toString(),
-          minimumOutWei: minCakeOut.toString(),
-          operation: swap,
-          quotedOutWei: quote.result[0].toString(),
-        },
-        paymentTokenFunding: {
-          amountInWei: PAYMENT_SWAP_IN.toString(),
-          balanceWei: paymentBalance.toString(),
-          operation: paymentSwap,
-          providerGasFloat: providerGasTransfer,
-        },
-      },
-      (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-      2,
-    ),
-  );
+  writeEvidence("bsc-testnet.protocol-live", {
+    account,
+    chainId,
+    gas: {
+      endBalance: formatEther(await client.getBalance({ address: account })),
+      startBalance: formatEther(startBalance),
+    },
+    jobs,
+    provider: owner.address,
+    sponsorshipFallbacks,
+    stake: {
+      cakeReturnedWei: cakeReturned.toString(),
+      cakeStakedWei: cakeReceived.toString(),
+      deposit: stake,
+      sharesWhileStaked: position[0].toString(),
+      withdraw: unstake,
+    },
+    swap: {
+      amountInWei: CAKE_SWAP_IN.toString(),
+      amountOutWei: cakeReceived.toString(),
+      minimumOutWei: minCakeOut.toString(),
+      operation: swap,
+      quotedOutWei: quote.result[0].toString(),
+    },
+    paymentTokenFunding: {
+      amountInWei: PAYMENT_SWAP_IN.toString(),
+      balanceWei: paymentBalance.toString(),
+      operation: paymentSwap,
+      providerGasFloat: providerGasTransfer,
+    },
+    ranAt: new Date().toISOString(),
+  });
 }
 
 void main();

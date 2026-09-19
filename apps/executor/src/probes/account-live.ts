@@ -25,6 +25,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 
 import { required, short } from "../lib/environment.ts";
+import { writeEvidence } from "../lib/evidence.ts";
 import {
   createUserOperationClient,
   type SubmittedUserOperation,
@@ -43,6 +44,8 @@ const WITHDRAW_SELECTOR = toFunctionSelector("withdraw(uint256)");
 const SESSION_NATIVE_LIMIT = parseEther("0.005");
 const ALLOWED_SPEND = parseEther("0.0002");
 const EXCESS_SPEND = parseEther("0.01");
+/** Float the probe needs when the bundler refuses to sponsor an operation. */
+const MINIMUM_ACCOUNT_BALANCE = parseEther("0.003");
 const SESSION_WINDOW_SECONDS = 3600;
 
 const wbnbAbi = parseAbi([
@@ -108,8 +111,10 @@ async function main() {
     }
   }
 
+  // Sponsored operations cost the account nothing, but the owner-paid fallback
+  // and the wrapped-value case still need a real float.
   const startBalance = await client.getBalance({ address: account });
-  if (startBalance < parseEther("0.01")) {
+  if (startBalance < MINIMUM_ACCOUNT_BALANCE) {
     throw new Error(
       `account ${account} holds ${formatEther(startBalance)} tBNB; fund it before running this probe`,
     );
@@ -327,44 +332,39 @@ async function main() {
   });
 
   const endBalance = await client.getBalance({ address: account });
-  console.log(
-    JSON.stringify(
-      {
-        account,
-        accountDeployedThisRun: deployedThisRun,
-        cases,
-        chainId,
-        gas: {
-          endBalance: formatEther(endBalance),
-          startBalance: formatEther(startBalance),
-        },
-        ownerEoa: owner.address,
-        session: {
-          allowedSelectors: permission.selectors,
-          entityId: sessionEntityId,
-          nativeSpendLimit: formatEther(SESSION_NATIVE_LIMIT),
-          signer: sessionSigner.address,
-          target: WBNB,
-        },
-        userOperations: {
-          expiredSessionInstall: expiredInstall,
-          expiredSessionRevocation: expiredRevocation,
-          sessionCall: { mode: sponsorship.mode, ...sponsorship.result },
-          sessionInstall,
-          sessionRevocation: revocation,
-        },
-        wrappedBalance: {
-          after: formatEther(wrappedAfter),
-          before: formatEther(wrappedBefore),
-        },
-        ...(sponsorship.mode === "owner-paid"
-          ? { sponsorshipBlocker: sponsorship.note }
-          : {}),
-      },
-      (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-      2,
-    ),
-  );
+  writeEvidence("bsc-testnet.account-live", {
+    account,
+    accountDeployedThisRun: deployedThisRun,
+    cases,
+    chainId,
+    gas: {
+      endBalance: formatEther(endBalance),
+      startBalance: formatEther(startBalance),
+    },
+    ownerEoa: owner.address,
+    session: {
+      allowedSelectors: permission.selectors,
+      entityId: sessionEntityId,
+      nativeSpendLimit: formatEther(SESSION_NATIVE_LIMIT),
+      signer: sessionSigner.address,
+      target: WBNB,
+    },
+    userOperations: {
+      expiredSessionInstall: expiredInstall,
+      expiredSessionRevocation: expiredRevocation,
+      sessionCall: { mode: sponsorship.mode, ...sponsorship.result },
+      sessionInstall,
+      sessionRevocation: revocation,
+    },
+    wrappedBalance: {
+      after: formatEther(wrappedAfter),
+      before: formatEther(wrappedBefore),
+    },
+    ranAt: new Date().toISOString(),
+    ...(sponsorship.mode === "owner-paid"
+      ? { sponsorshipBlocker: sponsorship.note }
+      : {}),
+  });
 }
 
 void main();
