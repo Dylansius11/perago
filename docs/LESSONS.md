@@ -78,6 +78,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## User insight
 
+### 2026-09-19 - Commit cadence is a working requirement, not a style note
+
+- Asked explicitly for more frequent commits while long onchain work was in flight.
+- Application: commit at every coherent boundary - a shared helper extracted, a probe proven live, a manifest recorded, a document synchronized - instead of batching a phase into one commit, and push `dev` after each so progress is externally visible.
+
 ### 2026-09-18 - Verified working preferences
 
 - Prefers deep, explicit documentation and acceptance criteria before implementation; make accepted requirements and gates executable before writing product code.
