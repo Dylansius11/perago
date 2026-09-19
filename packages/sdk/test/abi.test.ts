@@ -3,6 +3,7 @@ import { toFunctionSelector } from "viem";
 import { describe, expect, it } from "vitest";
 
 import {
+  mandateExecutorAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
   peragoVerifierAbi,
@@ -90,5 +91,53 @@ describe("generated Perago contract ABIs", () => {
       BigInt(toFunctionSelector(abiFunction(peragoAcpHookAbi, "afterAction")));
     // The deployed kernel rejects a hook that answers anything else.
     expect(`0x${interfaceId.toString(16).padStart(8, "0")}`).toBe("0x7ff6bc9e");
+  });
+
+  // The executor is what consumes a root signature, so its calldata shape is the
+  // one that must match what the wallet displayed and the SDK hashed.
+  it("binds mandate authorization to the frozen mandate tuple", () => {
+    expect(
+      toFunctionSelector(abiFunction(mandateExecutorAbi, "authorize")),
+    ).toBe(toFunctionSelector(`authorize(${MANDATE_TUPLE},bytes)`));
+    expect(
+      toFunctionSelector(abiFunction(mandateExecutorAbi, "hashMandate")),
+    ).toBe(toFunctionSelector(`hashMandate(${MANDATE_TUPLE})`));
+    // The account performs the accepted attempt with the same tuple plus the
+    // executor proof; a tuple change here would strand every signed mandate.
+    expect(toFunctionSelector(abiFunction(mandateExecutorAbi, "perform"))).toBe(
+      toFunctionSelector(
+        `perform(${MANDATE_TUPLE},bytes,(bytes32,address,address,uint48),bytes)`,
+      ),
+    );
+  });
+
+  // Offchain reason mapping reads these selectors; a renamed error silently
+  // becomes an unknown failure in the API and the receipt.
+  it("keeps the authorization reason codes the API maps", () => {
+    const errors = mandateExecutorAbi
+      .filter((entry) => entry.type === "error")
+      .map((entry) => entry.name);
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        "InvalidRootSignature",
+        "NonceAlreadyUsed",
+        "InvalidTransition",
+        "OwnerEpochMismatch",
+        "PolicyHashMismatch",
+        "RootOwnerMismatch",
+        "CommerceJobAlreadyBound",
+        "UnsupportedAdapter",
+        "WrongExecutor",
+        "WrongChain",
+        "ExpiredMandate",
+        "ExecutionNotStarted",
+        "ExecutionWindowElapsed",
+        "InvalidExecutorProof",
+        "ActionHashMismatch",
+        "VerificationFailed",
+        "PostconditionHashMismatch",
+        "RecipientMismatch",
+      ]),
+    );
   });
 });

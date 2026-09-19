@@ -4,6 +4,36 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-19 - A guard is unproven until a mutation of it fails a test
+
+- Observed: the full `P2-002` suite passed on the first run, yet deleting the subcall gas bound (`gas: available - FAILURE_RECORD_GAS` to `gas: available`) still passed all 49 tests, because at the 2,000,000 gas the test supplied, the EIP-150 1/64 remainder was itself enough to write the terminal `FAILED` record.
+- Root cause: the test proved the failure record exists, not that it survives an adapter that consumes everything it is handed; the gas figure was chosen for comfort rather than sized against the guard.
+- Rule: after a suite goes green, mutate each guard it claims to protect and confirm a named test fails; for a gas-starvation guard, size the call so the 63/64 remainder is demonstrably insufficient (300,000 here, not 2,000,000).
+
+### 2026-09-19 - A source-mutating script must restore in `finally`, and its baseline must be read before the first mutation
+
+- Observed: a mutation loop over `MandateExecutor.sol` asserted a pattern that `forge fmt` had reflowed, raised mid-loop, and left the file mutated; the next cell then re-read that mutated file as its "clean" baseline, so two mutations stacked and the uncommitted implementation had to be repaired by hand.
+- Root cause: the restore ran after the loop instead of in a `finally`, and the baseline was re-read from disk rather than held from before the first write.
+- Rule: capture the pristine text once, write mutations from that captured text, restore inside `finally`, and assert the restored file equals the capture before trusting any later result.
+
+### 2026-09-19 - Check order decides which rejection a caller sees, so order it deliberately
+
+- Observed: the first `MandateExecutor.authorize` implementation validated the ERC-8183 job binding inside the field-shape helper, so replaying an identical mandate reverted `CommerceJobAlreadyBound()` instead of `NonceAlreadyUsed()`; the replay test written first is what exposed it.
+- Root cause: two guards cover overlapping ground, and whichever runs first defines the offchain reason code. Grouping a stateful uniqueness check with stateless field validation moved it ahead of the stricter guard by accident.
+- Rule: order authorization checks caller-cheap and semantically strictest first - identity, chain, time, shape, then account state, then nonce, then binding, and signature recovery last before any state write - and pin the intended order with a test per reason code, because the reason code is a published interface.
+
+### 2026-09-19 - A Foundry `vm.prank` is spent by the next call, including a helper's view call
+
+- Observed: fifteen authorization tests failed with `WrongExecutor()` while the contract was correct; each read `vm.prank(executorSigner); executor.authorize(m, _signMandate(m, ...))`, and the helper's `executor.hashMandate` call consumed the prank, so `authorize` arrived from the test contract.
+- Root cause: argument expressions evaluate after the cheatcode arms, and `prank` applies to exactly one call - a view call counts.
+- Rule: build every signature and read every view before arming `vm.prank`, and treat an unexpected caller-authorization revert in a test as a prank-consumption bug before suspecting the contract.
+
+### 2026-09-19 - The index is shared, so commit by pathspec when another agent works the same worktree
+
+- Observed: a skills-only change staged with `git add .agents AGENTS.md` was committed with a bare `git commit`, and the resulting commit `7b6cf26` also carried `.gitmodules` and the `packages/contracts/lib/forge-std` submodule that a concurrently running agent had staged in the same worktree seconds earlier.
+- Root cause: `git add <paths>` is scoped but `git commit` is not - it commits the entire index, including whatever another process staged, and pushing then makes that attribution permanent on a branch where force-push is forbidden.
+- Rule: when a second agent or terminal is live in this worktree, commit with an explicit pathspec (`git commit -- <paths>`) and read `git diff --cached --name-only` first. Never assume the index holds only your own work.
+
 ### 2026-09-19 - A deployment's constraints are in its bytecode, not in the standard
 
 - Observed: the deployed BNB APEX kernel rejected a spec-legal `createJob` with `HookRequired()`, then would also have rejected `expiredAt = now + 120` with `ExpiryTooShort()`; ERC-8183 mandates neither rule, and the upstream README does not lead with them.
@@ -95,6 +125,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+
+### 2026-09-19 - The user executes the UI; agents prepare only the toolchain seam
+
+- Asked for the frontend scaffold (Tailwind, Motion, shadcn, GSAP skills) and then narrowed it mid-task: install and pin the toolchain, move the brand assets, leave `shadcn init` and every stylesheet to a later agent under the user's own design direction.
+- Application: for this repository, "scaffold" means manifests, configs, a `cn()` helper, a placeholder route that builds, and moved assets — never a CSS entry, `components.json`, component source, token set, font choice, or screen. Name the absent files explicitly in the handoff so the next agent knows the seam.
 
 ### 2026-09-19 - Commit cadence is a working requirement, not a style note
 

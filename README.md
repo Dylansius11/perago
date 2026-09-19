@@ -31,13 +31,13 @@ Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evi
 - a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
 - an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund.
 
-Not built yet: the Perago mandate contract, API, executor service, and client. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
+Also built: the `MandateExecutor` authorization, accepted-attempt, and atomic failure boundaries, proven by 110 Foundry tests. Not built yet: the adapters, verifiers, settlement evaluator, API, executor service, and any user interface. The web app is a toolchain scaffold only — no CSS entry, no `components.json`, no component source, no design token, and no screen exists, because design direction remains the user's explicit gate.
 
 ## Planned repository map
 
 ```text
 apps/
-  web/       New client after design direction is approved
+  web/       Toolchain scaffold; design execution held for the user
   api/       Policy compiler, simulation, lifecycle, receipts
   executor/  Constrained autonomous execution worker
 packages/
@@ -46,7 +46,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Current source is limited to the SDK domain and account-encoding layer plus read-only executor probes. The API, web client, and contract implementation begin with their approved Phase 2 and Phase 3 tasks.
+Current source is the SDK domain and account-encoding layer, the mandate contract's authorization and execution boundaries, read-only executor probes, and the web scaffold. The adapters, verifiers, API, and client journey begin with their approved tasks.
 
 ## Documentation
 

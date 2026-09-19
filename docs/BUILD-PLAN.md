@@ -1,6 +1,6 @@
 # Perago Build Plan
 
-**Status:** Phase 1 complete; Phase 2 (mandate contract and invariant tests) is next and needs the user's phase-gate acceptance.
+**Status:** Phase 1 accepted by the user on 2026-09-19 and open in [PR #5](https://github.com/Dylansius11/perago/pull/5); Phase 2 active: `P2-001` and `P2-002` complete, `P2-003` next. `P7-000` (web toolchain scaffold, no design) was authorized and completed out of order at the user's request.
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
@@ -19,8 +19,8 @@ Check a task only after its acceptance criteria and verification evidence pass. 
   - [x] `P1-004` Resolve protocol deployments
   - [x] `P1-005` Freeze contract interfaces and cross-stack fixtures
 - [ ] **Phase 2 — mandate contract and invariant tests**
-  - [ ] `P2-001` Implement account policy and mandate authorization
-  - [ ] `P2-002` Implement accepted-attempt and atomic failure boundary
+  - [x] `P2-001` Implement account policy and mandate authorization
+  - [x] `P2-002` Implement accepted-attempt and atomic failure boundary
   - [ ] `P2-003` Prove contract invariants
 - [ ] **Phase 3 — API, compiler, policy, and simulation**
   - [ ] `P3-001` Implement persistence and chain projections
@@ -39,6 +39,7 @@ Check a task only after its acceptance criteria and verification evidence pass. 
   - [ ] `P6-002` Implement deterministic ERC-8183 evaluator
   - [ ] `P6-003` Automate settlement without changing truth
 - [ ] **Phase 7 — fresh web client**
+  - [x] `P7-000` Scaffold the web toolchain without design
   - [ ] `P7-001` Translate approved design direction into accessible shell
   - [ ] `P7-002` Implement policy, mandate, and receipt journey
 - [ ] **Phase 8 — end-to-end demo and deployment**
@@ -112,6 +113,9 @@ This record tracks live work without marking a task complete before all of its a
 | `P1-003` | Complete. A disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` controls the derived account `0x2863167c8653b9369Ef51De203742A3429AC57E2` (deployed in `0x3182afdc31878abd6a9f0639e1533fd4602368ee766ba0689a0530a1b51eec05`). `apps/executor/src/probes/account-live.ts` re-verifies every manifest code hash against live code, then submits through the Alchemy bundler with fresh permission slots per run: owner-paid session install `0xf33b27b978f0f3b676c3aa66d9aba8a2fb07393c8581a77d01db7e9a706edb31` (block `131790009`); **sponsored** session call `0xeb5a84b01278515b6dc3f1eacf6c952098566ae285e34393d9af3cc5690efeb5` (block `131790024`, `actualGasCost` `0`, `0.0002 tBNB` wrapped by the session signer, not the owner); expired-session install `0xd11152c17edda28c91161b193d21a534ac1df60ce2215ebd1ad3206d79c3f3ca`; session revocation `0x276da0f5ca84477e0e30080c5329969fd0b5b710db6f2375f01f9405ee7f4397`; expired-session cleanup `0x36d2fa546c43c6d3060a356ad358bfcf224716eee20001379315976425f4e838`. All seven forbidden shapes are rejected on chain 97 with decoded reasons: unrelated target and unallowlisted selector (`AllowlistModule` revert `0x4db96e31`), module install and revoked session (`ValidationFunctionMissing` `0xcf7b49f6`), account self-call (`SelfCallRecursionDepthExceeded` `0x54ff929d`), spend above limit (`NativeTokenLimitModule` revert `0x74a1a72c`), and expired permission (time-range validation). Evidence is pinned in `deployments/bsc-testnet.account.json`. | None. |
 | `P1-004` | Complete. `deployments/bsc-testnet.protocols.json` pins thirteen addresses with live code hashes and ERC-1967 implementations; `pnpm --filter @perago/executor probe:integrations` re-reads every one and fails on drift, and also proves router/quoter/factory agreement, four direct CAKE/WBNB pools (deepest: fee `500`, `0xeaf78e3AA2C19dF9495318Cd9EA2aD83Be7D5015`), a live quote, CAKE Pool wiring, and kernel state. `pnpm --filter @perago/executor probe:protocol-live` then executed the full matrix on chain 97 with **zero** owner-paid gas (every UserOperation sponsored): swap `0x6329318347d05b355d12ed4ec537772fe864f82080abf954501e6421590fd85b`, stake `0x399b362f7dbce4cd1fdd80c27d3a036d46e0af5a6bfd53d1a08118c8d4333059`, unstake `0x69c8d0696f39f9fcb937770e335b6f2739696bbd0f571a581ecb50ed3c892838` (returned `31743379200592744851574047295` of `31775154354917688259102245144` wei, i.e. the documented 0.1% early-withdrawal fee), payment-token funding `0x6a832f869a164490f63866b28e356444a509c44e309d03cb24f5fd7ed5c63729`. ERC-8183 job `1258` ran `Open → Funded → Submitted → Completed` (`create` `0x61ee4d4098cb5a219348a43cf56a98d4063b3a173aa0240d4702238a7167946e`, `fund` `0xa3428caad9c05b32f29d54fb5192290bd6fba666b3da007c9de03dc9eb212480`, provider `submit` `0x24e9842e332f17edf0b91afdd50ef37e5b2a442443b0f12bd310c2a65994d6cb`, `complete` `0x57264534623660086dc3b2d01c427e90ccdb5c4f8ddcd0e83e2fe692df566b63`); job `1259` was refunded by evaluator rejection (`0x149ab35670880f2870acb829284333424e07c84ee3323cde0303f573a11a3171`); job `1260` was refunded by permissionless expiry (`0x9470fd0087f6ad8a04d7dc0069f798ee5774b4eee1e99ba66e6bc0793c234fd7`). Full report: [`evidence/bsc-testnet.protocol-live.json`](evidence/bsc-testnet.protocol-live.json). `D-002` and `D-003` are resolved in [`technical/INTEGRATION.md`](technical/INTEGRATION.md). | None. |
 | `P1-005` | Complete. `PeragoTypes`, the adapter/verifier interfaces, the new `IACPHook` mirror, and `PeragoAcpHook` compile and pass `forge test` (5 tests). `packages/sdk/scripts/sync-abis.mjs` regenerates `packages/sdk/src/abi/perago-contracts.ts` from the Foundry artifacts, and the SDK exports `peragoAdapterAbi`, `peragoVerifierAbi`, and `peragoAcpHookAbi`. `packages/sdk/test/abi.test.ts` derives the 22-field mandate tuple from `taskMandateTypes` and proves the compiled `validate`, `execute`, and `measure` selectors match it, and that the hook answers interface id `0x7ff6bc9e`; 27 SDK tests pass. Every address Perago calls is pinned and verified in `deployments/bsc-testnet.account.json` and `deployments/bsc-testnet.protocols.json`. | None. |
+| `P2-001` | Complete. `packages/contracts/src/MandateExecutor.sol` implements `setAccountPolicy`, `invalidateNonces`, `authorize`, `revoke`, and `finalizeExpired` over the frozen storage layout, with adapter/verifier pairs, `executionWindow`, and the local-only `allowUnboundCommerceJobs` flag pinned as constructor immutables. `forge test --match-contract MandateExecutorAuthorization` passes 56 tests (51 deterministic unit tests, of which 4 cover the constructor pinning guards, plus 5 fuzz properties at 256 runs each), including: owner-epoch monotonicity with a strictly greater epoch for a new owner; policy replacement and owner rotation invalidating already-signed mandates (`PolicyHashMismatch`, `RootOwnerMismatch`); `WrongExecutor`, `WrongChain`, `ExpiredMandate`, `UnsupportedAdapter`, `WrongSelector`, `InvalidTokenPair`, `AmountOutOfBounds`, and `InvalidMandateField` rejections; a session-key signature rejected as root and a high-`s` malleable signature rejected (`InvalidRootSignature`); a mandate signed for a sibling deployment rejected by the domain separator; nonce replay, same-nonce reuse, commerce-job reuse, and `invalidateNonces` blocking authorization; terminal immutability across revoke/expiry races; and `hashMandate` equal to the frozen cross-stack fixture digest. | None for `P2-001`. `beginExecution`, `perform`, `executeCore`, and `finalizeStalledExecution` are `P2-002`; the deployed `executionWindow` value stays open as `SC-D-005` until BSC inclusion is measured. |
+| `P2-002` | Complete. `beginExecution`, `perform`, `executeCore`, and `finalizeStalledExecution` implement the accepted-attempt and atomic failure boundaries: the success receipt is written **inside** the verified self-call, the outer frame only records `FAILED` with a bounded revert commitment (`keccak256(abi.encode(size, first 256 bytes))`), and the subcall gas is capped at `gasleft() - 60_000` so a gas-burning adapter cannot starve the record. `forge test` passes 110 tests (49 new: 45 deterministic, 4 fuzz at 256 runs), covering exact-allowance spend and cleanup, executor-measured input spend, refund of unspent and handed-back input, stranded output (`RecipientMismatch`), adapter inflation and unbound verifier evidence (`VerificationFailed`, `PostconditionHashMismatch`), adapter and verifier reverts, oversized revert data, reentrancy into `perform` and `revoke`, total gas burn, a fee-on-transfer input token, stalled finalization, and every second-attempt rejection. Seven targeted mutations of the guards were each caught by at least one test; the survivor found on the first pass (an unbounded subcall) is now covered by a gas-sized test. | None. |
+| `P7-000` | Complete, out of phase order at the user's explicit request on 2026-09-19. `apps/web` holds exact pins for Next `16.3.5`, React `19.3.0`, Tailwind `4.3.3`, Motion `13.4.0`, GSAP `3.15.0` with `@gsap/react` `2.1.2`, `clsx`/`tailwind-merge`/`class-variance-authority`, and `lucide-react` `1.47.0`; `pnpm --filter @perago/web build` compiles and prerenders `/` and `/_not-found`, `pnpm run check` passes lint plus three typecheck tasks plus 29 SDK tests, and the dev server returned the placeholder route as `200 text/html` with `<title>Perago</title>` on `/` and `404` on an unknown path, confirmed in a real Chromium tab. The four brand logos moved from `assets/` to `apps/web/public/brand/`. The design surface is untouched: no CSS entry, no `components.json`, no component source, no token, no font, no screen. | None for `P7-000`. Design execution stays held for the user; `P7-001` still needs the approved direction. |
 
 ### `P1-001` Bootstrap exact stable workspace
 
@@ -167,17 +171,17 @@ This record tracks live work without marking a task complete before all of its a
 ### `P2-001` Implement account policy and mandate authorization
 
 - **Requirements:** PRD-F-002–003, PRD-F-007–008, PRD-F-013, PRD-S-001–004, PRD-S-006, PRD-S-009, PRD-S-013.
-- **Files/symbols:** `packages/contracts/src/MandateExecutor.sol`; `setAccountPolicy`, `authorize`, `invalidateNonces`, `revoke`, `finalizeExpired`, account config/nonce/mandate storage, typed events/errors.
+- **Files/symbols:** `packages/contracts/src/MandateExecutor.sol`; `setAccountPolicy`, `invalidateNonces`, `authorize`, `revoke`, `finalizeExpired`, `hashMandate`, `hashAccountPolicy`, `hashExecutionProof`, `domainSeparator`, the account-config/nonce/mandate/job-binding storage, typed events and custom errors; `PeragoTypes` lifecycle types and adapter-kind identities; `packages/contracts/test/mocks/{MockPeragoAdapter,MockPeragoVerifier}.sol`.
 - **Acceptance:** root EIP-712 signer/account/epoch/policy/executor/domain/nonce/expiry/action bindings enforce the spec; only allowed state transitions occur; no session signature is accepted as root.
-- **Verification:** focused unit/fuzz tests for every field mutation, owner/policy change, replay, revoke/expiry race, and custom error.
+- **Verification:** `forge test --match-contract MandateExecutorAuthorization` — focused unit and fuzz tests for every field mutation, owner/policy change, replay, revoke/expiry race, and custom error, plus the digest equality against the frozen cross-stack fixture.
 - **Commit:** `feat(contracts): enforce mandate authorization lifecycle`.
 
 ### `P2-002` Implement accepted-attempt and atomic failure boundary
 
 - **Requirements:** PRD-F-008, PRD-F-011, PRD-F-015–016, PRD-S-004–005, PRD-S-007.
-- **Files/symbols:** `beginExecution`, `perform`, `executeCore`, `finalizeStalledExecution`, receipt storage/events; mock adapters/tokens/verifiers under `packages/contracts/test/mocks/`.
+- **Files/symbols:** `beginExecution`, `perform`, `executeCore`, `finalizeStalledExecution`, `_requireExecutorProof`, `_evidenceCommitment`, `_boundedRevertCommitment`, `STALLED_FAILURE_REASON`, `MAX_REASON_BYTES`, receipt storage/events; `packages/contracts/test/mocks/{MockERC20,MockPeragoAdapter,MockPeragoVerifier}.sol`; `packages/sdk/src/abi/perago-contracts.ts` (`mandateExecutorAbi`).
 - **Acceptance:** `beginExecution` permanently leaves `AUTHORIZED`; success requires atomic adapter + verifier pass; expected token/protocol/verifier revert records `FAILED` while inner effects roll back; execution timeout fails without retry authority; exact approvals clear and no funds remain.
-- **Verification:** unit/fuzz failure matrix including revert data, false returns, malicious callback/reentrancy, cleanup failure, and stalled execution.
+- **Verification:** `forge test --match-contract MandateExecutorExecution` — unit and fuzz failure matrix including oversized revert data, unbound verifier evidence, adapter inflation, malicious reentrancy, total gas burn, cleanup and refund failure, and stalled execution; each guard confirmed by mutation.
 - **Commit:** `feat(contracts): make execution one-shot and atomic`.
 
 ### `P2-003` Prove contract invariants
@@ -324,7 +328,15 @@ This record tracks live work without marking a task complete before all of its a
 
 ## 10. Phase 7 — fresh web client
 
-**Hard hold:** do not start until the user provides and approves Perago's design direction after the documentation/implementation foundations. Do not reuse reference UI, flows, styles, assets, routes, or copy.
+**Hard hold:** design execution does not start until the user provides and approves Perago's design direction. Do not reuse reference UI, flows, styles, assets, routes, or copy. The user explicitly authorized the toolchain scaffold (`P7-000`) on 2026-09-19 ahead of that direction, on the condition that it invents no CSS, tokens, components, or screens.
+
+### `P7-000` Scaffold the web toolchain without design
+
+- **Requirements:** PRD-O-004.
+- **Files/symbols:** `apps/web/package.json`, `next.config.ts`, `postcss.config.mjs`, `tsconfig.json`, `src/app/{layout,page}.tsx`, `src/lib/utils.ts`, `public/brand/*.png`; `turbo.json` `dev` task; root `dev` script; `biome.json` Next exclusions; `.agents/skills/{shadcn,migrate-radix-to-base,gsap-*}`; `skills-lock.json`.
+- **Acceptance:** exact stable pins only; `next build` and workspace `lint`/`typecheck`/`test` pass; the dev server serves the placeholder route; no CSS entry, no `components.json`, no component source, no design token, and no screen exists.
+- **Verification:** `pnpm --filter @perago/web build`, `pnpm run check`, and an HTTP plus real-browser fetch of the running dev server.
+- **Commit:** `feat(web): scaffold the web toolchain without design`.
 
 ### `P7-001` Translate approved design direction into accessible shell
 

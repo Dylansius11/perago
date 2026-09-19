@@ -1,6 +1,6 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** Proposed; implementation blocked until Phase 1 decision probes pass
+**Status:** `MandateExecutor` authorization, accepted-attempt, and atomic failure boundaries implemented and tested (`P2-001`, `P2-002`); the stateful invariant suite (`P2-003`), the two adapters, the two verifiers, and `OutcomeEvaluator` remain specified and unimplemented
 **Requirements:** [`../PRD.md`](../PRD.md)
 **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
@@ -180,7 +180,7 @@ mapping(bytes32 mandateHash => MandateRecord) mandates;
 mapping(address commerce => mapping(uint256 jobId => bytes32 mandateHash)) jobBindings;
 ```
 
-`AccountConfig` contains root owner, owner epoch, active policy hash, permission hash, and registration status. `MandateRecord` contains account, executor, expiry, status, adapter/verifier identity, commerce binding, execution-start timestamp, and terminal commitments—never raw intent.
+`AccountConfig` contains root owner, owner epoch, active policy hash, and permission hash. Registration status is **derived** from `rootOwner != address(0)`; a separate flag would be a second source of truth that can desynchronize. `MandateRecord` contains account, executor, expiry, status, adapter/verifier identity, commerce binding, execution-start timestamp, and terminal commitments—never raw intent.
 
 ### 5.2 Status
 
@@ -209,17 +209,20 @@ EXECUTING -> SUCCEEDED | FAILED
 `authorize(mandate, rootSignature)`:
 
 1. requires `msg.sender == mandate.executor`;
-2. validates all nonzero fields and supported adapter/selector/token relationship;
-3. requires `block.chainid == mandate.chainId` and `block.timestamp < expiresAt`;
-4. loads `accountConfigs[account]` and matches root owner, owner epoch, active policy hash, and expected permission hash policy;
-5. recovers the root signature over the EIP-712 digest;
-6. requires nonce unused and mandate hash absent;
-7. verifies the adapter/action/postcondition schema commitments and unused ERC-8183 job binding;
-8. writes `usedNonce[account][nonce] = true` before recording `AUTHORIZED`;
-9. reserves the commerce job binding;
-10. emits `MandateAuthorized`.
+2. requires `block.chainid == mandate.chainId` and `block.timestamp < expiresAt`;
+3. validates all nonzero fields, spend bounds, and the commerce-binding shape: a live deployment requires a bound `(commerceContract, jobId)` pair, and only a deployment explicitly constructed with `allowUnboundCommerceJobs` accepts a fully zero pair;
+4. resolves the adapter against the two constructor-pinned deployments, requires `adapterSelector == IPeragoAdapter.execute.selector`, enforces the token relationship the adapter kind implies, and carries the adapter's immutable paired verifier into the record;
+5. loads `accountConfigs[account]` and matches root owner, owner epoch, active policy hash, and a registered permission hash;
+6. requires the nonce unused and the ERC-8183 job binding free;
+7. requires the mandate hash absent;
+8. recovers the root signature over the EIP-712 digest and requires the recovered signer to equal `mandate.rootOwner`, rejecting zero, malformed, and high-`s` malleable signatures;
+9. writes `usedNonce[account][nonce] = true` before recording `AUTHORIZED`;
+10. reserves the commerce job binding and emits `CommerceJobBound`;
+11. emits `MandateAuthorized`.
 
-No external protocol or token call occurs during authorization.
+Cheap state and shape checks run before signature recovery so a replayed nonce reports `NonceAlreadyUsed` rather than spending gas on recovery; the signature is still the last gate before any state write.
+
+No external protocol or token call occurs during authorization. Reading `kind()` and `verifier()` from the pinned adapters happens once, in the constructor.
 
 ### 5.4 Accepted attempt boundary
 
@@ -227,7 +230,7 @@ No external protocol or token call occurs during authorization.
 
 The smart account then submits `perform(mandate, action, executorProof)`. Pre-call validation failure in `perform` does not widen authority; the mandate remains `EXECUTING` and can only be completed by a valid performance or terminally failed after the execution timeout. It cannot return to `AUTHORIZED`.
 
-`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + EXECUTION_WINDOW` and records `FAILED` if no terminal receipt exists. `EXECUTION_WINDOW` is immutable and no longer than the mandate expiry horizon.
+`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + executionWindow` and records `FAILED` if no terminal receipt exists. `executionWindow` is an immutable constructor argument, not a source literal, because its safe value is a measured chain property (`SC-D-005`); the contract rejects zero and anything above the `MAX_EXECUTION_WINDOW` ceiling of one hour, which keeps a stalled execution from outliving the mandate expiry horizon.
 
 ### 5.5 Why not a single transaction
 
@@ -287,53 +290,58 @@ The adapter maps `poolId` to one deployment-pinned staking target. It never trea
 4. It grants the approved adapter exactly the required amount with a zero-first/force-approve pattern compatible with the pinned token.
 5. It clears the adapter allowance to zero before the subcall returns success.
 6. The adapter cannot choose a spender other than its immutable protocol target.
-7. Any unspent input is returned to the signed smart account before success.
-8. Outputs go directly to the signed recipient; MandateExecutor is not a treasury.
-9. Fee-on-transfer, rebasing, callback-capable, or otherwise nonstandard assets are unsupported until explicitly modeled and tested.
-10. Unlimited approvals are forbidden in account, MandateExecutor, adapter, scripts, and demo setup.
+7. Any unspent input is returned to the signed smart account before success, and the input spend is **measured by MandateExecutor** from its own balance delta (`heldBefore + maxInput - heldAfter`), never taken from the adapter's self-report. A measured spend above `maxInput` reverts with `AmountOutOfBounds`.
+8. Outputs go directly to the signed recipient; MandateExecutor is not a treasury. A nonzero input balance after the refund reverts with `ResidualBalance`, and a nonzero output balance reverts with `RecipientMismatch`, because protocol output left inside the executor did not reach the signed recipient.
+9. Fee-on-transfer, rebasing, callback-capable, or otherwise nonstandard assets are unsupported until explicitly modeled and tested. Such a token fails terminally at the transfer, refund, or residual guard; it never settles short.
+10. Unlimited approvals are forbidden in account, MandateExecutor, adapter, scripts, and demo setup. The allowance is cleared to zero and re-read before success (`AllowanceNotCleared`).
 
 If the internal execution subcall reverts, all transfers, approvals, and protocol effects in that subcall revert atomically. The outer `perform` catches the revert and records terminal `FAILED` without restoring the already consumed mandate nonce.
 
 ## 8. Atomic execution model
 
-Conceptual implementation:
+Implemented shape:
 
 ```solidity
-function perform(TaskMandate calldata m, bytes calldata action, bytes calldata proof)
-    external
-    nonReentrant
-{
+function perform(
+    TaskMandate calldata m,
+    bytes calldata action,
+    ExecutionProof calldata proof,
+    bytes calldata proofSignature
+) external nonReentrant returns (MandateStatus) {
     bytes32 h = hashMandate(m);
-    MandateRecord storage r = mandates[h];
-    _requirePerformCallerAndProof(m, r, proof);
+    // admissibility: caller, stored EXECUTING, expiry, window, action hash, executor proof
 
-    try this.executeCore(h, m, action) returns (ExecutionEvidence memory evidence) {
-        _recordSuccess(h, m, evidence);
-    } catch (bytes memory reason) {
-        _recordFailure(h, m, keccak256(reason));
-    }
+    uint256 available = gasleft();
+    if (available <= FAILURE_RECORD_GAS * 2) revert InsufficientGasBudget();
+    (bool succeeded,) = address(this).call{gas: available - FAILURE_RECORD_GAS}(
+        abi.encodeCall(this.executeCore, (h, m, action))
+    );
+    // success: executeCore already wrote the receipt inside the verified subcall
+    // failure: record FAILED with a bounded commitment to the revert data
 }
 
-function executeCore(bytes32 h, TaskMandate calldata m, bytes calldata action)
-    external
-    onlySelf
-    returns (ExecutionEvidence memory evidence)
-{
-    // pull exact bounded funds, measure pre-state, call adapter,
-    // clear allowance, measure/verify post-state; revert on any failure
+function executeCore(bytes32 h, TaskMandate calldata m, bytes calldata action) external {
+    if (msg.sender != address(this)) revert OnlySelf();
+    // normalize action through the adapter, pull exact bounded funds, measure pre-state,
+    // grant the exact allowance, call the adapter, clear the allowance, measure the spend,
+    // verify, refund, prove nothing remains here, then write SUCCEEDED
 }
 ```
 
 Before `executeCore`, `perform` requires:
 
 - `msg.sender == mandate.account`;
-- stored status is `EXECUTING`;
-- hash and stored critical fields match;
-- current time is before mandate expiry and execution window;
-- executor proof is valid and unexpired;
-- action hash matches.
+- stored status is `EXECUTING`; a still-`AUTHORIZED` mandate reports `ExecutionNotStarted`, and any terminal status reports `InvalidTransition`;
+- hash and stored critical fields match, which the mandate hash itself binds;
+- current time is before mandate expiry and before `executionStartedAt + executionWindow`;
+- executor proof is valid, bound to this mandate/account/executor, and unexpired;
+- `keccak256(action) == mandate.actionHash`.
 
-`executeCore` reverts on token, protocol, cleanup, or verifier failure. Because it is an external self-call, its effects roll back while the outer call remains able to record `FAILED`. The outer catch must not parse unbounded revert strings; it stores a bounded reason code plus hash.
+The success receipt is written **inside** `executeCore`, in the same subcall that measured and verified the outcome, so `SUCCEEDED` cannot exist without a passing verifier measurement (invariant 4). The outer frame only records failure. `executeCore` reverts on token, protocol, cleanup, verifier, refund, or residual-balance failure. Because it is an external self-call, its effects roll back while the outer call remains able to record `FAILED`.
+
+The subcall gas is explicitly bounded to `gasleft() - FAILURE_RECORD_GAS`. The 63/64 rule alone reserves a stipend proportional to the forwarded call, not to the terminal write, so a hostile adapter that consumes everything it is handed can starve the failure record at low gas limits. `perform` also refuses to start when the remaining gas cannot cover both the attempt and the record (`InsufficientGasBudget`).
+
+The outer failure path never parses revert data: it commits `keccak256(abi.encode(size, prefix))`, where `size` is the true revert-data length and `prefix` is its first `MAX_REASON_BYTES` (256) bytes. A hostile adapter therefore chooses neither the cost nor the shape of the record. Reason codes are mapped offchain from this commitment.
 
 A catastrophic outer out-of-gas transaction is not an accepted protocol attempt because no `perform` state transition is committed. The prior `EXECUTING` checkpoint still prevents a new authorization or a second `beginExecution`; the executor reconciles and the immutable timeout ends it as `FAILED`. Automated blind resubmission is forbidden once a transaction hash exists without a definitive dropped/replaced result.
 
@@ -381,35 +389,40 @@ struct VerificationEvidence {
 }
 ```
 
-`verify` reverts with a typed error on any failed postcondition. MandateExecutor measures pre-state before adapter execution and passes it to the immutable paired verifier. An adapter's self-reported result is insufficient; the verifier reads protocol/token state and cross-checks it.
+`verify` reverts with a typed error on any failed postcondition. MandateExecutor measures pre-state before adapter execution and passes it to the immutable paired verifier. An adapter's self-reported result is insufficient; the verifier reads protocol/token state and cross-checks it. MandateExecutor additionally refuses an adapter that claims more than the verifier measured (`result.outputOrPositionReceived > evidence.observedOutputOrPositionDelta`).
+
+A verifier must bind its evidence to the mandate it measured:
+
+```text
+evidenceHash = keccak256(abi.encode(
+    mandate.postconditionHash,
+    evidence.inputSpent,
+    evidence.observedOutputOrPositionDelta,
+    result.protocolEvidenceHash
+))
+```
+
+MandateExecutor recomputes this and reverts with `PostconditionHashMismatch` on any mismatch, so evidence measured for one mandate - or produced by a verifier that never read the signed postcondition - can never settle another. `measure` also returns a `contextHash` that the executor hands back unchanged to `verify`; a verifier rejects a context it did not produce.
+
+`kind()` returns one of two frozen identities, `keccak256("perago.adapter.swap.v1")` or `keccak256("perago.adapter.stake.v1")`, declared in `PeragoTypes`. The `MandateExecutor` constructor reads `kind()` and `verifier()` from each pinned adapter, refuses a mislabeled pair, refuses a shared verifier across the two kinds, and stores both verifier addresses as immutables. A mandate therefore cannot name a verifier at all: the adapter it names determines which verifier measures the outcome.
 
 ## 10. Receipt commitment
 
-On terminal execution, MandateExecutor emits a receipt containing or committing to:
+On terminal execution, MandateExecutor emits `ExecutionReceiptRecorded(mandateHash, status, verificationHash, failureReasonHash)` and stores the same four values in the mandate record. The receipt carries hashes only; raw intent, policy documents, simulation documents, or action bytes are never stored or emitted.
+
+On success, `verificationHash` is the commitment to the measured outcome:
 
 ```text
-mandateHash
-account
-rootOwner
-executor
-policyHash
-intentHash
-planHash
-simulationHash
-actionHash
-postconditionHash
-adapter
-verifierId
-commerceContract
-commerceJobId
-status
-inputSpent
-observedOutputOrPositionDelta
-protocolEvidenceHash
-verificationHash
-failureReasonHash
-authorityConsumed = true
+verificationHash = keccak256(abi.encode(
+    mandateHash,                                 // binds every one of the 22 signed fields
+    measuredSpend,                               // measured by MandateExecutor, not reported
+    evidence.observedOutputOrPositionDelta,      // measured by the paired verifier
+    evidence.evidenceHash,                       // verifier evidence, bound to the mandate
+    result.protocolEvidenceHash                  // adapter's protocol reference
+))
 ```
+
+On failure, `verificationHash` is zero and `failureReasonHash` is either the bounded revert commitment of §8 or `STALLED_FAILURE_REASON = keccak256("perago.failure.stalled.v1")` when the window closed with no receipt. `status` plus a nonzero `verificationHash` is the only settlement-eligible shape; authority is consumed either way, because the nonce was burned at authorization.
 
 The transaction hash, block number, block hash, and log index come from the chain envelope and are not duplicated as contract storage. Raw intent, policy JSON, model output, and private data are never emitted.
 
@@ -425,14 +438,17 @@ event MandateRevoked(bytes32 indexed mandateHash, address indexed account);
 event MandateExpired(bytes32 indexed mandateHash);
 event ExecutionReceiptRecorded(bytes32 indexed mandateHash, MandateStatus status, bytes32 verificationHash, bytes32 failureReasonHash);
 event CommerceJobBound(address indexed commerceContract, uint256 indexed jobId, bytes32 indexed mandateHash);
+event NoncesInvalidated(address indexed account, uint256[] nonces);
 event CommerceJobSettled(address indexed commerceContract, uint256 indexed jobId, bytes32 indexed mandateHash);
 ```
 
 ### Required custom errors
 
-`UnsupportedAccount`, `InvalidRootSignature`, `InvalidExecutorProof`, `OwnerEpochMismatch`, `PolicyHashMismatch`, `PermissionHashMismatch`, `WrongChain`, `ExpiredMandate`, `NonceAlreadyUsed`, `MandateAlreadyExists`, `InvalidTransition`, `WrongExecutor`, `WrongAccountCaller`, `UnsupportedAdapter`, `WrongSelector`, `ActionHashMismatch`, `PostconditionHashMismatch`, `AmountOutOfBounds`, `RecipientMismatch`, `CommerceJobAlreadyBound`, `ExecutionWindowElapsed`, `ExecutionNotStarted`, `VerificationFailed`, `SettlementNotEligible`, `AlreadySettled`.
+`UnsupportedAccount`, `InvalidRootSignature`, `InvalidExecutorProof`, `RootOwnerMismatch`, `OwnerEpochMismatch`, `PolicyHashMismatch`, `PermissionHashMismatch`, `WrongChain`, `ExpiredPolicy`, `ExpiredMandate`, `MandateNotExpired`, `NonceAlreadyUsed`, `MandateAlreadyExists`, `InvalidTransition`, `WrongExecutor`, `WrongAccountCaller`, `UnsupportedAdapter`, `WrongSelector`, `InvalidPolicyField`, `InvalidMandateField`, `InvalidTokenPair`, `ActionHashMismatch`, `PostconditionHashMismatch`, `AmountOutOfBounds`, `RecipientMismatch`, `CommerceBindingRequired`, `CommerceJobAlreadyBound`, `ExecutionWindowElapsed`, `ExecutionNotStarted`, `VerificationFailed`, `SettlementNotEligible`, `AlreadySettled`, and the two deployment-time guards `InvalidDeploymentPair` and `InvalidExecutionWindow`.
 
-Use custom errors, not revert strings, for bounded gas and stable reason mapping.
+Use custom errors, not revert strings, for bounded gas and stable reason mapping. Every field, bound, and shape rejection maps to one of these selectors; `InvalidMandateField` and `InvalidPolicyField` cover the nonzero-commitment checks so the reason set stays small enough to map offchain.
+
+Four further selectors are fund-safety and call-shape guards that the implementation proved necessary and the specification therefore requires: `OnlySelf` (the effects boundary is reachable only through `perform`'s self-call), `AllowanceNotCleared` (the adapter allowance is re-read as zero before success), `ResidualBalance` (no input remains after the refund), and `InsufficientGasBudget` (an attempt is refused when the remaining gas cannot cover both the attempt and its terminal record).
 
 ### Storage limits
 
@@ -441,7 +457,7 @@ Store only data needed to prevent replay, drive lifecycle, verify settlement, an
 ## 12. Revocation, expiry, and failure
 
 - `invalidateNonces(uint256[] nonces)` may be called through the smart account with root authorization before those nonces are used.
-- `revoke(mandateHash)` requires `msg.sender == account`, status `AUTHORIZED`, and root-authorized account call; it records `REVOKED`.
+- `revoke(mandateHash)` requires `msg.sender == account`, status `AUTHORIZED`, and root-authorized account call; it records `REVOKED`. Once `beginExecution` has committed the attempt, revocation is no longer available: the accurate user-visible claim is that revocation exists while authorized, and that expiry plus the immutable execution window end authority otherwise.
 - `finalizeExpired(mandateHash)` is permissionless for `AUTHORIZED` after `expiresAt`; it records `EXPIRED`.
 - `beginExecution` refuses an expired mandate and wins or loses races by transaction ordering.
 - `finalizeStalledExecution` is permissionless for `EXECUTING` after the immutable execution window; it records `FAILED`.

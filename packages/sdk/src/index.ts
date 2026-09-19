@@ -1,4 +1,5 @@
 export {
+  mandateExecutorAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
   peragoVerifierAbi,

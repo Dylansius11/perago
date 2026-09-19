@@ -10,6 +10,7 @@
   "scripts": {
     "build": "turbo run build",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "dev": "turbo run dev",
     "lint": "biome check .",
     "test": "turbo run test",
     "toolchain:check": "\"%npm_node_execpath%\" --version && pnpm --version && turbo --version && biome --version && tsc --version && vitest --version",

@@ -18,7 +18,7 @@ Rules:
 7. Update dependencies in coherent review units with focused build/type/test/runtime evidence; automated version churn is not merged without behavior checks.
 8. Pin smart-contract integrations by chain, address, source revision, ABI, runtime code hash, and proxy implementation/admin—not package semver alone.
 
-The versions below are a verified planning baseline, not installed dependencies in this documentation-only phase.
+Every version below is installed and exact in the committed manifests; `pnpm-lock.yaml` is the record of what resolved.
 
 ## 2. Stable baseline
 
@@ -38,6 +38,12 @@ The versions below are a verified planning baseline, not installed dependencies 
 | Viem | `2.56.7` | npm registry stable tag. |
 | Wagmi | `3.7.7` | npm registry stable tag. |
 | TanStack Query | `5.103.1` | npm registry stable tag; use only where Wagmi/client state requires it. |
+| Tailwind CSS (`tailwindcss`, `@tailwindcss/postcss`) | `4.3.3` | npm registry stable tags; v4 configures its theme from the CSS entry, so no `tailwind.config` file exists. |
+| Motion (`motion`) | `13.4.0` | npm registry stable tag; imported as `motion/react`, never `framer-motion`. |
+| GSAP / `@gsap/react` | `3.15.0` / `2.1.2` | npm registry stable tags; all plugins are free from the public package, so no auth token or private registry is configured. |
+| `clsx` / `tailwind-merge` / `class-variance-authority` | `2.1.1` / `3.7.0` / `0.7.1` | npm registry stable tags; the exact trio shadcn component source imports. |
+| `lucide-react` | `1.47.0` | npm registry stable tag; the icon library recorded in `components.json` when the UI task runs `shadcn init`. |
+| shadcn CLI | not a dependency | Invoked as `pnpm dlx shadcn@latest`; it writes component source into the repository instead of shipping a runtime package. |
 | Alchemy AA SDK (`@aa-sdk/core`) | `4.88.5` | npm registry stable tag; its `viem ^2.45.0` peer passes against Perago's pinned Viem baseline. |
 | Legacy Alchemy AA SDK (`@alchemy/aa-core`) | `3.19.0` | npm registry stable tag, but its exact `viem 2.8.6` peer conflicts with the selected Viem baseline; do not install it. |
 | Biome | `2.5.14` | npm registry stable tag. |
@@ -45,6 +51,7 @@ The versions below are a verified planning baseline, not installed dependencies 
 | Solidity | `0.8.37` | `solc` npm stable tag; Foundry config pins exact compiler and optimizer settings. |
 | Foundry | `1.8.3` | Latest non-prerelease immutable GitHub release on 2026-09-17. |
 | OpenZeppelin Contracts | `5.6.1` | npm registry stable tag; install as a pinned Git submodule/tag or exact dependency according to Foundry convention. |
+| `forge-std` | `v1.16.2` | Latest non-prerelease GitHub release; installed as a pinned Git submodule at `packages/contracts/lib/forge-std`. Supplies the cheatcode surface, fuzz assertions, and `StdInvariant` the Phase 2 invariant suite requires. |
 
 Official version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [PostgreSQL documentation](https://www.postgresql.org/docs/), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
 
@@ -86,13 +93,36 @@ TypeScript 7 is accepted only after the bootstrap compatibility probe. If a sele
 
 ### Next.js + React
 
-Selected for the future web client because it provides stable routing/build/deployment and integrates with Wagmi/Viem. The client remains a thin consumer of canonical SDK types and API facts.
+Selected for the web client because it provides stable routing/build/deployment and integrates with Wagmi/Viem. The client remains a thin consumer of canonical SDK types and API facts.
 
 - Use Next App Router and React Server Components only where they reduce shipped client code.
 - Wallet, signature, and live transaction interactions are client boundaries.
 - Do not create a backend-for-frontend that duplicates Hono domain logic.
-- Do not add Redux, a form framework, component kit, CSS framework, motion library, or design tokens before the user provides UI/design direction and Phase 7 begins.
+- Do not add Redux or a second component kit, CSS framework, motion library, or icon set beyond the pins above.
 - TanStack Query is present through the wallet/data stack; do not add a second server-state cache.
+
+### UI toolchain and the design seam
+
+The user owns Perago's design execution. The scaffold installs the toolchain and leaves every design decision unmade, so `apps/web` currently contains:
+
+```text
+next.config.ts        tracing root pinned to the workspace, typed routes on
+postcss.config.mjs    registers @tailwindcss/postcss; no tailwind.config file (v4)
+tsconfig.json         extends the workspace base; bundler resolution, @/* alias
+src/app/layout.tsx    root layout, metadata only, no style import yet
+src/app/page.tsx      placeholder route that proves routing and types build
+src/lib/utils.ts      cn() over clsx + tailwind-merge, the shadcn contract
+public/brand/*.png    source logos (1254x1254), unoptimized originals
+```
+
+Deliberately absent until the UI task runs, and reserved for it:
+
+- the CSS entry (`src/app/globals.css`): the Tailwind import, `@theme inline` tokens, dark mode, and fonts;
+- `components.json`: written by `pnpm dlx shadcn@latest init`, which also decides `style`, `base` (`radix` or `base`), and the icon library;
+- `src/components/**`: component source the shadcn CLI adds, plus Perago-specific composition;
+- optimized/derived brand assets (favicon, OG image, responsive sizes) generated from `public/brand`.
+
+Agent skills for this surface are installed under `.agents/skills/`: `shadcn` and `migrate-radix-to-base` from `shadcn/ui`, and the eight official `gsap-*` skills from `greensock/gsap-skills`, tracked in `skills-lock.json`. The Motion AI Kit is a workstation-level install (`npx motion-ai@latest`) and supplies the `motion` skill plus its hosted MCP server; it is not repository state.
 
 ### Wallet connection and account abstraction
 
