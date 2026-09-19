@@ -767,3 +767,1054 @@ export const peragoAcpHookAbi = [
     ],
   },
 ] as const;
+
+/** Authority boundary: account registration, mandate authorization, and terminal state. */
+export const mandateExecutorAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "swapAdapter_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "stakeAdapter_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "executionWindow_",
+        type: "uint48",
+        internalType: "uint48",
+      },
+      {
+        name: "allowUnboundCommerceJobs_",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "MAX_EXECUTION_WINDOW",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint48",
+        internalType: "uint48",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "accountConfig",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        internalType: "struct PeragoTypes.AccountConfig",
+        components: [
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "activePolicyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "permissionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "allowUnboundCommerceJobs",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "authorize",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "rootSignature",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "commerceJobBinding",
+    inputs: [
+      {
+        name: "commerceContract",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "jobId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "domainSeparator",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "executionWindow",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint48",
+        internalType: "uint48",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "finalizeExpired",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "hashAccountPolicy",
+    inputs: [
+      {
+        name: "policy",
+        type: "tuple",
+        internalType: "struct PeragoTypes.AccountPolicy",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "permissionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "validUntil",
+            type: "uint48",
+            internalType: "uint48",
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "hashExecutionProof",
+    inputs: [
+      {
+        name: "proof",
+        type: "tuple",
+        internalType: "struct PeragoTypes.ExecutionProof",
+        components: [
+          {
+            name: "mandateHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "validUntil",
+            type: "uint48",
+            internalType: "uint48",
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "hashMandate",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "invalidateNonces",
+    inputs: [
+      {
+        name: "nonces",
+        type: "uint256[]",
+        internalType: "uint256[]",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "isNonceUsed",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "nonce",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "isRegistered",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "mandateRecord",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        internalType: "struct PeragoTypes.MandateRecord",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "status",
+            type: "uint8",
+            internalType: "enum PeragoTypes.MandateStatus",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "executionStartedAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "verifier",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "verificationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "failureReasonHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "revoke",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setAccountPolicy",
+    inputs: [
+      {
+        name: "policy",
+        type: "tuple",
+        internalType: "struct PeragoTypes.AccountPolicy",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "permissionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "validUntil",
+            type: "uint48",
+            internalType: "uint48",
+          },
+        ],
+      },
+      {
+        name: "rootSignature",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "stakeAdapter",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "stakeVerifier",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "swapAdapter",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "swapVerifier",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "AccountPolicySet",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "rootOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "ownerEpoch",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64",
+      },
+      {
+        name: "policyHash",
+        type: "bytes32",
+        indexed: false,
+        internalType: "bytes32",
+      },
+      {
+        name: "permissionHash",
+        type: "bytes32",
+        indexed: false,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "CommerceJobBound",
+    inputs: [
+      {
+        name: "commerceContract",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "jobId",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "MandateAuthorized",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+      {
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "executor",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "nonce",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "expiresAt",
+        type: "uint48",
+        indexed: false,
+        internalType: "uint48",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "MandateExpired",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "MandateRevoked",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+      {
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "NoncesInvalidated",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "nonces",
+        type: "uint256[]",
+        indexed: false,
+        internalType: "uint256[]",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "error",
+    name: "AmountOutOfBounds",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "CommerceBindingRequired",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "CommerceJobAlreadyBound",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ExpiredMandate",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ExpiredPolicy",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidDeploymentPair",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidExecutionWindow",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidMandateField",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidPolicyField",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidRootSignature",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidTokenPair",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidTransition",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "MandateAlreadyExists",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "MandateNotExpired",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NonceAlreadyUsed",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "OwnerEpochMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "PermissionHashMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "PolicyHashMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RootOwnerMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "UnsupportedAccount",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "UnsupportedAdapter",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "WrongAccountCaller",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "WrongChain",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "WrongExecutor",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "WrongSelector",
+    inputs: [],
+  },
+] as const;

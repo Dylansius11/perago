@@ -1,6 +1,6 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** Proposed; implementation blocked until Phase 1 decision probes pass
+**Status:** `MandateExecutor` authorization lifecycle implemented and tested (`P2-001`); execution, verification, and settlement paths remain specified and unimplemented
 **Requirements:** [`../PRD.md`](../PRD.md)
 **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
@@ -180,7 +180,7 @@ mapping(bytes32 mandateHash => MandateRecord) mandates;
 mapping(address commerce => mapping(uint256 jobId => bytes32 mandateHash)) jobBindings;
 ```
 
-`AccountConfig` contains root owner, owner epoch, active policy hash, permission hash, and registration status. `MandateRecord` contains account, executor, expiry, status, adapter/verifier identity, commerce binding, execution-start timestamp, and terminal commitments—never raw intent.
+`AccountConfig` contains root owner, owner epoch, active policy hash, and permission hash. Registration status is **derived** from `rootOwner != address(0)`; a separate flag would be a second source of truth that can desynchronize. `MandateRecord` contains account, executor, expiry, status, adapter/verifier identity, commerce binding, execution-start timestamp, and terminal commitments—never raw intent.
 
 ### 5.2 Status
 
@@ -209,17 +209,20 @@ EXECUTING -> SUCCEEDED | FAILED
 `authorize(mandate, rootSignature)`:
 
 1. requires `msg.sender == mandate.executor`;
-2. validates all nonzero fields and supported adapter/selector/token relationship;
-3. requires `block.chainid == mandate.chainId` and `block.timestamp < expiresAt`;
-4. loads `accountConfigs[account]` and matches root owner, owner epoch, active policy hash, and expected permission hash policy;
-5. recovers the root signature over the EIP-712 digest;
-6. requires nonce unused and mandate hash absent;
-7. verifies the adapter/action/postcondition schema commitments and unused ERC-8183 job binding;
-8. writes `usedNonce[account][nonce] = true` before recording `AUTHORIZED`;
-9. reserves the commerce job binding;
-10. emits `MandateAuthorized`.
+2. requires `block.chainid == mandate.chainId` and `block.timestamp < expiresAt`;
+3. validates all nonzero fields, spend bounds, and the commerce-binding shape: a live deployment requires a bound `(commerceContract, jobId)` pair, and only a deployment explicitly constructed with `allowUnboundCommerceJobs` accepts a fully zero pair;
+4. resolves the adapter against the two constructor-pinned deployments, requires `adapterSelector == IPeragoAdapter.execute.selector`, enforces the token relationship the adapter kind implies, and carries the adapter's immutable paired verifier into the record;
+5. loads `accountConfigs[account]` and matches root owner, owner epoch, active policy hash, and a registered permission hash;
+6. requires the nonce unused and the ERC-8183 job binding free;
+7. requires the mandate hash absent;
+8. recovers the root signature over the EIP-712 digest and requires the recovered signer to equal `mandate.rootOwner`, rejecting zero, malformed, and high-`s` malleable signatures;
+9. writes `usedNonce[account][nonce] = true` before recording `AUTHORIZED`;
+10. reserves the commerce job binding and emits `CommerceJobBound`;
+11. emits `MandateAuthorized`.
 
-No external protocol or token call occurs during authorization.
+Cheap state and shape checks run before signature recovery so a replayed nonce reports `NonceAlreadyUsed` rather than spending gas on recovery; the signature is still the last gate before any state write.
+
+No external protocol or token call occurs during authorization. Reading `kind()` and `verifier()` from the pinned adapters happens once, in the constructor.
 
 ### 5.4 Accepted attempt boundary
 
@@ -227,7 +230,7 @@ No external protocol or token call occurs during authorization.
 
 The smart account then submits `perform(mandate, action, executorProof)`. Pre-call validation failure in `perform` does not widen authority; the mandate remains `EXECUTING` and can only be completed by a valid performance or terminally failed after the execution timeout. It cannot return to `AUTHORIZED`.
 
-`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + EXECUTION_WINDOW` and records `FAILED` if no terminal receipt exists. `EXECUTION_WINDOW` is immutable and no longer than the mandate expiry horizon.
+`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + executionWindow` and records `FAILED` if no terminal receipt exists. `executionWindow` is an immutable constructor argument, not a source literal, because its safe value is a measured chain property (`SC-D-005`); the contract rejects zero and anything above the `MAX_EXECUTION_WINDOW` ceiling of one hour, which keeps a stalled execution from outliving the mandate expiry horizon.
 
 ### 5.5 Why not a single transaction
 
@@ -383,6 +386,8 @@ struct VerificationEvidence {
 
 `verify` reverts with a typed error on any failed postcondition. MandateExecutor measures pre-state before adapter execution and passes it to the immutable paired verifier. An adapter's self-reported result is insufficient; the verifier reads protocol/token state and cross-checks it.
 
+`kind()` returns one of two frozen identities, `keccak256("perago.adapter.swap.v1")` or `keccak256("perago.adapter.stake.v1")`, declared in `PeragoTypes`. The `MandateExecutor` constructor reads `kind()` and `verifier()` from each pinned adapter, refuses a mislabeled pair, refuses a shared verifier across the two kinds, and stores both verifier addresses as immutables. A mandate therefore cannot name a verifier at all: the adapter it names determines which verifier measures the outcome.
+
 ## 10. Receipt commitment
 
 On terminal execution, MandateExecutor emits a receipt containing or committing to:
@@ -425,14 +430,15 @@ event MandateRevoked(bytes32 indexed mandateHash, address indexed account);
 event MandateExpired(bytes32 indexed mandateHash);
 event ExecutionReceiptRecorded(bytes32 indexed mandateHash, MandateStatus status, bytes32 verificationHash, bytes32 failureReasonHash);
 event CommerceJobBound(address indexed commerceContract, uint256 indexed jobId, bytes32 indexed mandateHash);
+event NoncesInvalidated(address indexed account, uint256[] nonces);
 event CommerceJobSettled(address indexed commerceContract, uint256 indexed jobId, bytes32 indexed mandateHash);
 ```
 
 ### Required custom errors
 
-`UnsupportedAccount`, `InvalidRootSignature`, `InvalidExecutorProof`, `OwnerEpochMismatch`, `PolicyHashMismatch`, `PermissionHashMismatch`, `WrongChain`, `ExpiredMandate`, `NonceAlreadyUsed`, `MandateAlreadyExists`, `InvalidTransition`, `WrongExecutor`, `WrongAccountCaller`, `UnsupportedAdapter`, `WrongSelector`, `ActionHashMismatch`, `PostconditionHashMismatch`, `AmountOutOfBounds`, `RecipientMismatch`, `CommerceJobAlreadyBound`, `ExecutionWindowElapsed`, `ExecutionNotStarted`, `VerificationFailed`, `SettlementNotEligible`, `AlreadySettled`.
+`UnsupportedAccount`, `InvalidRootSignature`, `InvalidExecutorProof`, `RootOwnerMismatch`, `OwnerEpochMismatch`, `PolicyHashMismatch`, `PermissionHashMismatch`, `WrongChain`, `ExpiredPolicy`, `ExpiredMandate`, `MandateNotExpired`, `NonceAlreadyUsed`, `MandateAlreadyExists`, `InvalidTransition`, `WrongExecutor`, `WrongAccountCaller`, `UnsupportedAdapter`, `WrongSelector`, `InvalidPolicyField`, `InvalidMandateField`, `InvalidTokenPair`, `ActionHashMismatch`, `PostconditionHashMismatch`, `AmountOutOfBounds`, `RecipientMismatch`, `CommerceBindingRequired`, `CommerceJobAlreadyBound`, `ExecutionWindowElapsed`, `ExecutionNotStarted`, `VerificationFailed`, `SettlementNotEligible`, `AlreadySettled`, and the two deployment-time guards `InvalidDeploymentPair` and `InvalidExecutionWindow`.
 
-Use custom errors, not revert strings, for bounded gas and stable reason mapping.
+Use custom errors, not revert strings, for bounded gas and stable reason mapping. Every field, bound, and shape rejection maps to one of these selectors; `InvalidMandateField` and `InvalidPolicyField` cover the nonzero-commitment checks so the reason set stays small enough to map offchain.
 
 ### Storage limits
 

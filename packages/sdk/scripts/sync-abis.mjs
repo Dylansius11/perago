@@ -28,6 +28,12 @@ const EXPORTS = [
     exportName: "peragoAcpHookAbi",
     summary: "Inert ERC-8183 hook the deployed APEX kernel requires per job.",
   },
+  {
+    artifact: "MandateExecutor.sol/MandateExecutor.json",
+    exportName: "mandateExecutorAbi",
+    summary:
+      "Authority boundary: account registration, mandate authorization, and terminal state.",
+  },
 ];
 
 const artifactUrl = (artifact) =>

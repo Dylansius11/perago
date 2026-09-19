@@ -45,6 +45,7 @@ The versions below are a verified planning baseline, not installed dependencies 
 | Solidity | `0.8.37` | `solc` npm stable tag; Foundry config pins exact compiler and optimizer settings. |
 | Foundry | `1.8.3` | Latest non-prerelease immutable GitHub release on 2026-09-17. |
 | OpenZeppelin Contracts | `5.6.1` | npm registry stable tag; install as a pinned Git submodule/tag or exact dependency according to Foundry convention. |
+| `forge-std` | `v1.16.2` | Latest non-prerelease GitHub release; installed as a pinned Git submodule at `packages/contracts/lib/forge-std`. Supplies the cheatcode surface, fuzz assertions, and `StdInvariant` the Phase 2 invariant suite requires. |
 
 Official version sources: [Node releases](https://nodejs.org/en/about/previous-releases), [npm registry](https://www.npmjs.com/), [PostgreSQL documentation](https://www.postgresql.org/docs/), and [Foundry releases](https://github.com/foundry-rs/foundry/releases).
 

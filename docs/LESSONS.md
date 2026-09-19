@@ -4,6 +4,18 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-19 - Check order decides which rejection a caller sees, so order it deliberately
+
+- Observed: the first `MandateExecutor.authorize` implementation validated the ERC-8183 job binding inside the field-shape helper, so replaying an identical mandate reverted `CommerceJobAlreadyBound()` instead of `NonceAlreadyUsed()`; the replay test written first is what exposed it.
+- Root cause: two guards cover overlapping ground, and whichever runs first defines the offchain reason code. Grouping a stateful uniqueness check with stateless field validation moved it ahead of the stricter guard by accident.
+- Rule: order authorization checks caller-cheap and semantically strictest first - identity, chain, time, shape, then account state, then nonce, then binding, and signature recovery last before any state write - and pin the intended order with a test per reason code, because the reason code is a published interface.
+
+### 2026-09-19 - A Foundry `vm.prank` is spent by the next call, including a helper's view call
+
+- Observed: fifteen authorization tests failed with `WrongExecutor()` while the contract was correct; each read `vm.prank(executorSigner); executor.authorize(m, _signMandate(m, ...))`, and the helper's `executor.hashMandate` call consumed the prank, so `authorize` arrived from the test contract.
+- Root cause: argument expressions evaluate after the cheatcode arms, and `prank` applies to exactly one call - a view call counts.
+- Rule: build every signature and read every view before arming `vm.prank`, and treat an unexpected caller-authorization revert in a test as a prank-consumption bug before suspecting the contract.
+
 ### 2026-09-19 - The index is shared, so commit by pathspec when another agent works the same worktree
 
 - Observed: a skills-only change staged with `git add .agents AGENTS.md` was committed with a bare `git commit`, and the resulting commit `7b6cf26` also carried `.gitmodules` and the `packages/contracts/lib/forge-std` submodule that a concurrently running agent had staged in the same worktree seconds earlier.
