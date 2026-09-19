@@ -1,6 +1,6 @@
 # Perago Build Plan
 
-**Status:** Phase 1 active; `P1-001`–`P1-004` complete; `P1-005` is the remaining task.
+**Status:** Phase 1 complete; Phase 2 (mandate contract and invariant tests) is next and needs the user's phase-gate acceptance.
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
@@ -12,12 +12,12 @@ Check a task only after its acceptance criteria and verification evidence pass. 
   - [x] `P0-001` Repository governance
   - [x] `P0-002` Product and technical specification
   - [x] `P0-003` Foundation review PR
-- [ ] **Phase 1 — typed domain and decision probes**
+- [x] **Phase 1 — typed domain and decision probes**
   - [x] `P1-001` Bootstrap exact stable workspace
   - [x] `P1-002` Implement canonical domain schemas and hashes
   - [x] `P1-003` Prove account-abstraction path
   - [x] `P1-004` Resolve protocol deployments
-  - [ ] `P1-005` Freeze contract interfaces and cross-stack fixtures
+  - [x] `P1-005` Freeze contract interfaces and cross-stack fixtures
 - [ ] **Phase 2 — mandate contract and invariant tests**
   - [ ] `P2-001` Implement account policy and mandate authorization
   - [ ] `P2-002` Implement accepted-attempt and atomic failure boundary
@@ -111,7 +111,7 @@ This record tracks live work without marking a task complete before all of its a
 | `P1-002` | Complete. The frozen `TaskMandate` type string is byte-identical across four independent sources: this specification, the Solidity struct in `packages/contracts/src/types/PeragoTypes.sol`, the `TASK_MANDATE_TYPEHASH` literal in `packages/contracts/test/fixtures/TaskMandateFixtures.sol`, and both the type string and the typed-data array in `packages/sdk/src/eip712.ts` (22 fields). SDK and Foundry fixtures agree on digest `0x9b204a82d741df2398ef74a699cc6a9b5cc4dae63aac247b0d69c29e4f206574`; SDK tests cover unknown-field rejection, bigint-safe uint256 strings, and the closed `SWAP \| STAKE` union. | None. |
 | `P1-003` | Complete. A disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` controls the derived account `0x2863167c8653b9369Ef51De203742A3429AC57E2` (deployed in `0x3182afdc31878abd6a9f0639e1533fd4602368ee766ba0689a0530a1b51eec05`). `apps/executor/src/probes/account-live.ts` re-verifies every manifest code hash against live code, then submits through the Alchemy bundler with fresh permission slots per run: owner-paid session install `0xf33b27b978f0f3b676c3aa66d9aba8a2fb07393c8581a77d01db7e9a706edb31` (block `131790009`); **sponsored** session call `0xeb5a84b01278515b6dc3f1eacf6c952098566ae285e34393d9af3cc5690efeb5` (block `131790024`, `actualGasCost` `0`, `0.0002 tBNB` wrapped by the session signer, not the owner); expired-session install `0xd11152c17edda28c91161b193d21a534ac1df60ce2215ebd1ad3206d79c3f3ca`; session revocation `0x276da0f5ca84477e0e30080c5329969fd0b5b710db6f2375f01f9405ee7f4397`; expired-session cleanup `0x36d2fa546c43c6d3060a356ad358bfcf224716eee20001379315976425f4e838`. All seven forbidden shapes are rejected on chain 97 with decoded reasons: unrelated target and unallowlisted selector (`AllowlistModule` revert `0x4db96e31`), module install and revoked session (`ValidationFunctionMissing` `0xcf7b49f6`), account self-call (`SelfCallRecursionDepthExceeded` `0x54ff929d`), spend above limit (`NativeTokenLimitModule` revert `0x74a1a72c`), and expired permission (time-range validation). Evidence is pinned in `deployments/bsc-testnet.account.json`. | None. |
 | `P1-004` | Complete. `deployments/bsc-testnet.protocols.json` pins thirteen addresses with live code hashes and ERC-1967 implementations; `pnpm --filter @perago/executor probe:integrations` re-reads every one and fails on drift, and also proves router/quoter/factory agreement, four direct CAKE/WBNB pools (deepest: fee `500`, `0xeaf78e3AA2C19dF9495318Cd9EA2aD83Be7D5015`), a live quote, CAKE Pool wiring, and kernel state. `pnpm --filter @perago/executor probe:protocol-live` then executed the full matrix on chain 97 with **zero** owner-paid gas (every UserOperation sponsored): swap `0x6329318347d05b355d12ed4ec537772fe864f82080abf954501e6421590fd85b`, stake `0x399b362f7dbce4cd1fdd80c27d3a036d46e0af5a6bfd53d1a08118c8d4333059`, unstake `0x69c8d0696f39f9fcb937770e335b6f2739696bbd0f571a581ecb50ed3c892838` (returned `31743379200592744851574047295` of `31775154354917688259102245144` wei, i.e. the documented 0.1% early-withdrawal fee), payment-token funding `0x6a832f869a164490f63866b28e356444a509c44e309d03cb24f5fd7ed5c63729`. ERC-8183 job `1258` ran `Open → Funded → Submitted → Completed` (`create` `0x61ee4d4098cb5a219348a43cf56a98d4063b3a173aa0240d4702238a7167946e`, `fund` `0xa3428caad9c05b32f29d54fb5192290bd6fba666b3da007c9de03dc9eb212480`, provider `submit` `0x24e9842e332f17edf0b91afdd50ef37e5b2a442443b0f12bd310c2a65994d6cb`, `complete` `0x57264534623660086dc3b2d01c427e90ccdb5c4f8ddcd0e83e2fe692df566b63`); job `1259` was refunded by evaluator rejection (`0x149ab35670880f2870acb829284333424e07c84ee3323cde0303f573a11a3171`); job `1260` was refunded by permissionless expiry (`0x9470fd0087f6ad8a04d7dc0069f798ee5774b4eee1e99ba66e6bc0793c234fd7`). Full report: [`evidence/bsc-testnet.protocol-live.json`](evidence/bsc-testnet.protocol-live.json). `D-002` and `D-003` are resolved in [`technical/INTEGRATION.md`](technical/INTEGRATION.md). | None. |
-| `P1-005` | `PeragoTypes`, adapter/verifier interfaces, and the shared SDK–Solidity digest fixture are committed and passing. | Keep interfaces provisional until the AA and protocol adapter decisions are resolved; then generate/export the final ABI/type surface and check the task. |
+| `P1-005` | Complete. `PeragoTypes`, the adapter/verifier interfaces, the new `IACPHook` mirror, and `PeragoAcpHook` compile and pass `forge test` (5 tests). `packages/sdk/scripts/sync-abis.mjs` regenerates `packages/sdk/src/abi/perago-contracts.ts` from the Foundry artifacts, and the SDK exports `peragoAdapterAbi`, `peragoVerifierAbi`, and `peragoAcpHookAbi`. `packages/sdk/test/abi.test.ts` derives the 22-field mandate tuple from `taskMandateTypes` and proves the compiled `validate`, `execute`, and `measure` selectors match it, and that the hook answers interface id `0x7ff6bc9e`; 27 SDK tests pass. Every address Perago calls is pinned and verified in `deployments/bsc-testnet.account.json` and `deployments/bsc-testnet.protocols.json`. | None. |
 
 ### `P1-001` Bootstrap exact stable workspace
 
@@ -150,9 +150,9 @@ This record tracks live work without marking a task complete before all of its a
 ### `P1-005` Freeze contract interfaces and cross-stack fixtures
 
 - **Requirements:** PRD-F-007–008, PRD-S-003–006, PRD-S-013.
-- **Files/symbols:** `packages/contracts/src/types/PeragoTypes.sol`; `packages/contracts/src/interfaces/{IPeragoAdapter,IPeragoVerifier}.sol`; `packages/contracts/test/fixtures/TaskMandateFixtures.sol`; SDK ABI/type exports generated from compiled interfaces.
+- **Files/symbols:** `packages/contracts/src/types/PeragoTypes.sol`; `packages/contracts/src/interfaces/{IPeragoAdapter,IPeragoVerifier,IACPHook}.sol`; `packages/contracts/src/hooks/PeragoAcpHook.sol`; `packages/contracts/test/fixtures/TaskMandateFixtures.sol`; `packages/sdk/scripts/sync-abis.mjs` generating `packages/sdk/src/abi/perago-contracts.ts`.
 - **Acceptance:** exact EIP-712 digest agrees between SDK and Solidity; interface fields reflect resolved adapters/account path; no implementation or address remains ambiguous.
-- **Verification:** Foundry fixture test plus SDK digest test using the same checked-in vector.
+- **Verification:** `forge test` (Foundry fixture and hook) plus `pnpm --filter @perago/sdk test`, whose ABI test derives the mandate tuple from the frozen EIP-712 type list and compares it to the compiled adapter/verifier selectors; regenerate with `pnpm --filter @perago/sdk sync:abi` after any Solidity interface change and commit the diff.
 - **Commit:** `feat(contracts): freeze mandate interfaces and fixtures`.
 
 **Phase 1 smoke:** from a disposable root wallet, derive/deploy the target smart account, install narrow permission, submit allowed/forbidden UserOperations, quote a real swap, probe stake, and run ERC-8183 create/fund/submit/complete-or-refund lifecycle. Capture evidence; do not proceed on a fabricated fallback.

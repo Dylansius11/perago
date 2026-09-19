@@ -22,7 +22,16 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phase 1 in progress.** The workspace, toolchain, and package manifests are pinned. The SDK now carries the canonical mandate domain, its EIP-712 digest fixture, and the bounded Modular Account V2 session encoding; contract interfaces and fixtures are frozen provisionally. Account-abstraction constraints are proven locally against Modular Account V2 bytecode replayed from BNB Smart Chain Testnet, with code hashes recorded in [`deployments/bsc-testnet.account.json`](deployments/bsc-testnet.account.json). No mandate contract, live endpoint, deployment, or signed chain-97 transaction evidence exists yet. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
+**Phase 1 complete.** The workspace, toolchain, and package manifests are pinned; the SDK carries the canonical mandate domain, its cross-stack EIP-712 digest fixture, the bounded Modular Account V2 session encoding, and ABIs generated from the compiled contracts.
+
+Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
+
+- a semi-modular ERC-4337 account controlled by an external owner, driven by owner-paid **and** fully sponsored UserOperations;
+- a bounded session that performs its one allowlisted call and is rejected for an unrelated target, an unallowlisted selector, module install, a self-call, an over-limit spend, an expired window, and after revocation;
+- a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
+- an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund.
+
+Not built yet: the Perago mandate contract, API, executor service, and client. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
 
 ## Planned repository map
 

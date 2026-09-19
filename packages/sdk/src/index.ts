@@ -1,4 +1,9 @@
 export {
+  peragoAcpHookAbi,
+  peragoAdapterAbi,
+  peragoVerifierAbi,
+} from "./abi/perago-contracts.js";
+export {
   ACCOUNT_EXECUTE_SELECTOR,
   type AccountCall,
   buildUserOperationNonceKey,
