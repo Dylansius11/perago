@@ -126,6 +126,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## User insight
 
+### 2026-09-19 - The user executes the UI; agents prepare only the toolchain seam
+
+- Asked for the frontend scaffold (Tailwind, Motion, shadcn, GSAP skills) and then narrowed it mid-task: install and pin the toolchain, move the brand assets, leave `shadcn init` and every stylesheet to a later agent under the user's own design direction.
+- Application: for this repository, "scaffold" means manifests, configs, a `cn()` helper, a placeholder route that builds, and moved assets — never a CSS entry, `components.json`, component source, token set, font choice, or screen. Name the absent files explicitly in the handoff so the next agent knows the seam.
+
 ### 2026-09-19 - Commit cadence is a working requirement, not a style note
 
 - Asked explicitly for more frequent commits while long onchain work was in flight.
