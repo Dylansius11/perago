@@ -43,8 +43,16 @@ Skills are installed in [`.agents/skills/`](.agents/skills) and are discovered f
 
 ### Routing
 
+Project-role skills first - they carry this repository's decisions. Upstream skills supply method.
+
 | Situation | Skill | Non-negotiable part |
 | --- | --- | --- |
+| Writing, changing, testing, or deploying any Solidity - `MandateExecutor`, an adapter, a verifier, `OutcomeEvaluator`, storage, events, errors, Foundry tests | `perago-contract-engineer` | The 22-field `TaskMandate`, the legal status transitions, the separate `beginExecution` checkpoint, and the 12 safety invariants are not negotiable for convenience. |
+| Touching any external system - EntryPoint, account modules, bundler or paymaster, PancakeSwap, the stake target, the ERC-8183 kernel, payment tokens, RPC | `perago-integration-engineer` | A status moves to `verified` only from a probe run in this repository whose evidence file is committed; the deployed bytecode outranks the standard. |
+| Wiring `apps/api` or `apps/executor` - routes, policy engine, planner adapter, compiler, simulation, schema, leased queue, indexer, reconciliation | `perago-backend-wiring` | No database row can turn a failed onchain mandate into success; idempotency is a schema constraint, not an application `if`. |
+| Closing any task, or changing a claim, status, address, version, scope, or decision | `perago-proof-engineer` | Same-change document synchronization, honest evidence labels, and a `BUILD-PLAN.md` checkbox that flips only on passing criteria. |
+| Reviewing authority, signatures, keys, session scope, fund routing, calldata, settlement eligibility, logging, or a user-visible safety claim | `perago-security-auditor` | Never a clean bill of health by assertion; prefer removing a capability over guarding it. |
+| Any work in `apps/web` - screens, wallet interaction, typed-data review, copy, motion | `perago-frontend-polish` | Read it to confirm the UI hold is lifted before building anything; a screenshot of a mock is not verification. |
 | A feature, change, or idea is not yet a written design | `brainstorming` | Do not write code or scaffold while the design is unapproved. |
 | An approved design needs an executable plan | `writing-plans` | Plan against task IDs in `docs/BUILD-PLAN.md`; never invent a parallel plan document. |
 | A requirement must become a precise specification | `to-spec` | Every acceptance criterion is observable and testable, or it is not a criterion. |
@@ -68,12 +76,13 @@ Skills are installed in [`.agents/skills/`](.agents/skills) and are discovered f
 | [mattpocock/skills](https://github.com/mattpocock/skills) | `6654f6b60cd9d5be8b54c6fafe44346dabeb3b76` | `domain-modeling`, `codebase-design`, `grilling`, `grill-with-docs`, `to-spec` |
 | [OpenZeppelin/openzeppelin-skills](https://github.com/OpenZeppelin/openzeppelin-skills) | `6f215af60eb60017ab1a933ce9d22a479cd42b26` | `setup-solidity-contracts`, `develop-secure-contracts` (AGPL-3.0-only, unmodified) |
 | Workstation global install, snapshot 2026-09-19 | unpinned upstream | `bnbchain-mcp`, `code-review-skill`, `find-docs` |
+| Perago repository | this commit | `perago-contract-engineer`, `perago-integration-engineer`, `perago-backend-wiring`, `perago-proof-engineer`, `perago-security-auditor`, `perago-frontend-polish` |
 
-Every directory was copied unmodified; MIT license texts are retained in [`.agents/skills/licenses/`](.agents/skills/licenses) and `code-review-skill` carries its own `LICENSE`. When a skill is added or removed, update this section in the same change.
+Upstream directories were copied unmodified; MIT license texts are retained in [`.agents/skills/licenses/`](.agents/skills/licenses) and `code-review-skill` carries its own `LICENSE`. The six `perago-*` skills are original project instructions derived from the canonical documents in `docs/`; they encode decisions and obligations, never chain facts. When a skill is added, removed, or contradicted by a document change, update this section and the affected skill in the same change.
 
 ### Deliberately absent
 
-- **Interface skills** (`emil-design-eng`, `motion`, `impeccable`, `design-taste-frontend`, `vercel-react-best-practices`) are not installed while the UI hold is in force. Install them in the change that opens the web surface, never earlier.
+- **Interface skills** (`emil-design-eng`, `motion`, `impeccable`, `design-taste-frontend`, `vercel-react-best-practices`) are not installed while the UI hold is in force, which is why `perago-frontend-polish` names them as a dependency rather than assuming them. Install them in the same change that opens the web surface, never earlier.
 - **Reference-repository skills** (`bsc-foundry`, `bnb-agent-stack`, `altana-*`, `swap-*`/`liquidity-*`/`farming-*`/`hub-*` planners) are excluded on purpose. They encode another product's contracts, its vendor session wallet, and its address tables, all of which would either contradict `docs/technical/INTEGRATION.md` or reintroduce the vendor dependency the core is forbidden to have. Do not re-import them; extract a specific technique into a canonical document instead.
 - **Harness tooling** (`graphify`, `orca-cli`, `orchestration`, `computer-use`) stays at the workstation level and is not vendored.
 
