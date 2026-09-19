@@ -37,6 +37,46 @@ Priority when sources disagree: current user instruction, accepted PRD, accepted
 
 External integration claims require a primary-source link and an explicit status: `verified`, `proposed`, `needs re-verification`, or `blocked`. Existing experiments are evidence, not proof of current third-party behavior.
 
+## Agent skills
+
+Skills are installed in [`.agents/skills/`](.agents/skills) and are discovered from there by every runtime used on this repository. They are **working method, never authority**: when a skill and a canonical document disagree, the canonical document wins and the work proceeds under the document. No skill may assert a chain address, protocol status, or dependency version; those facts belong to `docs/technical/INTEGRATION.md` and `docs/technical/TECH-STACK.md` alone.
+
+### Routing
+
+| Situation | Skill | Non-negotiable part |
+| --- | --- | --- |
+| A feature, change, or idea is not yet a written design | `brainstorming` | Do not write code or scaffold while the design is unapproved. |
+| An approved design needs an executable plan | `writing-plans` | Plan against task IDs in `docs/BUILD-PLAN.md`; never invent a parallel plan document. |
+| A requirement must become a precise specification | `to-spec` | Every acceptance criterion is observable and testable, or it is not a criterion. |
+| Types, states, or invariants are being shaped | `domain-modeling` | Shared domain schemas live in `packages/sdk`; make illegal states unrepresentable instead of validating them later. |
+| Module boundaries, dependency direction, or file placement is in question | `codebase-design` | Obey the import rules below; reuse one existing convention rather than adding a second. |
+| Implementing any behavior or fixing any bug | `test-driven-development` | Write the failing test first and watch it fail. No production code without a failing test. |
+| Something fails, is flaky, or behaves unexpectedly | `systematic-debugging` | Find the cause before proposing a fix; never mask a failure with a catch, mock, retry, or fallback. |
+| A third-party API, SDK, or protocol behavior must be established | `find-docs` | Retrieve current primary-source documentation and record its status per the integration rules; training memory is not evidence. |
+| Assumptions in a plan, claim, or specification need pressure | `grilling`, `grill-with-docs` | Use before committing to an external dependency or an architectural decision, not after. |
+| Reading BNB Chain / opBNB state, transactions, or contract code during a probe | `bnbchain-mcp` | Read-only use for evidence gathering. Never hand it a production key; probe keys stay disposable and out of the repository. |
+| Starting or configuring the Foundry workspace and OpenZeppelin imports | `setup-solidity-contracts` | Pinned versions and remappings come from `docs/technical/TECH-STACK.md`. |
+| Writing or reviewing contract code that uses library primitives | `develop-secure-contracts` | Prefer an audited library primitive over a hand-rolled one; a library default still has to satisfy the mandate invariants. |
+| Reviewing a changed TypeScript or Solidity surface before claiming it done | `code-review-skill`, `requesting-code-review` | Review the diff against the invariants and the acceptance criteria of the task, not against taste. |
+| About to claim a task, test, deployment, or integration is complete | `verification-before-completion` | Produce the command and its observed output. An unrun check is a blocker, not a pass. |
+
+### Provenance
+
+| Source | Pinned revision | Installed |
+| --- | --- | --- |
+| [obra/superpowers](https://github.com/obra/superpowers) | `b36e0829c6d0140e93cfef2ca599b1b07d4a7797` | `brainstorming`, `writing-plans`, `test-driven-development`, `systematic-debugging`, `requesting-code-review`, `verification-before-completion` |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | `6654f6b60cd9d5be8b54c6fafe44346dabeb3b76` | `domain-modeling`, `codebase-design`, `grilling`, `grill-with-docs`, `to-spec` |
+| [OpenZeppelin/openzeppelin-skills](https://github.com/OpenZeppelin/openzeppelin-skills) | `6f215af60eb60017ab1a933ce9d22a479cd42b26` | `setup-solidity-contracts`, `develop-secure-contracts` (AGPL-3.0-only, unmodified) |
+| Workstation global install, snapshot 2026-09-19 | unpinned upstream | `bnbchain-mcp`, `code-review-skill`, `find-docs` |
+
+Every directory was copied unmodified; MIT license texts are retained in [`.agents/skills/licenses/`](.agents/skills/licenses) and `code-review-skill` carries its own `LICENSE`. When a skill is added or removed, update this section in the same change.
+
+### Deliberately absent
+
+- **Interface skills** (`emil-design-eng`, `motion`, `impeccable`, `design-taste-frontend`, `vercel-react-best-practices`) are not installed while the UI hold is in force. Install them in the change that opens the web surface, never earlier.
+- **Reference-repository skills** (`bsc-foundry`, `bnb-agent-stack`, `altana-*`, `swap-*`/`liquidity-*`/`farming-*`/`hub-*` planners) are excluded on purpose. They encode another product's contracts, its vendor session wallet, and its address tables, all of which would either contradict `docs/technical/INTEGRATION.md` or reintroduce the vendor dependency the core is forbidden to have. Do not re-import them; extract a specific technique into a canonical document instead.
+- **Harness tooling** (`graphify`, `orca-cli`, `orchestration`, `computer-use`) stays at the workstation level and is not vendored.
+
 ## Non-negotiable product and security invariants
 
 1. AI may narrow authority, never create or widen it.
