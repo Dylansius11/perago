@@ -8,7 +8,8 @@
       "!**/dist",
       "!packages/contracts/cache",
       "!packages/contracts/lib",
-      "!packages/contracts/out"
+      "!packages/contracts/out",
+      "!.agents"
     ]
   },
   "formatter": {
