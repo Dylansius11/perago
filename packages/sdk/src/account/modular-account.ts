@@ -110,6 +110,23 @@ const modularAccountAbi = [
   },
   {
     type: "function",
+    name: "executeBatch",
+    inputs: [
+      {
+        name: "calls",
+        type: "tuple[]",
+        components: [
+          { name: "target", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "data", type: "bytes" },
+        ],
+      },
+    ],
+    outputs: [{ name: "results", type: "bytes[]" }],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
     name: "installValidation",
     inputs: [
       { name: "validationConfig", type: "bytes25" },
@@ -392,6 +409,41 @@ export function encodeAccountExecute(params: {
     abi: modularAccountAbi,
     args: [getAddress(params.target), params.value, params.data],
     functionName: "execute",
+  });
+}
+
+/** One call inside an account batch. */
+export type AccountCall = {
+  target: Address;
+  value: bigint;
+  data: Hex;
+};
+
+/**
+ * Encodes several bounded calls as one atomic account execution. Only the root
+ * owner may reach this selector: `executeBatch` is a privileged selector, so a
+ * Perago session can never validate it (see {@link PRIVILEGED_SELECTORS}).
+ */
+export function encodeAccountExecuteBatch(calls: readonly AccountCall[]): Hex {
+  if (calls.length === 0) {
+    throw new RangeError("a batch must contain at least one call");
+  }
+
+  return encodeFunctionData({
+    abi: modularAccountAbi,
+    args: [
+      calls.map((call) => {
+        if (call.value < 0n || call.value > MAX_UINT256) {
+          throw new RangeError("value must fit in uint256");
+        }
+        return {
+          data: call.data,
+          target: getAddress(call.target),
+          value: call.value,
+        };
+      }),
+    ],
+    functionName: "executeBatch",
   });
 }
 

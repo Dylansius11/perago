@@ -1,9 +1,11 @@
 export {
   ACCOUNT_EXECUTE_SELECTOR,
+  type AccountCall,
   buildUserOperationNonceKey,
   deriveSemiModularAccountAddress,
   EXECUTE_USER_OP_SELECTOR,
   encodeAccountExecute,
+  encodeAccountExecuteBatch,
   encodeInstallMandateSession,
   encodeSemiModularAccountFactoryData,
   encodeUninstallMandateSession,
