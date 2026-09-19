@@ -18,6 +18,10 @@ export function TopBar() {
           aria-label="Perago home"
         >
           <Image
+            src="/brand/primary-no-bg.png"
+            alt="Perago logo"
+            width={124}
+            height={32}
             className="h-7 w-auto"
             priority
           />
@@ -68,3 +72,5 @@ export function TopBar() {
         </a>
       </div>
     </header>
+  );
+}
