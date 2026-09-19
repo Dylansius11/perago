@@ -4,6 +4,24 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-19 - A deployment's constraints are in its bytecode, not in the standard
+
+- Observed: the deployed BNB APEX kernel rejected a spec-legal `createJob` with `HookRequired()`, then would also have rejected `expiredAt = now + 120` with `ExpiryTooShort()`; ERC-8183 mandates neither rule, and the upstream README does not lead with them.
+- Root cause: an implementation may narrow a standard. Reading only the EIP produces calls that are valid on paper and revert onchain.
+- Rule: before integrating, decode the deployment's own error selectors and read its validation branch; treat the standard as the outer bound and the deployed contract as the real contract.
+
+### 2026-09-19 - A live probe must persist its own evidence
+
+- Observed: a six-minute chain-97 run printed a complete report that was then truncated by terminal paging, and the transaction hashes could not be recovered afterwards because the free RPC tier caps `eth_getLogs` at a ten-block range.
+- Root cause: the run's only output was stdout, so the evidence lived exactly as long as the scrollback.
+- Rule: every state-changing probe writes its report to a committed file (`docs/evidence/<name>.json`) as well as stdout; evidence that cannot be cited later did not happen.
+
+### 2026-09-19 - Delta assertions, never absolute balances
+
+- Observed: the stake assertion compared the post-withdrawal balance against the amount staked, so it failed the moment the account already held a leftover balance from an earlier run.
+- Root cause: the check conflated a running total with a per-run delta.
+- Rule: assert on measured deltas around each action, and treat any pre-existing balance as legitimate state a repeatable probe must tolerate.
+
 ### 2026-09-19 - A probe that writes onchain state must claim fresh state each run
 
 - Observed: the chain-97 session probe passed once, then failed on rerun with `AA10 sender already constructed`, and its fixed permission slot would next have collided with the expired session the earlier run left installed.

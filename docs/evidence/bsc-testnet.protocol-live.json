@@ -33,12 +33,7 @@
         }
       },
       "outcome": "escrow released to provider 0x2E42E0FB693765715014934282b9A7d3cF0c3818",
-      "statusPath": [
-        0,
-        1,
-        2,
-        3
-      ]
+      "statusPath": [0, 1, 2, 3]
     },
     "rejected": {
       "budgetWei": "400000000000000000",
@@ -64,10 +59,7 @@
         }
       },
       "outcome": "escrow refunded to the client before submission",
-      "statusPath": [
-        1,
-        4
-      ]
+      "statusPath": [1, 4]
     },
     "expired": {
       "budgetWei": "400000000000000000",
@@ -93,10 +85,7 @@
         }
       },
       "outcome": "escrow refunded after expiry without provider or evaluator action",
-      "statusPath": [
-        1,
-        5
-      ]
+      "statusPath": [1, 5]
     }
   },
   "provider": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",

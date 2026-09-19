@@ -58,9 +58,7 @@
   },
   "ownerEoa": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
   "session": {
-    "allowedSelectors": [
-      "0xd0e30db0"
-    ],
+    "allowedSelectors": ["0xd0e30db0"],
     "entityId": 71042,
     "nativeSpendLimit": "0.005",
     "signer": "0xB5EF99e2ff291E2CbfA28e8C51C381B9bbfDDa8b",
