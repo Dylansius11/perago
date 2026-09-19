@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.37;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {IPeragoAdapter} from "./interfaces/IPeragoAdapter.sol";
+import {IPeragoVerifier} from "./interfaces/IPeragoVerifier.sol";
 import {PeragoTypes} from "./types/PeragoTypes.sol";
 
 /// @title MandateExecutor
@@ -13,12 +17,25 @@ import {PeragoTypes} from "./types/PeragoTypes.sol";
 /// depth around this contract, never a substitute for it.
 /// @dev Non-upgradeable with a frozen storage layout. There is no admin, pause, sweep,
 /// nonce reset, or settlement override, by specification.
-contract MandateExecutor {
+contract MandateExecutor is ReentrancyGuard {
     using ECDSA for bytes32;
 
     /// @notice Ceiling for the constructor-pinned execution window. The deployment supplies
     /// the measured value; this bound keeps a stalled execution from outliving a mandate.
     uint48 public constant MAX_EXECUTION_WINDOW = 1 hours;
+
+    /// @notice Reason commitment written when the execution window closes with no receipt.
+    bytes32 public constant STALLED_FAILURE_REASON = keccak256("perago.failure.stalled.v1");
+
+    /// @notice Bytes of adapter or verifier revert data hashed into a failure reason. The
+    /// executor never parses revert data; it commits a bounded prefix and its true length,
+    /// so an oversized payload cannot price the failure record out of the block.
+    uint256 public constant MAX_REASON_BYTES = 256;
+
+    /// @dev Gas withheld from the effects subcall so the terminal `FAILED` record and its
+    /// event always fit, even when the adapter consumes everything it is given. The 63/64
+    /// rule alone leaves a stipend proportional to the call, not to this write.
+    uint256 private constant FAILURE_RECORD_GAS = 60_000;
 
     bytes32 private constant TASK_MANDATE_TYPEHASH = keccak256(
         "TaskMandate(address account,address rootOwner,uint64 ownerEpoch,address executor,uint256 chainId,uint256 nonce,uint48 expiresAt,bytes32 policyHash,bytes32 intentHash,bytes32 planHash,bytes32 simulationHash,address adapter,bytes4 adapterSelector,address inputToken,uint256 maxInput,address outputToken,uint256 minOutput,address recipient,bytes32 actionHash,bytes32 postconditionHash,address commerceContract,uint256 commerceJobId)"
@@ -69,6 +86,13 @@ contract MandateExecutor {
     event MandateRevoked(bytes32 indexed mandateHash, address indexed account);
     event MandateExpired(bytes32 indexed mandateHash);
     event CommerceJobBound(address indexed commerceContract, uint256 indexed jobId, bytes32 indexed mandateHash);
+    event ExecutionBegun(bytes32 indexed mandateHash, uint48 startedAt);
+    event ExecutionReceiptRecorded(
+        bytes32 indexed mandateHash,
+        PeragoTypes.MandateStatus status,
+        bytes32 verificationHash,
+        bytes32 failureReasonHash
+    );
 
     error InvalidDeploymentPair();
     error InvalidExecutionWindow();
@@ -95,6 +119,17 @@ contract MandateExecutor {
     error InvalidTransition();
     error CommerceJobAlreadyBound();
     error CommerceBindingRequired();
+    error ExecutionNotStarted();
+    error ExecutionWindowElapsed();
+    error InsufficientGasBudget();
+    error InvalidExecutorProof();
+    error ActionHashMismatch();
+    error VerificationFailed();
+    error PostconditionHashMismatch();
+    error RecipientMismatch();
+    error AllowanceNotCleared();
+    error ResidualBalance();
+    error OnlySelf();
 
     /// @param swapAdapter_ deployment-pinned swap adapter; its verifier is read, not passed
     /// @param stakeAdapter_ deployment-pinned stake adapter; its verifier is read, not passed
@@ -294,6 +329,124 @@ contract MandateExecutor {
         emit MandateAuthorized(mandateHash, mandate.account, mandate.executor, mandate.nonce, mandate.expiresAt);
     }
 
+    // --- accepted attempt -----------------------------------------------------
+
+    /// @notice The signed executor commits the one execution attempt this mandate allows.
+    /// @dev A separate transaction on purpose: `EXECUTING` and `executionStartedAt` are
+    /// written before any smart-account or protocol call, so a reverting attempt cannot
+    /// roll back its own nonce and make the root signature reusable.
+    function beginExecution(bytes32 mandateHash) external {
+        PeragoTypes.MandateRecord storage record = _mandates[mandateHash];
+        if (record.status != PeragoTypes.MandateStatus.AUTHORIZED) revert InvalidTransition();
+        if (msg.sender != record.executor) revert WrongExecutor();
+        if (block.timestamp >= record.expiresAt) revert ExpiredMandate();
+
+        record.status = PeragoTypes.MandateStatus.EXECUTING;
+        record.executionStartedAt = uint48(block.timestamp);
+        emit ExecutionBegun(mandateHash, uint48(block.timestamp));
+    }
+
+    /// @notice The smart account performs the accepted attempt and receives its terminal
+    /// status. Reverts only when the attempt was never admissible; an admissible attempt
+    /// that fails downstream is recorded as `FAILED`, never retried.
+    function perform(
+        PeragoTypes.TaskMandate calldata mandate,
+        bytes calldata action,
+        PeragoTypes.ExecutionProof calldata proof,
+        bytes calldata proofSignature
+    ) external nonReentrant returns (PeragoTypes.MandateStatus) {
+        bytes32 mandateHash = hashMandate(mandate);
+        PeragoTypes.MandateRecord storage record = _mandates[mandateHash];
+        if (record.status == PeragoTypes.MandateStatus.AUTHORIZED) revert ExecutionNotStarted();
+        if (record.status != PeragoTypes.MandateStatus.EXECUTING) revert InvalidTransition();
+        if (msg.sender != record.account) revert WrongAccountCaller();
+        if (block.timestamp >= record.expiresAt) revert ExpiredMandate();
+        if (block.timestamp > uint256(record.executionStartedAt) + executionWindow) revert ExecutionWindowElapsed();
+        if (keccak256(action) != mandate.actionHash) revert ActionHashMismatch();
+        _requireExecutorProof(mandateHash, record.executor, proof, proofSignature);
+
+        uint256 available = gasleft();
+        if (available <= FAILURE_RECORD_GAS * 2) revert InsufficientGasBudget();
+        (bool succeeded,) = address(this).call{gas: available - FAILURE_RECORD_GAS}(
+            abi.encodeCall(this.executeCore, (mandateHash, mandate, action))
+        );
+
+        if (succeeded) {
+            // `executeCore` writes the receipt inside the subcall that verified it, so
+            // `SUCCEEDED` can never exist without a passing verifier measurement.
+            if (record.status != PeragoTypes.MandateStatus.SUCCEEDED) revert VerificationFailed();
+            return PeragoTypes.MandateStatus.SUCCEEDED;
+        }
+
+        bytes32 failureReasonHash = _boundedRevertCommitment();
+        record.status = PeragoTypes.MandateStatus.FAILED;
+        record.failureReasonHash = failureReasonHash;
+        emit ExecutionReceiptRecorded(mandateHash, PeragoTypes.MandateStatus.FAILED, bytes32(0), failureReasonHash);
+        return PeragoTypes.MandateStatus.FAILED;
+    }
+
+    /// @notice The effects boundary, reachable only through `perform`'s self-call. Every
+    /// token movement, approval, and protocol call lives here, so one revert rolls all of
+    /// them back while the outer frame still records the terminal receipt.
+    function executeCore(bytes32 mandateHash, PeragoTypes.TaskMandate calldata mandate, bytes calldata action)
+        external
+    {
+        if (msg.sender != address(this)) revert OnlySelf();
+
+        PeragoTypes.MandateRecord storage record = _mandates[mandateHash];
+        address adapter = record.adapter;
+        address verifier = record.verifier;
+        IERC20 inputToken = IERC20(mandate.inputToken);
+
+        // The adapter must normalize the signed action to the same commitment the root
+        // owner approved; a different reading of the same bytes is not this action.
+        if (IPeragoAdapter(adapter).validate(mandate, action) != mandate.actionHash) revert ActionHashMismatch();
+
+        uint256 heldBefore = inputToken.balanceOf(address(this));
+        SafeERC20.safeTransferFrom(inputToken, mandate.account, address(this), mandate.maxInput);
+
+        (uint256 beforeValue, bytes32 beforeContext) = IPeragoVerifier(verifier).measure(mandate, action);
+
+        SafeERC20.forceApprove(inputToken, adapter, mandate.maxInput);
+        PeragoTypes.AdapterResult memory result = IPeragoAdapter(adapter).execute(mandate, action);
+        SafeERC20.forceApprove(inputToken, adapter, 0);
+        if (inputToken.allowance(address(this), adapter) != 0) revert AllowanceNotCleared();
+
+        // Input spend is measured here, never taken from the adapter's self-report.
+        uint256 heldAfter = inputToken.balanceOf(address(this));
+        uint256 measuredSpend = heldBefore + mandate.maxInput - heldAfter;
+        if (measuredSpend > mandate.maxInput) revert AmountOutOfBounds();
+
+        PeragoTypes.VerificationEvidence memory evidence =
+            IPeragoVerifier(verifier).verify(mandate, action, beforeValue, beforeContext, result);
+        if (evidence.inputSpent > mandate.maxInput) revert AmountOutOfBounds();
+        if (evidence.observedOutputOrPositionDelta < mandate.minOutput) revert VerificationFailed();
+        // The adapter may not claim more than the verifier measured.
+        if (result.outputOrPositionReceived > evidence.observedOutputOrPositionDelta) revert VerificationFailed();
+        if (evidence.evidenceHash != _evidenceCommitment(mandate, evidence, result)) {
+            revert PostconditionHashMismatch();
+        }
+
+        // Unspent input goes back to the signed account; protocol output was sent straight
+        // to the signed recipient, so nothing of the user's may remain here.
+        if (heldAfter != 0) SafeERC20.safeTransfer(inputToken, mandate.account, heldAfter);
+        if (inputToken.balanceOf(address(this)) != 0) revert ResidualBalance();
+        if (IERC20(mandate.outputToken).balanceOf(address(this)) != 0) revert RecipientMismatch();
+
+        bytes32 verificationHash = keccak256(
+            abi.encode(
+                mandateHash,
+                measuredSpend,
+                evidence.observedOutputOrPositionDelta,
+                evidence.evidenceHash,
+                result.protocolEvidenceHash
+            )
+        );
+        record.status = PeragoTypes.MandateStatus.SUCCEEDED;
+        record.verificationHash = verificationHash;
+        emit ExecutionReceiptRecorded(mandateHash, PeragoTypes.MandateStatus.SUCCEEDED, verificationHash, bytes32(0));
+    }
+
     // --- terminal transitions -------------------------------------------------
 
     /// @notice The account ends an authorized mandate before it is executed.
@@ -317,7 +470,70 @@ contract MandateExecutor {
         emit MandateExpired(mandateHash);
     }
 
+    /// @notice Permissionless: an accepted attempt that never returned a receipt is failed
+    /// once its window closes. Authority ends either way, so anyone may close the record.
+    function finalizeStalledExecution(bytes32 mandateHash) external {
+        PeragoTypes.MandateRecord storage record = _mandates[mandateHash];
+        if (record.status != PeragoTypes.MandateStatus.EXECUTING) revert InvalidTransition();
+        if (block.timestamp <= uint256(record.executionStartedAt) + executionWindow) revert MandateNotExpired();
+
+        record.status = PeragoTypes.MandateStatus.FAILED;
+        record.failureReasonHash = STALLED_FAILURE_REASON;
+        emit ExecutionReceiptRecorded(mandateHash, PeragoTypes.MandateStatus.FAILED, bytes32(0), STALLED_FAILURE_REASON);
+    }
+
     // --- internals ------------------------------------------------------------
+
+    /// @dev The executor proof survives ERC-4337 call indirection: `perform` sees the
+    /// account as its caller, so the scoped executor's own short-lived signature is what
+    /// ties this attempt to the executor the root owner named.
+    function _requireExecutorProof(
+        bytes32 mandateHash,
+        address expectedExecutor,
+        PeragoTypes.ExecutionProof calldata proof,
+        bytes calldata signature
+    ) private view {
+        if (proof.mandateHash != mandateHash || proof.account != msg.sender || proof.executor != expectedExecutor) {
+            revert InvalidExecutorProof();
+        }
+        if (proof.validUntil <= block.timestamp) revert InvalidExecutorProof();
+
+        (address recovered, ECDSA.RecoverError err,) = hashExecutionProof(proof).tryRecoverCalldata(signature);
+        if (err != ECDSA.RecoverError.NoError || recovered != expectedExecutor) revert InvalidExecutorProof();
+    }
+
+    /// @dev The verifier must bind its measurement to this mandate's postcondition, so
+    /// evidence measured for one mandate can never settle another.
+    function _evidenceCommitment(
+        PeragoTypes.TaskMandate calldata mandate,
+        PeragoTypes.VerificationEvidence memory evidence,
+        PeragoTypes.AdapterResult memory result
+    ) private pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                mandate.postconditionHash,
+                evidence.inputSpent,
+                evidence.observedOutputOrPositionDelta,
+                result.protocolEvidenceHash
+            )
+        );
+    }
+
+    /// @dev Commits a bounded prefix of the subcall's revert data plus its true length.
+    /// Reason codes are mapped offchain from this hash; revert data is never parsed here,
+    /// because a hostile adapter chooses its size.
+    function _boundedRevertCommitment() private pure returns (bytes32) {
+        uint256 size;
+        assembly ("memory-safe") {
+            size := returndatasize()
+        }
+        uint256 copied = size > MAX_REASON_BYTES ? MAX_REASON_BYTES : size;
+        bytes memory reason = new bytes(copied);
+        assembly ("memory-safe") {
+            returndatacopy(add(reason, 0x20), 0, copied)
+        }
+        return keccak256(abi.encode(size, reason));
+    }
 
     function _requireMandateShape(PeragoTypes.TaskMandate calldata mandate) private view {
         if (mandate.account == address(0) || mandate.rootOwner == address(0) || mandate.executor == address(0)) {

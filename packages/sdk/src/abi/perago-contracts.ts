@@ -811,6 +811,32 @@ export const mandateExecutorAbi = [
   },
   {
     type: "function",
+    name: "MAX_REASON_BYTES",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "STALLED_FAILURE_REASON",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "accountConfig",
     inputs: [
       {
@@ -1001,6 +1027,19 @@ export const mandateExecutorAbi = [
   },
   {
     type: "function",
+    name: "beginExecution",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "commerceJobBinding",
     inputs: [
       {
@@ -1038,6 +1077,141 @@ export const mandateExecutorAbi = [
   },
   {
     type: "function",
+    name: "executeCore",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "executionWindow",
     inputs: [],
     outputs: [
@@ -1052,6 +1226,19 @@ export const mandateExecutorAbi = [
   {
     type: "function",
     name: "finalizeExpired",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "finalizeStalledExecution",
     inputs: [
       {
         name: "mandateHash",
@@ -1424,6 +1611,174 @@ export const mandateExecutorAbi = [
   },
   {
     type: "function",
+    name: "perform",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+      {
+        name: "proof",
+        type: "tuple",
+        internalType: "struct PeragoTypes.ExecutionProof",
+        components: [
+          {
+            name: "mandateHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "validUntil",
+            type: "uint48",
+            internalType: "uint48",
+          },
+        ],
+      },
+      {
+        name: "proofSignature",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "uint8",
+        internalType: "enum PeragoTypes.MandateStatus",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "revoke",
     inputs: [
       {
@@ -1606,6 +1961,56 @@ export const mandateExecutorAbi = [
   },
   {
     type: "event",
+    name: "ExecutionBegun",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+      {
+        name: "startedAt",
+        type: "uint48",
+        indexed: false,
+        internalType: "uint48",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "ExecutionReceiptRecorded",
+    inputs: [
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+      {
+        name: "status",
+        type: "uint8",
+        indexed: false,
+        internalType: "enum PeragoTypes.MandateStatus",
+      },
+      {
+        name: "verificationHash",
+        type: "bytes32",
+        indexed: false,
+        internalType: "bytes32",
+      },
+      {
+        name: "failureReasonHash",
+        type: "bytes32",
+        indexed: false,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "MandateAuthorized",
     inputs: [
       {
@@ -1694,6 +2099,16 @@ export const mandateExecutorAbi = [
   },
   {
     type: "error",
+    name: "ActionHashMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "AllowanceNotCleared",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "AmountOutOfBounds",
     inputs: [],
   },
@@ -1709,6 +2124,16 @@ export const mandateExecutorAbi = [
   },
   {
     type: "error",
+    name: "ExecutionNotStarted",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ExecutionWindowElapsed",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "ExpiredMandate",
     inputs: [],
   },
@@ -1719,12 +2144,22 @@ export const mandateExecutorAbi = [
   },
   {
     type: "error",
+    name: "InsufficientGasBudget",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "InvalidDeploymentPair",
     inputs: [],
   },
   {
     type: "error",
     name: "InvalidExecutionWindow",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidExecutorProof",
     inputs: [],
   },
   {
@@ -1769,6 +2204,11 @@ export const mandateExecutorAbi = [
   },
   {
     type: "error",
+    name: "OnlySelf",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "OwnerEpochMismatch",
     inputs: [],
   },
@@ -1784,8 +2224,39 @@ export const mandateExecutorAbi = [
   },
   {
     type: "error",
+    name: "PostconditionHashMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RecipientMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ReentrancyGuardReentrantCall",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ResidualBalance",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "RootOwnerMismatch",
     inputs: [],
+  },
+  {
+    type: "error",
+    name: "SafeERC20FailedOperation",
+    inputs: [
+      {
+        name: "token",
+        type: "address",
+        internalType: "address",
+      },
+    ],
   },
   {
     type: "error",
@@ -1795,6 +2266,11 @@ export const mandateExecutorAbi = [
   {
     type: "error",
     name: "UnsupportedAdapter",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "VerificationFailed",
     inputs: [],
   },
   {

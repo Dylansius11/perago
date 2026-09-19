@@ -102,6 +102,13 @@ describe("generated Perago contract ABIs", () => {
     expect(
       toFunctionSelector(abiFunction(mandateExecutorAbi, "hashMandate")),
     ).toBe(toFunctionSelector(`hashMandate(${MANDATE_TUPLE})`));
+    // The account performs the accepted attempt with the same tuple plus the
+    // executor proof; a tuple change here would strand every signed mandate.
+    expect(toFunctionSelector(abiFunction(mandateExecutorAbi, "perform"))).toBe(
+      toFunctionSelector(
+        `perform(${MANDATE_TUPLE},bytes,(bytes32,address,address,uint48),bytes)`,
+      ),
+    );
   });
 
   // Offchain reason mapping reads these selectors; a renamed error silently
@@ -123,6 +130,13 @@ describe("generated Perago contract ABIs", () => {
         "WrongExecutor",
         "WrongChain",
         "ExpiredMandate",
+        "ExecutionNotStarted",
+        "ExecutionWindowElapsed",
+        "InvalidExecutorProof",
+        "ActionHashMismatch",
+        "VerificationFailed",
+        "PostconditionHashMismatch",
+        "RecipientMismatch",
       ]),
     );
   });

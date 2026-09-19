@@ -4,6 +4,18 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-19 - A guard is unproven until a mutation of it fails a test
+
+- Observed: the full `P2-002` suite passed on the first run, yet deleting the subcall gas bound (`gas: available - FAILURE_RECORD_GAS` to `gas: available`) still passed all 49 tests, because at the 2,000,000 gas the test supplied, the EIP-150 1/64 remainder was itself enough to write the terminal `FAILED` record.
+- Root cause: the test proved the failure record exists, not that it survives an adapter that consumes everything it is handed; the gas figure was chosen for comfort rather than sized against the guard.
+- Rule: after a suite goes green, mutate each guard it claims to protect and confirm a named test fails; for a gas-starvation guard, size the call so the 63/64 remainder is demonstrably insufficient (300,000 here, not 2,000,000).
+
+### 2026-09-19 - A source-mutating script must restore in `finally`, and its baseline must be read before the first mutation
+
+- Observed: a mutation loop over `MandateExecutor.sol` asserted a pattern that `forge fmt` had reflowed, raised mid-loop, and left the file mutated; the next cell then re-read that mutated file as its "clean" baseline, so two mutations stacked and the uncommitted implementation had to be repaired by hand.
+- Root cause: the restore ran after the loop instead of in a `finally`, and the baseline was re-read from disk rather than held from before the first write.
+- Rule: capture the pristine text once, write mutations from that captured text, restore inside `finally`, and assert the restored file equals the capture before trusting any later result.
+
 ### 2026-09-19 - Check order decides which rejection a caller sees, so order it deliberately
 
 - Observed: the first `MandateExecutor.authorize` implementation validated the ERC-8183 job binding inside the field-shape helper, so replaying an identical mandate reverted `CommerceJobAlreadyBound()` instead of `NonceAlreadyUsed()`; the replay test written first is what exposed it.
