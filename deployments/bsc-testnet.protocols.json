@@ -1,95 +1,100 @@
 {
-  "schemaVersion": "1",
-  "status": "needs re-verification",
-  "chainId": "97",
-  "block": {
-    "number": "131695325",
-    "hash": "0x3cb529de3d4e875ca8031a3f71a8b212592fdf19748a4d8fbb8f4e248010bf39"
+  "chainId": 97,
+  "chainName": "BNB Smart Chain Testnet",
+  "verifiedAt": {
+    "blockNumber": "131853725",
+    "blockHash": "0x0993863297a2761638f46105d146b7519f7f9bf47f46bd2f1cd8a60df5f921b3",
+    "blockTimestamp": "1789780842"
   },
   "sources": {
     "pancakeV3": "https://developer.pancakeswap.finance/contracts/v3/addresses",
-    "cakePool": "https://docs.pancakeswap.finance/welcome-to-pancakeswap/how-to-guides/v3-v2-migration/migration/cake-syrup-pool"
+    "cakePool": "https://docs.pancakeswap.finance/welcome-to-pancakeswap/how-to-guides/v3-v2-migration/migration/cake-syrup-pool",
+    "apex": "https://github.com/bnb-chain/apex-contracts",
+    "erc8183": "https://eips.ethereum.org/EIPS/eip-8183"
   },
-  "contracts": [
-    {
-      "name": "PancakeV3Factory",
-      "address": "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
-      "runtimeCodeHash": "0x8191d3ab1d55d3da9822199f28865415c99566b6f1aee4a4b16713f57930678c",
-      "runtimeCodeSize": 5151
+  "contracts": {
+    "pancakeV3Factory": {
+      "address": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+      "codeHash": "0x8191d3ab1d55d3da9822199f28865415c99566b6f1aee4a4b16713f57930678c",
+      "role": "PancakeSwap V3 factory that owns every direct pool Perago may swap through."
     },
-    {
-      "name": "PancakeV3SwapRouter",
-      "address": "0x1b81d678ffb9c0263b24a97847620c99d213eb14",
-      "runtimeCodeHash": "0xb9a158fb57e65ea1fea1f1149e30720ccbc413f65fb1aecfe734c199f132fc14",
-      "runtimeCodeSize": 12154
+    "pancakeV3SwapRouter": {
+      "address": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
+      "codeHash": "0xb9a158fb57e65ea1fea1f1149e30720ccbc413f65fb1aecfe734c199f132fc14",
+      "role": "PancakeSwap V3 SwapRouter; the only swap entry point a Perago swap adapter calls."
     },
-    {
-      "name": "PancakeV3QuoterV2",
-      "address": "0xbc203d7f83677c7ed3f7acec959963e7f4ecc5c2",
-      "runtimeCodeHash": "0xdaac3d7e54ebcbaa6c3d93731da89f2f11a506716088184620a238fb82bdd8e3",
-      "runtimeCodeSize": 8331
+    "pancakeV3QuoterV2": {
+      "address": "0xbC203d7f83677c7ed3F7acEc959963E7F4ECC5C2",
+      "codeHash": "0xdaac3d7e54ebcbaa6c3d93731da89f2f11a506716088184620a238fb82bdd8e3",
+      "role": "QuoterV2 used for pre-signature simulation of exact-input swaps."
     },
-    {
-      "name": "DummyCAKE",
-      "address": "0xfa60d973f7642b748046464e165a65b7323b0dee",
-      "runtimeCodeHash": "0x6b9d0521473366d6a5e75ddacee104389f35f6f877fc08dc3aa339400e71a828",
-      "runtimeCodeSize": 8796,
+    "pancakeV2Router": {
+      "address": "0xD99D1c33F9fC3444f8101754aBC46c52416550D1",
+      "codeHash": "0x89c56da835bced0ca70200b1628ccc5c2af177e22d2471f5637977419b1681a1",
+      "role": "PancakeSwap V2 router; test-asset funding path only, not a Perago action target."
+    },
+    "pancakeV2Factory": {
+      "address": "0x6725F303b657a9451d8BA641348b6761A6CC7a17",
+      "codeHash": "0x36c7ba456c3a96dd2533d77851ff273705972236486ce2421495e55633d5522a",
+      "role": "PancakeSwap V2 factory backing the payment-token funding pair."
+    },
+    "wbnb": {
+      "address": "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+      "codeHash": "0xb7d84205eaaf83ce7b3940c6beaad6d22790255e34a9a2b486aa8cdfff118fe6",
+      "role": "Wrapped BNB used by both routers as WETH9; the canonical native wrapper on chain 97."
+    },
+    "cake": {
+      "address": "0xFa60D973F7642B748046464e165A65B7323b0DEE",
+      "codeHash": "0x6b9d0521473366d6a5e75ddacee104389f35f6f877fc08dc3aa339400e71a828",
+      "role": "Testnet CAKE; the stake asset and the swap output Perago proves."
+    },
+    "cakePool": {
+      "address": "0x683433ba14e8F26774D43D3E90DA6Dd7a22044Fe",
+      "codeHash": "0x05e4b2dafbea502af223316e347c2dffb5971e1dfc99ab2199787a8e222b4f8e",
+      "role": "CAKE Pool (single-asset stake) that Perago's stake adapter targets."
+    },
+    "masterChefV2": {
+      "address": "0xB4A466911556e39210a6bB2FaECBB59E4eB7E43d",
+      "codeHash": "0x653f2d2cd95aaf373d5b76a20fddc348e01c5823060f375a9d8244d931521cfb",
+      "role": "MasterChef V2 that the CAKE Pool deposits into; read-only dependency."
+    },
+    "apexKernel": {
+      "address": "0xa206c0517B6371C6638CD9e4a42Cc9f02A33B0DE",
+      "codeHash": "0x1f1858db4825be798342d4c094630bf5ddc685bd802a083d8d88f15a6cdb2a89",
+      "role": "BNB APEX AgenticCommerceUpgradeable proxy; the ERC-8183 escrow kernel.",
+      "erc1967Implementation": "0x55c3826b39a0f671b2c3e5d0f1372cad0b911421",
+      "implementationCodeHash": "0xb42935ea4e89b470ea5049cf66d7f1003a5c8d452aef72d78c666577e828380b"
+    },
+    "apexEvaluatorRouter": {
+      "address": "0xd7d36d66d2f1b608a0f943f722d27e3744f66f25",
+      "codeHash": "0x1f1858db4825be798342d4c094630bf5ddc685bd802a083d8d88f15a6cdb2a89",
+      "role": "BNB APEX EvaluatorRouterUpgradeable proxy; evaluator/hook used by upstream jobs.",
+      "erc1967Implementation": "0x40c0254610d92f1eb9c2d7d5d2114bc4c99d935e",
+      "implementationCodeHash": "0xb523939a51d980e6bb482b6362806d06b2d75cee4e230d4ccb25f9acf0e44d18"
+    },
+    "apexPaymentToken": {
+      "address": "0xc70B8741B8B07A6d61E54fd4B20f22Fa648E5565",
+      "codeHash": "0xae12b1d61f7ed4febf649ccf319cb49a0e921cca3739dcb01b47d316049d46ff",
+      "role": "Kernel paymentToken(); upstream labels it USDC, onchain it is United Stables (U).",
+      "erc1967Implementation": "0x6b5c44cbd4bbddf11723557ba1b77ec5e33225cc",
+      "implementationCodeHash": "0x72a63adfb9af6944c694e1ecb76b566fd921a10ce98754f2f841a821ff8fb16f"
+    }
+  },
+  "tokens": {
+    "wbnb": {
+      "name": "Wrapped BNB",
+      "symbol": "WBNB",
+      "decimals": 18
+    },
+    "cake": {
+      "name": "PancakeSwap Token",
       "symbol": "Cake",
       "decimals": 18
     },
-    {
-      "name": "WBNB",
-      "address": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
-      "runtimeCodeHash": "0xb7d84205eaaf83ce7b3940c6beaad6d22790255e34a9a2b486aa8cdfff118fe6",
-      "runtimeCodeSize": 3124
-    },
-    {
-      "name": "CakePool",
-      "address": "0x683433ba14e8f26774d43d3e90da6dd7a22044fe",
-      "runtimeCodeHash": "0x05e4b2dafbea502af223316e347c2dffb5971e1dfc99ab2199787a8e222b4f8e",
-      "runtimeCodeSize": 17899,
-      "pricePerFullShare": "41200720493158251251424357",
-      "performanceFeeBps": "200",
-      "withdrawFeeBps": "10",
-      "withdrawFeePeriodSeconds": "259200"
-    },
-    {
-      "name": "MasterChefV2",
-      "address": "0xb4a466911556e39210a6bb2faecbb59e4eb7e43d",
-      "runtimeCodeHash": "0x653f2d2cd95aaf373d5b76a20fddc348e01c5823060f375a9d8244d931521cfb",
-      "runtimeCodeSize": 15149
+    "apexPaymentToken": {
+      "name": "United Stables",
+      "symbol": "U",
+      "decimals": 18
     }
-  ],
-  "candidateDirectPools": [
-    {
-      "token0Or1": "DummyCAKE",
-      "token0Or1Other": "WBNB",
-      "fee": 100,
-      "address": "0x3ad3f791d0e04ba135f28ee385d1e0e6bb01fcfa"
-    },
-    {
-      "token0Or1": "DummyCAKE",
-      "token0Or1Other": "WBNB",
-      "fee": 500,
-      "address": "0xeaf78e3aa2c19df9495318cd9ea2ad83be7d5015"
-    },
-    {
-      "token0Or1": "DummyCAKE",
-      "token0Or1Other": "WBNB",
-      "fee": 2500,
-      "address": "0x1066a98a0cfd1e24ba565274b43881a92adc4fd1"
-    },
-    {
-      "token0Or1": "DummyCAKE",
-      "token0Or1Other": "WBNB",
-      "fee": 10000,
-      "address": "0x703bc57fc0a39bd81d668b2477f7c20e546945fd"
-    }
-  ],
-  "remainingAcceptanceEvidence": [
-    "Read candidate pool liquidity and quote each viable direct pool.",
-    "Run smallest disposable-wallet swap success/failure/refund evidence.",
-    "Run CAKE Pool flexible deposit, position increase, and withdrawal recovery evidence.",
-    "Validate APEX kernel/router/policy/token lifecycle and deterministic evaluator compatibility."
-  ]
+  }
 }
