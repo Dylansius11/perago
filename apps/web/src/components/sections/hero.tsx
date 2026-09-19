@@ -24,7 +24,7 @@ export function Hero() {
 
   return (
     <section className="relative border-b border-ruleinvert pt-16">
-      <div className="mx-auto grid max-w-[1560px] md:grid-cols-12">
+      <div className="grid md:grid-cols-12">
         {/* Left: the promise */}
         <div className="flex min-h-[82dvh] flex-col justify-between border-b border-ruleinvert px-6 pb-10 pt-10 md:col-span-7 md:min-h-0 md:border-b-0 md:border-r md:pr-10">
           <div className="flex items-center gap-3 pt-2">

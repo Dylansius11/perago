@@ -16,7 +16,7 @@ const NAV = [
 export function SiteFooter() {
   return (
     <footer className="rain border-t border-ruleinvert bg-ink text-paper">
-      <div className="mx-auto max-w-[1560px] px-6 py-14 md:px-10">
+      <div className="px-6 py-14 md:px-10">
         <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
           <Wordmark tone="paper" size="lg" />
           <nav aria-label="Footer" className="flex flex-wrap gap-x-10 gap-y-4">

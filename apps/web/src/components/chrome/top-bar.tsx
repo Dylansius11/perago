@@ -11,7 +11,7 @@ import { UtcClock } from "./utc-clock";
 export function TopBar() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-ruleinvert bg-paper">
-      <div className="mx-auto flex h-16 max-w-[1560px] items-stretch">
+      <div className="flex h-16 items-stretch">
         <Link
           href="/"
           className="flex w-52 items-center border-r border-ruleinvert px-5"

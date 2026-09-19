@@ -41,7 +41,7 @@ const FAILURES = [
 export function FailureStates() {
   return (
     <section id="execution" className="scroll-mt-16 border-b border-ruleinvert bg-paper">
-      <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-10">
+      <div className="px-6 py-16 md:px-10">
         <RiseIn>
           <h2 className="max-w-[20ch] text-4xl font-semibold tracking-[-0.03em] md:text-6xl">
             The fence holds when things go wrong.

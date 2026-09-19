@@ -8,7 +8,7 @@ import { RiseIn } from "@/components/motion/reveal";
 export function Closing() {
   return (
     <section id="access" className="scroll-mt-16 bg-signal text-ink">
-      <div className="mx-auto max-w-[1560px] px-6 pb-24 pt-20 md:px-10">
+      <div className="px-6 pb-24 pt-20 md:px-10">
         <RiseIn>
           <h2 className="max-w-[14ch] text-[clamp(2.6rem,6.5vw,6rem)] font-semibold leading-[1.02] tracking-[-0.03em]">
             Give the goal. Keep the keys.

@@ -7,7 +7,7 @@ import { Caption } from "@/components/primitives";
  * card type. Each step is one product fact, two lines of copy, and a mono
  * spec line.
  */
-const STEPS_PAPER: readonly [StepData, StepData] = [
+const STEPS: readonly [StepData, StepData, StepData, StepData, StepData, StepData] = [
   {
     n: "01",
     title: "State the goal",
@@ -20,9 +20,6 @@ const STEPS_PAPER: readonly [StepData, StepData] = [
     copy: "Deterministic code intersects the plan with your standing limits. A conflict is a structured rejection, every rule shown.",
     spec: "WalletPolicy",
   },
-];
-
-const STEPS_INK: readonly [StepData, StepData] = [
   {
     n: "03",
     title: "Simulated before you sign",
@@ -35,9 +32,6 @@ const STEPS_INK: readonly [StepData, StepData] = [
     copy: "An EIP-712 mandate binds owner, executor, chain, nonce, expiry, spend bounds, recipient, and the verified outcome.",
     spec: "TaskMandate",
   },
-];
-
-const STEP_TAIL: readonly [StepData, StepData] = [
   {
     n: "05",
     title: "Executed inside the fence",
@@ -62,17 +56,21 @@ type StepData = {
 export function Lifecycle() {
   return (
     <section id="mandate" className="scroll-mt-16 border-b border-ruleinvert">
-      <div className="mx-auto max-w-[1560px]">
-        <SectionHeader />
-        <div className="grid md:grid-cols-6">
-          <StepCell data={STEPS_PAPER[0]} />
-          <StepCell data={STEPS_PAPER[1]} />
-          <PhotoCell />
-          <StepCell data={STEPS_INK[0]} dark />
-          <StepCell data={STEPS_INK[1]} dark />
-          <StepCell data={STEP_TAIL[0]} tail />
-          <StepCell data={STEP_TAIL[1]} tail />
-        </div>
+      <SectionHeader />
+      {/*
+       * Four columns, two rows, seven cells: the tree photograph spans both
+       * rows in the last column so no slot is left empty. Reading order stays
+       * 01 through 06 for assistive tech; the photograph is decorative and
+       * sits after step 03 in the DOM.
+       */}
+      <div className="grid md:grid-cols-4">
+        <StepCell data={STEPS[0]} />
+        <StepCell data={STEPS[1]} />
+        <StepCell data={STEPS[2]} dark />
+        <PhotoCell />
+        <StepCell data={STEPS[3]} />
+        <StepCell data={STEPS[4]} dark />
+        <StepCell data={STEPS[5]} tail />
       </div>
     </section>
   );
@@ -114,7 +112,7 @@ function StepCell({ data, dark, tail }: StepProps) {
 
   return (
     <RiseIn
-      className={`min-h-[300px] border-l border-t ${ruleColor} ${surface} p-8 md:p-10`}
+      className={`min-h-[280px] border-l border-t ${ruleColor} ${surface} p-6 md:p-8`}
     >
       <div className="flex h-full flex-col justify-between gap-10">
         <div>
@@ -136,7 +134,7 @@ function StepCell({ data, dark, tail }: StepProps) {
 
 function PhotoCell() {
   return (
-    <Unveil className="relative min-h-[300px] overflow-hidden border-l border-t border-rule bg-panel">
+    <Unveil className="relative min-h-[220px] overflow-hidden border-l border-t border-rule bg-panel md:row-span-2">
       {/* Wood-cut node illustration: authored SVG line art on panel green. */}
       <svg
         viewBox="0 0 200 200"

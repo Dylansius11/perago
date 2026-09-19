@@ -29,7 +29,7 @@ const BOUNDS: Array<[string, string]> = [
 export function Anatomy() {
   return (
     <section className="border-b border-ruleinvert bg-paper">
-      <div className="mx-auto grid max-w-[1560px] md:grid-cols-12">
+      <div className="grid md:grid-cols-12">
         <div className="px-6 py-16 md:col-span-7 md:px-10">
           <RiseIn>
             <h2 className="max-w-[18ch] text-4xl font-semibold tracking-[-0.03em] md:text-6xl">

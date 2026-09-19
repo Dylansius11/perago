@@ -26,7 +26,7 @@ export function Receipt() {
   return (
     <section id="evidence" className="scroll-mt-16 border-b border-ruleinvert">
       <div className="rain bg-ink text-paper">
-        <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-10">
+        <div className="px-6 py-16 md:px-10">
           <RiseIn>
             <Caption>Execution Receipt</Caption>
             <h2 className="max-w-[22ch] text-4xl font-semibold tracking-[-0.03em] md:text-6xl">
