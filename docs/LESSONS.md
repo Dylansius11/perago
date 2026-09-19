@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-19 - The index is shared, so commit by pathspec when another agent works the same worktree
+
+- Observed: a skills-only change staged with `git add .agents AGENTS.md` was committed with a bare `git commit`, and the resulting commit `7b6cf26` also carried `.gitmodules` and the `packages/contracts/lib/forge-std` submodule that a concurrently running agent had staged in the same worktree seconds earlier.
+- Root cause: `git add <paths>` is scoped but `git commit` is not - it commits the entire index, including whatever another process staged, and pushing then makes that attribution permanent on a branch where force-push is forbidden.
+- Rule: when a second agent or terminal is live in this worktree, commit with an explicit pathspec (`git commit -- <paths>`) and read `git diff --cached --name-only` first. Never assume the index holds only your own work.
+
 ### 2026-09-19 - A deployment's constraints are in its bytecode, not in the standard
 
 - Observed: the deployed BNB APEX kernel rejected a spec-legal `createJob` with `HookRequired()`, then would also have rejected `expiredAt = now + 120` with `ExpiryTooShort()`; ERC-8183 mandates neither rule, and the upstream README does not lead with them.
