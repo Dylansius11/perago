@@ -18,11 +18,11 @@ export function TopBar() {
           aria-label="Perago home"
         >
           <Image
-            src="/brand/primary-no-bg.png"
-            alt="Perago logo"
-            width={124}
-            height={32}
-            className="h-7 w-auto"
+            src="/brand/icon-mark.png"
+            alt="Perago"
+            width={56}
+            height={68}
+            className="h-9 w-auto"
             priority
           />
         </Link>
@@ -50,7 +50,7 @@ export function TopBar() {
             ))}
             <a
               href="#access"
-              className="group flex items-center gap-3 border-l border-ruleinvert bg-ink px-6 text-[15px] font-medium text-paper transition-colors duration-200 hover:bg-panel"
+              className="group flex items-center gap-3 border-l border-ruleinvert bg-ink px-6 text-[15px] font-medium text-paper transition-colors duration-200 hover:bg-signal hover:text-ink active:scale-[0.98] motion-safe:transition-transform"
             >
               Connect wallet
               <span

@@ -19,7 +19,7 @@ export default function Page() {
   return (
     <>
       <TopBar />
-      <main>
+      <main className="relative z-10">
         <Hero />
         <LedgerStrip />
         <Lifecycle />

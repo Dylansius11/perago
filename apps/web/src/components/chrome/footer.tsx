@@ -20,11 +20,11 @@ export function SiteFooter() {
       <div className="rain mx-auto grid h-full max-w-[1560px] grid-cols-[1fr_auto]">
         <div className="flex min-w-0 flex-col justify-between py-6 pl-6">
           <Image
-            src="/brand/primary-no-bg.png"
+            src="/brand/primary-mark.png"
             alt="Perago"
-            width={140}
-            height={36}
-            className="h-8 w-auto"
+            width={200}
+            height={102}
+            className="h-12 w-auto"
           />
           <nav aria-label="Footer" className="flex gap-7">
             {NAV.map(([label, href]) => (
@@ -57,11 +57,11 @@ export function SiteFooterMobile() {
   return (
     <footer className="border-t border-ruleinvert bg-ink px-6 py-10 text-paper md:hidden">
       <Image
-        src="/brand/primary-no-bg.png"
+        src="/brand/primary-mark.png"
         alt="Perago"
-        width={140}
-        height={36}
-        className="h-8 w-auto"
+        width={200}
+        height={102}
+        className="h-12 w-auto"
       />
       <nav aria-label="Footer" className="mt-6 flex flex-col gap-3">
         {NAV.map(([label, href]) => (

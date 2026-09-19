@@ -110,7 +110,7 @@ function HeroActions() {
     <div className="flex items-stretch">
       <a
         href="#access"
-        className="group flex items-center gap-4 bg-ink px-7 py-4 text-paper transition-colors duration-200 hover:bg-panel active:scale-[0.98] motion-safe:transition-transform"
+        className="group flex items-center gap-4 bg-ink px-7 py-4 text-paper transition-colors duration-200 hover:bg-signal hover:text-ink active:scale-[0.98] motion-safe:transition-transform"
       >
         Start a mandate
         <span
@@ -122,12 +122,12 @@ function HeroActions() {
       </a>
       <a
         href="#mandate"
-        className="group flex items-center gap-3 border border-rule px-7 py-4 text-ink transition-colors duration-200 hover:border-ink"
+        className="group flex items-center gap-3 border border-rule px-7 py-4 text-ink transition-colors duration-200 hover:border-ink hover:bg-ink hover:text-paper"
       >
         How it works
         <span
           aria-hidden
-          className="font-mono text-fog transition-transform duration-200 group-hover:translate-x-1"
+          className="font-mono text-fog transition-colors duration-200 group-hover:text-paper group-hover:translate-x-1"
         >
           &#8594;
         </span>
@@ -135,10 +135,9 @@ function HeroActions() {
     </div>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Lifecycle sequence                                                  */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ * Lifecycle sequence
+ * ------------------------------------------------------------------ */
 
 type Phase = {
   label: string;
