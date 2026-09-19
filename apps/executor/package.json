@@ -1,0 +1,26 @@
+{
+  "name": "@perago/executor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "probe:account-abstraction": "node --env-file-if-exists=../../.env src/probes/account-abstraction.ts",
+    "probe:account-address": "node --env-file-if-exists=../../.env src/probes/account-address.ts",
+    "probe:account-session": "node --env-file-if-exists=../../.env src/probes/account-session.ts",
+    "probe:bundler": "node --env-file-if-exists=../../.env src/probes/bundler.ts",
+    "probe:integrations": "node --env-file-if-exists=../../.env src/probes/integrations.ts",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "probe:account-live": "node --env-file-if-exists=../../.env src/probes/account-live.ts",
+    "probe:protocol-live": "node --env-file-if-exists=../../.env src/probes/protocol-live.ts"
+  },
+  "dependencies": {
+    "@aa-sdk/core": "4.88.5",
+    "@alchemy/aa-infra": "5.2.6",
+    "@alchemy/common": "5.2.6",
+    "@alchemy/smart-accounts": "5.2.6",
+    "@perago/sdk": "workspace:*",
+    "viem": "2.56.7",
+    "zod": "4.6.5"
+  }
+}

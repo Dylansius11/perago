@@ -403,9 +403,14 @@ Minimum alerts for a hosted demo: executor queue age, indexer lag, repeated RPC 
 
 Only externally dependent choices remain open:
 
-1. `D-002`: live staking deployment and testnet behavior.
-2. `D-003`: target ERC-8183 deployment/payment token.
-3. Exact Alchemy EntryPoint/account/module deployments, permission encoding, and fallback public bundler behavior after BSC Testnet probe.
-4. Exact BSC confirmation depth and independent RPC pair after testnet measurement.
+1. `D-004`: whether ERC-20 spend for a swap is authorized inside one account-executed call or bounded by the AllowlistModule ERC-20 spend limit; a session key never receives a bare `approve` selector.
+2. Fallback public bundler capability, if Alchemy is unavailable.
+3. Exact BSC confirmation depth and independent RPC pair after testnet measurement.
+
+Closed since the last revision, with evidence in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and [`../evidence/`](../evidence/):
+
+- The pinned Alchemy EntryPoint, account, and module deployments: owner-paid and sponsored UserOperations, bounded session execution, and every forbidden-shape rejection are proven on chain 97.
+- `D-002`: the documented CAKE Pool deployment works for a smart account, including the 0.1% early-withdrawal fee, so it stays the stake target.
+- `D-003`: Perago settles on the official BNB APEX ERC-8183 kernel as the job evaluator, with the Perago-owned inert hook the kernel requires, and the pinned United Stables (`U`) payment token. The APEX evaluator router and its optimistic policy are rejected because policy registration is owner-gated and optimistic settlement is not deterministic.
 
 Each is assigned a validation task in [`../BUILD-PLAN.md`](../BUILD-PLAN.md); none authorizes a placeholder implementation or fabricated integration claim.

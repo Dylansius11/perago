@@ -22,7 +22,16 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Documentation foundation only. Nothing is implemented or deployed.** Product code begins after this documentation is reviewed. UI and design direction will be supplied separately; this repository intentionally contains no generated UI or design system.
+**Phase 1 complete.** The workspace, toolchain, and package manifests are pinned; the SDK carries the canonical mandate domain, its cross-stack EIP-712 digest fixture, the bounded Modular Account V2 session encoding, and ABIs generated from the compiled contracts.
+
+Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
+
+- a semi-modular ERC-4337 account controlled by an external owner, driven by owner-paid **and** fully sponsored UserOperations;
+- a bounded session that performs its one allowlisted call and is rejected for an unrelated target, an unallowlisted selector, module install, a self-call, an over-limit spend, an expired window, and after revocation;
+- a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
+- an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund.
+
+Not built yet: the Perago mandate contract, API, executor service, and client. UI and design direction remain an explicit later gate; no UI source, design system, or generated interface exists.
 
 ## Planned repository map
 
@@ -37,7 +46,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Only `docs/` exists during the foundation phase.
+Current source is limited to the SDK domain and account-encoding layer plus read-only executor probes. The API, web client, and contract implementation begin with their approved Phase 2 and Phase 3 tasks.
 
 ## Documentation
 
@@ -48,11 +57,12 @@ Only `docs/` exists during the foundation phase.
 - [BNB and protocol integrations](docs/technical/INTEGRATION.md)
 - [Technology decisions](docs/technical/TECH-STACK.md)
 - [Phased build plan](docs/BUILD-PLAN.md)
+- [Lessons and verified preferences](docs/LESSONS.md)
 - [Agent operating contract](AGENTS.md)
 
 ## Honest limitations
 
-- Perago has no application code, contracts, live endpoints, deployments, or transaction evidence yet.
+- Perago has no mandate contract implementation, live endpoint, deployment, or signed onchain transaction evidence yet; the account-abstraction proof is local replay of verified chain-97 bytecode, not a submitted UserOperation.
 - ERC-8183 and ERC-8004 are draft standards; integration details can change.
 - Session-key, staking, payment-token, and testnet deployment capabilities remain gated on source and onchain validation described in the technical documents.
 - Simulation reduces execution risk but cannot guarantee future chain state.

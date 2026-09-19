@@ -1,0 +1,105 @@
+{
+  "account": "0x2863167c8653b9369Ef51De203742A3429AC57E2",
+  "accountDeployedThisRun": false,
+  "cases": [
+    {
+      "detail": "sponsored userOpHash 0xedee08b460dcc3feef4f40760076d3720e16938ec5cb58481962f70e514e7101 in transaction 0xa085e0f0b4d65632fa2c5f5fb2382690034e98b337cce99ac823466dd9a641ed; 0.0002 tBNB wrapped",
+      "expectation": "accepted",
+      "name": "allowlisted session call",
+      "outcome": "accepted"
+    },
+    {
+      "detail": "{\"code\":-32500,\"message\":\"validation reverted: [reason]: AA23 reverted\",\"data\":{\"reason\":\"AA23 reverted\",\"revertData\":\"0x4db96e3100000000003e826473a313e600b5b9b791f5a59a000115820000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000042b53784e00000000000000000000000000000000000000000000000000000000\"}}",
+      "expectation": "rejected",
+      "name": "unrelated target",
+      "outcome": "rejected"
+    },
+    {
+      "detail": "{\"code\":-32500,\"message\":\"validation reverted: [reason]: AA23 reverted\",\"data\":{\"reason\":\"AA23 reverted\",\"revertData\":\"0x4db96e3100000000003e826473a313e600b5b9b791f5a59a00011582000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004bdb518d200000000000000000000000000000000000000000000000000000000\"}}",
+      "expectation": "rejected",
+      "name": "unallowlisted selector on the allowlisted target",
+      "outcome": "rejected"
+    },
+    {
+      "detail": "{\"code\":-32500,\"message\":\"validation reverted: [reason]: AA23 reverted\",\"data\":{\"reason\":\"AA23 reverted\",\"revertData\":\"0xcf7b49f61bbf564c00000000000000000000000000000000000000000000000000000000\"}}",
+      "expectation": "rejected",
+      "name": "module install through the session",
+      "outcome": "rejected"
+    },
+    {
+      "detail": "{\"code\":-32500,\"message\":\"validation reverted: [reason]: AA23 reverted\",\"data\":{\"reason\":\"AA23 reverted\",\"revertData\":\"0x54ff929d\"}}",
+      "expectation": "rejected",
+      "name": "account self-call",
+      "outcome": "rejected"
+    },
+    {
+      "detail": "{\"code\":-32521,\"message\":\"execution reverted\",\"data\":{\"revertData\":\"0x74a1a72c00000000000001e541f0d090868fbe24b59fbe060001158200000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000494c58c9400000000000000000000000000000000000000000000000000000000\"}}",
+      "expectation": "rejected",
+      "name": "spend above the session native limit",
+      "outcome": "rejected"
+    },
+    {
+      "detail": "{\"code\":-32500,\"message\":\"validation simulation failed: User Operation expired or has an invalid time range. validUntil: 2026-09-19 01:38:46 UTC, validAfter: 1970-01-01 00:00:00 UTC\"}",
+      "expectation": "rejected",
+      "name": "expired session permission",
+      "outcome": "rejected"
+    },
+    {
+      "detail": "{\"code\":-32500,\"message\":\"validation reverted: [reason]: AA23 reverted\",\"data\":{\"reason\":\"AA23 reverted\",\"revertData\":\"0xcf7b49f6b61d27f600000000000000000000000000000000000000000000000000000000\"}}",
+      "expectation": "rejected",
+      "name": "revoked session permission",
+      "outcome": "rejected"
+    }
+  ],
+  "chainId": 97,
+  "gas": {
+    "endBalance": "0.0052612015",
+    "startBalance": "0.0072777295"
+  },
+  "ownerEoa": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+  "session": {
+    "allowedSelectors": ["0xd0e30db0"],
+    "entityId": 71042,
+    "nativeSpendLimit": "0.005",
+    "signer": "0xB5EF99e2ff291E2CbfA28e8C51C381B9bbfDDa8b",
+    "target": "0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F"
+  },
+  "userOperations": {
+    "expiredSessionInstall": {
+      "actualGasCost": "576470000000000",
+      "blockNumber": "131856272",
+      "transactionHash": "0x10a055f61dfbad6aa6ac4e55b054d8c8ded197b5f1a9f3893b60e184b964bf92",
+      "userOpHash": "0x9180672f61a1073c54515119cbeb587f55d3c788ccf81d61c8461dda3b0ea387"
+    },
+    "expiredSessionRevocation": {
+      "actualGasCost": "331794000000000",
+      "blockNumber": "131856299",
+      "transactionHash": "0x97d50c104c99cce892d78631f76f0380f05b9ad856392c0476e361b8f66f643c",
+      "userOpHash": "0xd6bf61bd0e068e17a5f99b6c79a66b553ecb79ec059dfd7b08cd4b9e5f68c1dc"
+    },
+    "sessionCall": {
+      "mode": "sponsored",
+      "actualGasCost": "0",
+      "blockNumber": "131856255",
+      "transactionHash": "0xa085e0f0b4d65632fa2c5f5fb2382690034e98b337cce99ac823466dd9a641ed",
+      "userOpHash": "0xedee08b460dcc3feef4f40760076d3720e16938ec5cb58481962f70e514e7101"
+    },
+    "sessionInstall": {
+      "actualGasCost": "576470000000000",
+      "blockNumber": "131856242",
+      "transactionHash": "0xb00f704c69ef2c1354a2e2b12e6ca7abdab7f9b40d53e66c0622b50c9d020210",
+      "userOpHash": "0xcdd8391e62522747a75151ae733a16c73325d751d11855f8fc5757ccab8e0693"
+    },
+    "sessionRevocation": {
+      "actualGasCost": "331794000000000",
+      "blockNumber": "131856287",
+      "transactionHash": "0x2b2c180d9a0345458bad31e7cf65c39476d9c2fa20600ecac4e428987dc44574",
+      "userOpHash": "0x59080be9b10f25686e6a7fd481164ac136b5343618a64291c25ca98a68fd972b"
+    }
+  },
+  "wrappedBalance": {
+    "after": "0.0008",
+    "before": "0.0006"
+  },
+  "ranAt": "2026-09-19T01:40:02.783Z"
+}

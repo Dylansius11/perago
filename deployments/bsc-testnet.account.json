@@ -1,0 +1,78 @@
+{
+  "chainId": 97,
+  "chainName": "BNB Smart Chain Testnet",
+  "verifiedAt": {
+    "blockNumber": "131778783",
+    "blockHash": "0x82cc5625158fc1d09cee3853fb50cc4ea26a98874216429d7abe86ccc5d3e834",
+    "blockTimestamp": "1789747118"
+  },
+  "source": "https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses",
+  "entryPointVersion": "0.7",
+  "accountType": "SMA",
+  "notes": "The semi-modular account keeps the root owner as an immutable constructor argument, and the derived address depends on the implementation address.",
+  "contracts": {
+    "entryPoint": {
+      "address": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+      "codeHash": "0x8db5ff695839d655407cc8490bb7a5d82337a86a6b39c3f0258aa6c3b582fc58",
+      "role": "ERC-4337 EntryPoint v0.7 used to validate and execute Perago UserOperations."
+    },
+    "entryPointSenderCreator": {
+      "address": "0xEFC2c1444eBCC4Db75e7613d20C6a62fF67A167C",
+      "codeHash": "0x283c9d14378f5f4c4e24045b87d621d48443fa5b4af7dd7180a599b3756a7689",
+      "role": "EntryPoint helper used to deploy Perago account senders during UserOperation handling."
+    },
+    "factory": {
+      "address": "0x00000000000017c61b5bEe81050EC8eFc9c6fecd",
+      "codeHash": "0xd797dac2d304de879abba3ed87b60f9f141b2da869c3ce24c037feb5c5d60342",
+      "role": "SMA factory used to derive and deploy Perago Modular Account V2 instances."
+    },
+    "semiModularAccountBytecode": {
+      "address": "0x000000000000c5A9089039570Dd36455b5C07383",
+      "codeHash": "0x3612f3fa5ac5e89b87b284024977e6082441e30ff05f9f8497cd280131a27e16",
+      "role": "SMA implementation used when deriving and deploying Perago accounts."
+    },
+    "singleSignerValidationModule": {
+      "address": "0x00000000000099DE0BF6fA90dEB851E2A2df7d83",
+      "codeHash": "0x5c897ee551f50db31556c976e99742529a4b512d928db01829f15fd073e2d8ea",
+      "role": "Validation module Perago installs for the bounded session signer; the root owner uses the semi-modular fallback validation."
+    },
+    "allowlistModule": {
+      "address": "0x00000000003E826473A313e600B5B9b791f5A59A",
+      "codeHash": "0xef299f31bc7fdbfad47e69dec2c3f3b80c8f4223fab5baf21565c2f92f435bfd",
+      "role": "Session validation module that allowlists Perago mandate targets and selectors."
+    },
+    "nativeTokenLimitModule": {
+      "address": "0x00000000000001e541f0D090868FBe24b59Fbe06",
+      "codeHash": "0xf732e93b64bdc8393325b028480b86811f8feef87e6932fd745a85280c93fa41",
+      "role": "Session validation module that enforces Perago native-token spend limits."
+    },
+    "timeRangeModule": {
+      "address": "0x00000000000082B8e2012be914dFA4f62A0573eA",
+      "codeHash": "0x9843dca9c23d7da2dc2d7413faee67101bfce30a2a8cc8c6c6255e84c5c79f31",
+      "role": "Session validation module that enforces Perago mandate expiry."
+    }
+  },
+  "status": "verified",
+  "liveEvidence": {
+    "account": "0x2863167c8653b9369Ef51De203742A3429AC57E2",
+    "rootOwner": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+    "probe": "pnpm --filter @perago/executor probe:account-live",
+    "ownerPaidUserOperation": {
+      "userOpHash": "0x6f1d29ec053945124c7a916aa681627078f8c3d03f156e96b963f9e1bd90c65d",
+      "transactionHash": "0xf33b27b978f0f3b676c3aa66d9aba8a2fb07393c8581a77d01db7e9a706edb31",
+      "blockNumber": "131790009",
+      "effect": "root owner installed one bounded mandate session"
+    },
+    "sponsoredUserOperation": {
+      "userOpHash": "0x0e5498793edb9d83fab5ad50cf730688533b036db88b55305e4ddf1554e93971",
+      "transactionHash": "0xeb5a84b01278515b6dc3f1eacf6c952098566ae285e34393d9af3cc5690efeb5",
+      "blockNumber": "131790024",
+      "actualGasCost": "0",
+      "effect": "session signer executed its single allowlisted call with Alchemy bundler sponsorship"
+    },
+    "accountDeployment": {
+      "transactionHash": "0x3182afdc31878abd6a9f0639e1533fd4602368ee766ba0689a0530a1b51eec05",
+      "blockNumber": "131788898"
+    }
+  }
+}

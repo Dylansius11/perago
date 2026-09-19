@@ -21,20 +21,20 @@ No entry is marked “integrated” in this phase.
 
 | Integration | MVP use | Status | Decision |
 | --- | --- | --- | --- |
-| BNB Smart Chain Testnet | Execution chain | `needs re-verification` | Selected; chain/RPC facts are official, live endpoints and confirmation behavior need probe. |
-| External self-custodial wallet | Root owner | `proposed` | Selected; EVM wallet connector remains implementation work. |
-| Alchemy Modular Account V2 | ERC-4337 smart account | `needs re-verification` | Selected; validate chain-97 deployment/code/modules and external EOA ownership. |
-| Alchemy Bundler + Gas Manager | UserOperation transport/sponsorship | `needs re-verification` | Selected initial provider; standard owner-funded fallback required. |
+| BNB Smart Chain Testnet | Execution chain | `verified` | Selected; chain 97 executes Perago account, swap, stake, and settlement traffic today. |
+| External self-custodial wallet | Root owner | `proposed` | Selected; EVM wallet connector remains implementation work. A disposable key stands in for automated evidence. |
+| Alchemy Modular Account V2 | ERC-4337 smart account | `verified` | Selected; deployment, ownership, bounded session, and forbidden-shape rejection are proven on chain 97. |
+| Alchemy Bundler + Gas Manager | UserOperation transport/sponsorship | `verified` | Selected initial provider; sponsored and owner-paid paths both proven, and the owner-paid fallback is automatic. |
 | MandateExecutor | One-use semantic authority | `proposed` | Perago-owned contract; required even with smart-account permissions. |
 | BNB Agent SDK | ERC-8183 helpers/BNB ecosystem utilities | `needs re-verification` | Evaluate narrowly; do not adopt its key provider or SDK wholesale. |
 | Altana EIP-7702 sessions | Alternate session path | `verified in reference repo` | Not selected; historical experiment and current official SDK mention are insufficient for Perago's exact guarantees. |
 | Trust Wallet Agent Kit | Alternate wallet/agent runtime | `proposed` | Not selected for MVP; no need beside the chosen ERC-4337 path. |
 | ERC-8004 | Agent identity/reputation/validation | `proposed` | Deferred; does not earn MVP complexity. |
-| ERC-8183 / BNB APEX | Outcome-based agent commerce | `needs re-verification` | Selected; pin deployment/ABI/upgrade/admin state and test full lifecycle. |
-| PancakeSwap V3 | Exact-input swap | `needs re-verification` | Selected swap protocol. |
-| PancakeSwap CAKE Pool | Single-asset stake | `needs re-verification` | Selected candidate; official testnet docs are old, so chain probe is a hard gate. |
+| ERC-8183 / BNB APEX | Outcome-based agent commerce | `verified` | Selected; kernel pinned, Perago hook deployed, and completion, rejection, and expiry refunds proven on chain 97. |
+| PancakeSwap V3 | Exact-input swap | `verified` | Selected swap protocol; router, quoter, factory, and a liquid direct pool proven with a live swap. |
+| PancakeSwap CAKE Pool | Single-asset stake | `verified` | Selected; deposit, share position, and fee-bearing withdrawal proven from the smart account. |
 | USD1 | Mainnet payment-token candidate | `needs re-verification` | Official BSC mainnet address exists; not a testnet token. |
-| APEX testnet USDC | ERC-8183 demo payment token | `needs re-verification` | Preferred live-demo candidate if deployment/token behavior passes checks. |
+| APEX payment token (United Stables `U`) | ERC-8183 demo payment token | `verified` | Selected; upstream labels it USDC, onchain it is `U`. No faucet: funded through one V2 pair. |
 | Quote + pinned `eth_call` + UserOp simulation | Pre-sign simulation | `proposed` | Initial simulation source; add no third-party simulator until evidence requires it. |
 
 ## 3. BNB Smart Chain
@@ -77,32 +77,38 @@ The official [BSC faucet guide](https://docs.bnbchain.org/bnb-smart-chain/develo
 
 Alchemy's official [Wallet APIs supported chains](https://www.alchemy.com/docs/wallets/supported-chains) lists BNB Mainnet and BNB Testnet with bundler, gas sponsorship, ERC-20 gas payments, and batch-send-operation support. Its [smart-contract deployment page](https://www.alchemy.com/docs/wallets/smart-contracts/deployed-addresses/) states that account contracts use the same addresses across supported EVM chains.
 
-Documented Modular Account V2 contracts include:
+Perago pins these contracts. Code at every address below was read on chain 97 and hashed; the code hashes, the verification block, and the signed execution evidence live in the reviewed manifest [`deployments/bsc-testnet.account.json`](../../deployments/bsc-testnet.account.json), which owns those values. `pnpm --filter @perago/executor probe:account-live` re-reads each address and fails if any live code hash drifts from the manifest.
 
-| Contract | Version | Documented address | Status |
+| Contract | Version | Address | Status |
 | --- | --- | --- | --- |
-| `ModularAccount` | `v2.0.0` | `0x00000000000002377B26b1EdA7b0BC371C60DD4f` | `needs re-verification` |
-| `AccountFactory` | `v2.0.0` | `0x00000000000017c61b5bEe81050EC8eFc9c6fecd` | `needs re-verification` |
-| `SingleSignerValidationModule` | `v1.0.0` | `0x00000000000099DE0BF6fA90dEB851E2A2df7d83` | `needs re-verification` |
-| `AllowlistModule` | `v1.0.0` | `0x00000000003e826473a313e600b5b9b791f5a59a` | `needs re-verification` |
-| `NativeTokenLimitModule` | `v1.0.0` | `0x00000000000001e541f0D090868FBe24b59Fbe06` | `needs re-verification` |
-| `PaymasterGuardModule` | `v1.0.0` | `0x0000000000001aA7A7F7E29abe0be06c72FD42A1` | `needs re-verification` |
-| `TimeRangeModule` | `v1.0.0` | `0x00000000000082B8e2012be914dFA4f62A0573eA` | `needs re-verification` |
+| `EntryPoint` | `v0.7` | `0x0000000071727De22E5E9d8BAf0edAc6f37da032` | `verified` code on chain 97 |
+| `SenderCreator` | `v0.7` | `0xEFC2c1444eBCC4Db75e7613d20C6a62fF67A167C` | `verified` code on chain 97; the EntryPoint's first `CREATE`, required for factory deployment |
+| `SemiModularAccountBytecode` | `v2.0.0` | `0x000000000000c5A9089039570Dd36455b5C07383` | `verified` code on chain 97; the implementation Perago derives accounts from |
+| `AccountFactory` | `v2.0.0` | `0x00000000000017c61b5bEe81050EC8eFc9c6fecd` | `verified` code on chain 97 |
+| `SingleSignerValidationModule` | `v1.0.0` | `0x00000000000099DE0BF6fA90dEB851E2A2df7d83` | `verified` code on chain 97 |
+| `AllowlistModule` | `v1.0.0` | `0x00000000003E826473A313e600B5B9b791f5A59A` | `verified` code on chain 97 |
+| `NativeTokenLimitModule` | `v1.0.0` | `0x00000000000001e541f0D090868FBe24b59Fbe06` | `verified` code on chain 97 |
+| `TimeRangeModule` | `v1.0.0` | `0x00000000000082B8e2012be914dFA4f62A0573eA` | `verified` code on chain 97 |
+| `ModularAccount` | `v2.0.0` | `0x00000000000002377B26b1EdA7b0BC371C60DD4f` | `proposed`; not used, Perago selects the semi-modular bytecode variant |
+| `PaymasterGuardModule` | `v1.0.0` | `0x0000000000001aA7A7F7E29abe0be06c72FD42A1` | `needs re-verification`; only if sponsorship guarding is adopted |
 
-These rows are documentation evidence, not a Perago manifest. Phase 1 must read code at each address on chain 97, identify EntryPoint version/address, verify factory output and external EOA ownership, and pin source commits/code hashes.
+The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership and bounded execution are proven: the disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` deployed and drove account `0x2863167c8653b9369Ef51De203742A3429AC57E2` through the Alchemy bundler, including one owner-paid operation and one fully sponsored operation whose `actualGasCost` was `0`. Transaction hashes are recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and the manifest.
 
 ### 4.2 Session permission shape
 
 Alchemy's official [session-key permission reference](https://www.alchemy.com/docs/wallets/reference/wallet-apis-session-keys) documents expiry, ERC-20 cumulative allowance, gas limit, contract access, account-function, functions-on-contract, functions-on-all-contracts, and dangerous `root` permissions.
 
-Perago allows only the minimum combination that Phase 1 proves enforceable:
+Perago allows only the combination now proven enforceable on the deployed modules, encoded by `encodeInstallMandateSession` in `packages/sdk/src/account/modular-account.ts`:
 
-- account execution selector(s) required to carry a UserOperation;
-- MandateExecutor `perform` and, if necessary, narrow lifecycle selectors;
-- specific ERC-20 `approve` selector on approved input tokens with cumulative Wallet Policy ceiling;
-- time range no longer than active policy/session duration;
-- gas ceiling;
-- no `root`, wildcard contract, all-contract function, module install, upgrade, ownership, or arbitrary batch authority.
+- one single-signer validation scoped to the account's `execute` selector only, so no other account function is reachable through the session;
+- one pre-validation allowlist pinning exactly one target contract and its permitted selectors;
+- one pre-execution native spend cap;
+- one validation-time expiry window, which is always set;
+- no `root`, wildcard contract, all-contract function, module install, upgrade, ownership, batch, `performCreate`, runtime-validation, or ERC-20 `approve` authority. The SDK rejects any of those selectors at encode time, and the selector values are taken from the deployed account's dispatcher rather than from vendor constants.
+
+Both locally replayed chain-97 bytecode and signed chain-97 execution confirm the enforcement: the allowlisted call is accepted, while an unrelated target and an unallowlisted selector fail the allowlist hook, `installValidation` and a revoked session fail validation lookup, a self-call exceeds the account's self-call recursion guard, an over-limit spend reverts before any value moves, and an expired session fails the time-range window. Each rejection reason is decoded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md).
+
+Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. Token spend for a swap must therefore be authorized inside one account-executed call, or bounded by the AllowlistModule ERC-20 spend limit. That choice is decision gate `D-004` and is resolved with the swap adapter, not by widening the session.
 
 A contract/function allowlist can still permit malicious arguments. MandateExecutor independently validates the root Task Mandate, action hash, amount, recipient, protocol, nonce, and postcondition.
 
@@ -152,26 +158,26 @@ Prefer Viem calls against pinned ABIs when an SDK helper obscures lifecycle or a
 
 Perago uses the standard for payment escrow, not task authorization. The Task Mandate and receipt bind the commerce contract/job ID; `OutcomeEvaluator` completes only after deterministic success.
 
-### BNB APEX deployment candidate
+### BNB APEX deployment — verified and selected
 
-The official BNB Chain [`apex-contracts` repository](https://github.com/bnb-chain/apex-contracts) states that `scripts/addresses.ts` is the deployment source of truth and currently documents these BSC Testnet addresses:
+The official BNB Chain [`apex-contracts` repository](https://github.com/bnb-chain/apex-contracts) is the upstream source. Every address below was read on chain 97, hashed, and pinned in [`deployments/bsc-testnet.protocols.json`](../../deployments/bsc-testnet.protocols.json), which owns the code hashes and ERC-1967 implementations.
 
 | Contract | Address | Status |
 | --- | --- | --- |
-| `AgenticCommerceUpgradeable` proxy | `0xa206c0517B6371C6638CD9e4a42Cc9f02A33B0DE` | `needs re-verification` |
-| `EvaluatorRouterUpgradeable` proxy | `0xd7d36d66d2f1b608a0f943f722d27e3744f66f25` | `needs re-verification` |
-| `OptimisticPolicy` | `0x4f4678d4439fec812ac7674bb3efb4c8f5fb78a6` | `needs re-verification` |
-| Testnet payment token labeled USDC | `0xc70B8741B8B07A6d61E54fd4B20f22Fa648E5565` | `needs re-verification` |
+| `AgenticCommerceUpgradeable` proxy | `0xa206c0517B6371C6638CD9e4a42Cc9f02A33B0DE` | `verified`; selected escrow kernel, implementation `0x55c3826b39a0f671b2c3e5d0f1372cad0b911421`, `platformFeeBP` `0`, not paused |
+| `EvaluatorRouterUpgradeable` proxy | `0xd7d36d66d2f1b608a0f943f722d27e3744f66f25` | `verified`; **not used**, see the policy finding below |
+| `OptimisticPolicy` | `0x4f4678d4439fec812ac7674bb3efb4c8f5fb78a6` | `verified` upstream address; **not used**, optimistic settlement is not deterministic |
+| Payment token, upstream labeled USDC | `0xc70B8741B8B07A6d61E54fd4B20f22Fa648E5565` | `verified`; onchain it is **United Stables (`U`)**, 18 decimals, ERC-1967 upgradeable, `isPaymentTokenSupported` true |
+| `PeragoAcpHook` | `0x64a807FceFb25ea710B2D3cb15Abf5e46f32cff0` | `verified`; Perago-owned inert hook, source `packages/contracts/src/hooks/PeragoAcpHook.sol` |
 
-APEX is upgradeable at the kernel/router layer and its default policy is optimistic. Perago's desired evaluator is deterministic. Phase 1 must determine whether:
+Four findings decided the integration shape:
 
-1. the deployed router permits a Perago deterministic policy/evaluator binding;
-2. the deployed proxies' implementations/admin/timelocks match upstream docs;
-3. the payment token is a standard ERC-20 with verified decimals and sufficient test balance;
-4. complete/reject/refund and non-hookable refund behavior match the pinned ABI;
-5. Perago should integrate the deployment or deploy a separate standards-compatible test instance.
+1. **The kernel requires a hook.** `createJob` reverts with `HookRequired()` when `hook == address(0)` and with `HookMissingInterface()` unless the hook answers `type(IACPHook).interfaceId` (`0x7ff6bc9e`). Perago therefore deploys `PeragoAcpHook`: it holds no funds, never reverts on a legitimate kernel callback, and accepts callbacks only from the pinned kernel.
+2. **A Perago policy cannot be registered upstream.** `EvaluatorRouterUpgradeable.registerJob` accepts only policies enabled through `setPolicyWhitelist`, which is `onlyOwner`. Perago cannot install a deterministic policy on the official router, so Perago does not use the router or `OptimisticPolicy`. Perago is instead the job's **evaluator**, which the standard allows, and its deterministic outcome check stays in Perago's own executor and mandate path.
+3. **The payment token is obtainable but thin.** It has no public mint (`Ownable` mint) and no liquid V3 pool; the only funding route on chain 97 is the PancakeSwap V2 pair `0x55ed32b1808d4Bb9aD8DF8201494b74B982915F8`. Treat funding as a scarce test resource and keep job budgets small.
+4. **Expiry has a floor.** `createJob` rejects `expiredAt <= block.timestamp + 5 minutes` (`ExpiryTooShort()`) and `expiredAt > block.timestamp + MAX_EXPIRY_DURATION` (one year).
 
-Until those checks pass, all addresses remain `needs re-verification`. The reference repository's earlier ERC-8183 work is not Perago evidence.
+`D-003` is resolved: Perago settles on the official APEX kernel with its own hook and its own evaluator, using the pinned payment token. The lifecycle is proven on chain 97 — completion, evaluator rejection refund, and permissionless expiry refund — with transaction hashes recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and the full report in [`../evidence/bsc-testnet.protocol-live.json`](../evidence/bsc-testnet.protocol-live.json).
 
 ### Failure behavior
 
@@ -196,9 +202,12 @@ The official [PancakeSwap V3 address page](https://developer.pancakeswap.finance
 
 | Contract | BSC Testnet address | Perago use | Status |
 | --- | --- | --- | --- |
-| V3 `SwapRouter` | `0x1b81D678ffb9C0263b24A97847620C99d213eB14` | Exact-input execution | `needs re-verification` |
-| `QuoterV2` | `0xbC203d7f83677c7ed3F7acEc959963E7F4ECC5C2` | Pre-sign quote | `needs re-verification` |
-| V3 factory | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` | Pool existence/fee validation | `needs re-verification` |
+| V3 `SwapRouter` | `0x1b81D678ffb9C0263b24A97847620C99d213eB14` | Exact-input execution | `verified`; its `factory()` and `WETH9()` match the pinned factory and WBNB |
+| `QuoterV2` | `0xbC203d7f83677c7ed3F7acEc959963E7F4ECC5C2` | Pre-sign quote | `verified`; same factory and wrapper |
+| V3 factory | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` | Pool existence/fee validation | `verified`; four direct CAKE/WBNB pools, deepest at fee `500` |
+| WBNB (`WETH9`) | `0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd` | Native wrapper both routers use | `verified`; read from the router, never hand-copied |
+
+The router uses the eight-field `exactInputSingle` struct that still carries `deadline`, not the SwapRouter02 shape. That is read from the deployed selector set, not assumed.
 
 Perago deliberately rejects PancakeSwap Smart Router, Universal Router, arbitrary path bytes, multicall, native unwrap, and multi-hop routes in the first adapter. One pinned direct pool/fee pair per supported token pair is enough for the demo and produces a clear verifier.
 
@@ -221,36 +230,30 @@ The official [CAKE Syrup Pool integration page](https://docs.pancakeswap.finance
 
 | Item | Address | Status |
 | --- | --- | --- |
-| Dummy/mintable CAKE | `0xFa60D973F7642B748046464e165A65B7323b0DEE` | `needs re-verification` |
-| CAKE Pool | `0x683433ba14e8F26774D43D3E90DA6Dd7a22044Fe` | `needs re-verification` |
-| MasterChef V2 | `0xB4A466911556e39210a6bB2FaECBB59E4eB7E43d` | `needs re-verification` |
+| Testnet CAKE | `0xFa60D973F7642B748046464e165A65B7323b0DEE` | `verified`; `mint` is `Ownable`, so CAKE is acquired by swapping, not minting |
+| CAKE Pool | `0x683433ba14e8F26774D43D3E90DA6Dd7a22044Fe` | `verified`; `token()` and `masterchefV2()` match this table, contracts are not blocked from depositing |
+| MasterChef V2 | `0xB4A466911556e39210a6bB2FaECBB59E4eB7E43d` | `verified` |
 
 This is selected over LP farming because one input token and one position-share metric fit the mandate/verifier model. Flexible staking uses `lockDuration = 0`; locked staking is excluded from MVP to avoid withdrawal-time and fee complexity.
 
-### Hard validation gate
+### Validation gate — passed
 
-The official page is migration-era documentation and may describe an old testnet deployment. Before implementation, Phase 1 must:
+`D-002` is resolved: the documented CAKE Pool deployment is live and usable by a smart account. Chain-97 evidence (`pnpm --filter @perago/executor probe:protocol-live`, report in [`../evidence/bsc-testnet.protocol-live.json`](../evidence/bsc-testnet.protocol-live.json)):
 
-1. confirm nonempty verified code and expected ABI at all addresses;
-2. mint/fund dummy CAKE through the documented test method;
-3. read `userInfo`, `getPricePerFullShare`, fee configuration, and pause/ownership state;
-4. perform a minimal flexible deposit from a disposable wallet;
-5. prove share/position increase and withdraw/recovery behavior;
-6. identify any fee, lock, allowlist, or deprecated state that makes automation unreliable.
+1. all three addresses hold code matching the reviewed manifest, and the pool is wired to the pinned CAKE and MasterChef;
+2. CAKE is funded by a V3 exact-input swap from the smart account, because the testnet token's `mint` is owner-only;
+3. a flexible `deposit(amount, 0)` from the smart account produced a nonzero `userInfo.shares` position and consumed the approval exactly, leaving no standing allowance;
+4. `withdrawAll()` closed the position and returned the stake minus the documented 0.1% early-withdrawal fee (`withdrawFee` `10` bp inside a `withdrawFeePeriod` of 259200 seconds), which the probe asserts rather than assumes;
+5. `MIN_DEPOSIT_AMOUNT` is `1e13` wei, and a smaller deposit reverts with `Deposit amount must be greater than MIN_DEPOSIT_AMOUNT`;
+6. `performanceFee` is `200` bp on yield; locked staking stays out of the MVP.
 
-If any step fails, this deployment is `blocked`. The contingency order is:
-
-1. obtain a current official PancakeSwap/BNB staking testnet deployment;
-2. run the adapter on a pinned BSC mainnet fork against the official mainnet CAKE Pool and label it as fork evidence;
-3. with user approval, deploy a minimal test staking vault solely to demonstrate the generic verifier, labeled as Perago test infrastructure—not a third-party integration.
-
-Do not silently switch to lending, LP management, or a made-up address.
+Testnet pricing in these pools is not economically meaningful, so amounts prove mechanics, not value. If the deployment later regresses, the contingency order is: a current official PancakeSwap/BNB staking testnet deployment; a pinned BSC mainnet fork labeled as fork evidence; or, with user approval, a minimal Perago test vault labeled as Perago test infrastructure — never a silent switch to lending, LP management, or an invented address.
 
 ## 10. Payment asset
 
 ### Live BSC Testnet demo
 
-Use the APEX testnet payment token only after code/decimals/standard transfer behavior and funding path are verified. It is labeled USDC by the upstream deployment source but is not represented here as Circle-issued production USDC.
+The ERC-8183 payment token is `verified` on chain 97: `0xc70B8741B8B07A6d61E54fd4B20f22Fa648E5565`, name **United Stables**, symbol `U`, 18 decimals, standard `transferFrom` escrow behavior observed through three funded jobs. The upstream deployment source labels it USDC; that label is wrong onchain and Perago never presents it as Circle-issued USDC. It has no faucet or public mint, and its only liquid route on this chain is the PancakeSwap V2 pair `0x55ed32b1808d4Bb9aD8DF8201494b74B982915F8`, so demo budgets stay small.
 
 ### BSC Mainnet candidate
 

@@ -13,7 +13,7 @@ Optimize for a judge-verifiable, security-first product. AI may propose and expl
 
 ## Current gate
 
-The repository is in the documentation-foundation phase. Do not implement application code, contracts, infrastructure, UI, visual assets, or a design system until the documentation PR is accepted and the user gives the next instruction.
+The repository is in Phase 1 implementation: typed domain, account-abstraction encoding, and decision probes. Implement only the current task in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md); do not start a later phase, and do not implement UI, visual assets, or a design system.
 
 The user will supply Perago's UI and design direction later. Do not invent screens, component systems, CSS, tokens, logos, mockups, or visual specifications before that direction arrives.
 
@@ -30,11 +30,52 @@ Each fact has one canonical owner. Link to it instead of duplicating it.
 | Chains, protocols, external capabilities | `docs/technical/INTEGRATION.md` |
 | Technology and deployment choices | `docs/technical/TECH-STACK.md` |
 | Delivery phases, task IDs, acceptance gates | `docs/BUILD-PLAN.md` |
+| Durable technical lessons and verified user preferences | `docs/LESSONS.md` |
 | Repository entry point and current status | `README.md` |
 
 Priority when sources disagree: current user instruction, accepted PRD, accepted technical specifications, build plan, implementation. Correct the lower-priority source in the same change.
 
 External integration claims require a primary-source link and an explicit status: `verified`, `proposed`, `needs re-verification`, or `blocked`. Existing experiments are evidence, not proof of current third-party behavior.
+
+## Agent skills
+
+Skills are installed in [`.agents/skills/`](.agents/skills) and are discovered from there by every runtime used on this repository. They are **working method, never authority**: when a skill and a canonical document disagree, the canonical document wins and the work proceeds under the document. No skill may assert a chain address, protocol status, or dependency version; those facts belong to `docs/technical/INTEGRATION.md` and `docs/technical/TECH-STACK.md` alone.
+
+### Routing
+
+| Situation | Skill | Non-negotiable part |
+| --- | --- | --- |
+| A feature, change, or idea is not yet a written design | `brainstorming` | Do not write code or scaffold while the design is unapproved. |
+| An approved design needs an executable plan | `writing-plans` | Plan against task IDs in `docs/BUILD-PLAN.md`; never invent a parallel plan document. |
+| A requirement must become a precise specification | `to-spec` | Every acceptance criterion is observable and testable, or it is not a criterion. |
+| Types, states, or invariants are being shaped | `domain-modeling` | Shared domain schemas live in `packages/sdk`; make illegal states unrepresentable instead of validating them later. |
+| Module boundaries, dependency direction, or file placement is in question | `codebase-design` | Obey the import rules below; reuse one existing convention rather than adding a second. |
+| Implementing any behavior or fixing any bug | `test-driven-development` | Write the failing test first and watch it fail. No production code without a failing test. |
+| Something fails, is flaky, or behaves unexpectedly | `systematic-debugging` | Find the cause before proposing a fix; never mask a failure with a catch, mock, retry, or fallback. |
+| A third-party API, SDK, or protocol behavior must be established | `find-docs` | Retrieve current primary-source documentation and record its status per the integration rules; training memory is not evidence. |
+| Assumptions in a plan, claim, or specification need pressure | `grilling`, `grill-with-docs` | Use before committing to an external dependency or an architectural decision, not after. |
+| Reading BNB Chain / opBNB state, transactions, or contract code during a probe | `bnbchain-mcp` | Read-only use for evidence gathering. Never hand it a production key; probe keys stay disposable and out of the repository. |
+| Starting or configuring the Foundry workspace and OpenZeppelin imports | `setup-solidity-contracts` | Pinned versions and remappings come from `docs/technical/TECH-STACK.md`. |
+| Writing or reviewing contract code that uses library primitives | `develop-secure-contracts` | Prefer an audited library primitive over a hand-rolled one; a library default still has to satisfy the mandate invariants. |
+| Reviewing a changed TypeScript or Solidity surface before claiming it done | `code-review-skill`, `requesting-code-review` | Review the diff against the invariants and the acceptance criteria of the task, not against taste. |
+| About to claim a task, test, deployment, or integration is complete | `verification-before-completion` | Produce the command and its observed output. An unrun check is a blocker, not a pass. |
+
+### Provenance
+
+| Source | Pinned revision | Installed |
+| --- | --- | --- |
+| [obra/superpowers](https://github.com/obra/superpowers) | `b36e0829c6d0140e93cfef2ca599b1b07d4a7797` | `brainstorming`, `writing-plans`, `test-driven-development`, `systematic-debugging`, `requesting-code-review`, `verification-before-completion` |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | `6654f6b60cd9d5be8b54c6fafe44346dabeb3b76` | `domain-modeling`, `codebase-design`, `grilling`, `grill-with-docs`, `to-spec` |
+| [OpenZeppelin/openzeppelin-skills](https://github.com/OpenZeppelin/openzeppelin-skills) | `6f215af60eb60017ab1a933ce9d22a479cd42b26` | `setup-solidity-contracts`, `develop-secure-contracts` (AGPL-3.0-only, unmodified) |
+| Workstation global install, snapshot 2026-09-19 | unpinned upstream | `bnbchain-mcp`, `code-review-skill`, `find-docs` |
+
+Every directory was copied unmodified; MIT license texts are retained in [`.agents/skills/licenses/`](.agents/skills/licenses) and `code-review-skill` carries its own `LICENSE`. When a skill is added or removed, update this section in the same change.
+
+### Deliberately absent
+
+- **Interface skills** (`emil-design-eng`, `motion`, `impeccable`, `design-taste-frontend`, `vercel-react-best-practices`) are not installed while the UI hold is in force. Install them in the change that opens the web surface, never earlier.
+- **Reference-repository skills** (`bsc-foundry`, `bnb-agent-stack`, `altana-*`, `swap-*`/`liquidity-*`/`farming-*`/`hub-*` planners) are excluded on purpose. They encode another product's contracts, its vendor session wallet, and its address tables, all of which would either contradict `docs/technical/INTEGRATION.md` or reintroduce the vendor dependency the core is forbidden to have. Do not re-import them; extract a specific technique into a canonical document instead.
+- **Harness tooling** (`graphify`, `orca-cli`, `orchestration`, `computer-use`) stays at the workstation level and is not vendored.
 
 ## Non-negotiable product and security invariants
 
@@ -107,6 +148,15 @@ When a contract or interface changes, migrate every caller and remove the obsole
 4. Resolve reachable decisions through code or primary sources. Record only genuinely external uncertainty as a decision gate with an owner and validation method.
 5. Reject work that bypasses an accepted requirement, security invariant, or phase hold point.
 
+### Documentation synchronization
+
+1. Every change that alters behavior, scope, evidence, status, or an external claim updates its canonical document in the same change; a documentation update is never deferred to a later commit.
+2. `docs/BUILD-PLAN.md` carries live task status, current evidence, and named blockers while work is in progress; acceptance checkboxes flip only when every acceptance criterion of the task passes.
+3. When an address, interface, dependency version, protocol status, or decision changes, update every canonical document that asserts it, and keep integration status values (`verified`, `proposed`, `needs re-verification`, `blocked`) accurate in `docs/technical/INTEGRATION.md`.
+4. Evidence recorded in documentation names the exact chain, address, block, transaction, command, or primary source, and distinguishes local, fork, testnet, and mainnet evidence.
+5. A durable lesson or verified user preference is appended to `docs/LESSONS.md` in the same change that produced it, newest first, using that file's dated entry format.
+6. Documentation must never claim an unperformed run or an unverified external behavior; an unfinished criterion is recorded as a blocker with its unblocking action and owner.
+
 ### Verification standards
 
 - **Documentation:** validate internal links, requirement/task/acceptance traceability, terminology, states, external source status, and absence of placeholders or stale product language.
@@ -143,18 +193,6 @@ When blocked:
 
 Conflicting product or security choices require user resolution. Tooling failures do not: investigate and repair them when safe.
 
-## Self Learning Logs
+## Lessons and insight
 
-Newest entries first. Each entry records a root cause and a durable operating rule.
-
-- No entries yet.
-
-## Self Insight Logs
-
-Newest entries first. Each entry records a verified preference and how to apply it.
-
-- The user prefers deep, explicit documentation and acceptance criteria before implementation; make accepted requirements and gates executable before writing product code.
-- The user will provide Perago's design system later; do not invent UI or visual direction early.
-- The user rejects reuse of the reference product's UI and flow; reuse only audited technical primitives.
-- The user wants frequent coherent commits and `dev` development with PRs into protected `main`; checkpoint complete review units and avoid direct feature work on `main`.
-- The user expects the highest-quality output and informed action rather than timid scaffolding; investigate first, then deliver complete bounded work.
+Durable technical lessons and verified user preferences are recorded newest-first in `docs/LESSONS.md`. Every session appends there rather than inline.
