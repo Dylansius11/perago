@@ -1,0 +1,6 @@
+graphify-out/graph.json merge=graphify text eol=lf
+graphify-out/*.json text eol=lf
+graphify-out/*.html text eol=lf
+graphify-out/GRAPH_REPORT.md text eol=lf -whitespace
+.graphifyignore text eol=lf
+.gitattributes text eol=lf
