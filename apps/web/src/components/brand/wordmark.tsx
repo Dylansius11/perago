@@ -14,9 +14,9 @@ const tones = {
 } as const;
 
 const sizes = {
-  sm: { icon: "h-7 w-auto", text: "text-[19px]" },
-  md: { icon: "h-9 w-auto", text: "text-[22px]" },
-  lg: { icon: "h-14 w-auto", text: "text-[38px]" },
+  sm: { icon: "h-8 w-auto", text: "text-[19px]" },
+  md: { icon: "h-12 w-auto", text: "text-[24px]" },
+  lg: { icon: "h-16 w-auto", text: "text-[40px]" },
 } as const;
 
 export function Wordmark({
@@ -29,12 +29,12 @@ export function Wordmark({
   className?: string;
 }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
+    <span className={cn("flex items-center gap-3", className)}>
       <Image
         src="/brand/icon-mark.png"
         alt=""
-        width={56}
-        height={68}
+        width={949}
+        height={1142}
         className={sizes[size].icon}
         priority
       />

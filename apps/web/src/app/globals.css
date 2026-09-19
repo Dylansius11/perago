@@ -23,9 +23,15 @@
   --color-rule: #ccd1c8;
   --color-ruleinvert: #2b352f;
 
-  /* The accent. Only Perago teal. */
-  --color-signal: #17c3b2;
-  --color-signaldeep: #0e8a80;
+  /*
+   * The accent, in two roles. `signal` is the brand mark teal and is only
+   * legible on dark surfaces (9.7:1 on ink); on paper it measures 1.78:1,
+   * so paper surfaces use `signal-ink` (a darkened form at 4.6:1) and keep
+   * `signal` for fills, rules, and small graphic marks. Never set body text
+   * in `signal` on paper.
+   */
+  --color-signal: #00d0c0;
+  --color-signal-ink: #077d74;
 
   /* Terminal green, only inside dark panels. */
   --color-phos: #34d399;

@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: workspaceRoot,
   reactStrictMode: true,
   typedRoutes: true,
+  // Never write agent instruction files into the app tree: this repository's
+  // governance documents are the only source of agent rules.
+  agentRules: false,
 };
 
 export default nextConfig;

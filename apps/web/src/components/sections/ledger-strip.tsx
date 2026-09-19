@@ -25,7 +25,7 @@ export function LedgerStrip() {
       key={term}
       className="flex shrink-0 items-baseline gap-3 border-r border-ruleinvert px-8 py-5"
     >
-      <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-signaldeep">
+      <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-signal-ink">
         {term}
       </span>
       <span className="whitespace-nowrap text-[15px] text-ink">

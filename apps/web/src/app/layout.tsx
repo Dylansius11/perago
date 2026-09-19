@@ -32,6 +32,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${archivo.variable} ${jetbrains.variable}`}>
+      <head>
+        {/*
+         * Entrance animations ship their start state inline, so without
+         * JavaScript the page would render invisible. This override wins
+         * over those inline declarations and hands the reader the content.
+         */}
+        <noscript>
+          <style>{`[data-reveal]{opacity:1!important;transform:none!important;clip-path:none!important;filter:none!important}`}</style>
+        </noscript>
+      </head>
       <body>{children}</body>
     </html>
   );

@@ -49,7 +49,7 @@ export function Anatomy() {
                   key={field}
                   className="grid grid-cols-[7rem_1fr] items-baseline gap-x-6 py-3.5 md:grid-cols-[9rem_12rem_1fr]"
                 >
-                  <span className="font-mono text-[13px] text-signaldeep">
+                  <span className="font-mono text-[13px] text-signal-ink">
                     {field}
                   </span>
                   <span className="font-mono text-[13px] text-ink">{value}</span>

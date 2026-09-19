@@ -5,10 +5,12 @@ import type { ReactNode } from "react";
 
 /*
  * Shared entrance vocabulary. Every section-level reveal on the page uses
- * one of these two primitives so motion stays consistent, honors
- * prefers-reduced-motion, and never leaves content invisible when JS fails:
- * the blurred state is a CSS default, so the element is still readable
- * before hydration flips it on.
+ * one of these two primitives so motion stays consistent and honors
+ * prefers-reduced-motion.
+ *
+ * Both carry `data-reveal`: the entrance state ships inline in the server
+ * HTML, and the layout's noscript rule resets those properties so the page
+ * stays readable when JavaScript never runs.
  */
 
 const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
@@ -24,11 +26,16 @@ export function RiseIn({
 }) {
   const reduced = useReducedMotion();
   if (reduced) {
-    return <div className={className}>{children}</div>;
+    return (
+      <div className={className} data-reveal>
+        {children}
+      </div>
+    );
   }
   return (
     <motion.div
       className={className}
+      data-reveal
       initial={{ y: 26, opacity: 0, filter: "blur(6px)" }}
       whileInView={{ y: 0, opacity: 1, filter: "blur(0px)" }}
       viewport={{ once: true, margin: "-12% 0px" }}
@@ -50,11 +57,16 @@ export function Unveil({
 }) {
   const reduced = useReducedMotion();
   if (reduced) {
-    return <div className={className}>{children}</div>;
+    return (
+      <div className={className} data-reveal>
+        {children}
+      </div>
+    );
   }
   return (
     <motion.div
       className={className}
+      data-reveal
       initial={{ clipPath: "inset(0 0 100% 0)", y: 14 }}
       whileInView={{ clipPath: "inset(0 0 0% 0)", y: 0 }}
       viewport={{ once: true, margin: "-12% 0px" }}
