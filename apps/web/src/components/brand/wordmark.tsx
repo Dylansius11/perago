@@ -15,7 +15,7 @@ const tones = {
 
 const sizes = {
   sm: { icon: "h-8 w-auto", text: "text-[19px]" },
-  md: { icon: "h-12 w-auto", text: "text-[24px]" },
+  md: { icon: "h-14 w-auto", text: "text-[24px]" },
   lg: { icon: "h-16 w-auto", text: "text-[40px]" },
 } as const;
 
