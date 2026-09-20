@@ -1,32 +1,37 @@
-# Graph Report - perago  (2026-09-19)
+# Graph Report - perago  (2026-09-20)
 
 ## Corpus Check
-- 342 files · ~167,922 words
+- 357 files · ~172,343 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2827 nodes · 4367 edges · 225 communities (188 shown, 28 thin omitted)
+- 2885 nodes · 4466 edges · 218 communities (185 shown, 27 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 112 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `cd8acc72`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Forge cheatcode documentation
 - Brainstorming companion server
-- Collection testing utilities
+- EnumerableMap.test.js
 - Account session probe
-- Bridge and access tests
+- BridgeERC20.test.js
 - OpenZeppelin development dependencies
 - Modular account tests
 - Cryptographic signing keys
 - Modular account SDK
-- OpenZeppelin package metadata
+- openzeppelin-contracts/package.json
 - ERC20 behavior tests
 - Execution domain models
-- ERC4337 test fixtures
-- Votes and clock tests
+- Account.behavior.js
+- Votes.behavior.js
 - Pull request analyzer
 - Governor nonce tests
-- Storage code generators
+- format-lines.js
 - Access control tests
 - Smart account behaviors
 - User operation helpers
@@ -41,154 +46,150 @@
 - User operation client
 - Live protocol probe
 - Vesting wallet tests
-- Contract clone tests
+- chai
 - Web application package
-- Ownership and burn tests
+- hardhat
 - Merkle tree generators
-- ERC1155 behavior tests
-- Proxy deployment helpers
-- Governor behavior tests
+- draft-InteroperableAddress.test.js
+- DoubleEndedQueue.test.js
+- AccountP256.test.js
 - Bytes utility tests
-- Account factory utilities
+- ERC2771Context.test.js
 - Access manager tests
 - Multisig account tests
 - ECDSA signature tests
 - WebAuthn cryptography tests
 - Merkle proof tests
-- ERC20 permit tests
+- AccessManager.predicate.js
 - Token bridge mocks
-- Upgradeable contract tests
+- time.js
 - SafeERC20 tests
 - Governance proposal tests
-- EIP712 domain utilities
+- pragma-validity.js
 - ERC4626 vault tests
 - Mandate executor authorization
 - Contract lint configuration
 - Token transfer helpers
-- Test assertion helpers
-- Transparent proxy tests
+- Math.test.js
+- Bytes.test.js
 - Governor quorum tests
-- Time utility tests
-- ERC721 enumerable tests
+- biome.json
+- fv/run.js
 - Access manager mocks
 - Deployment script helpers
 - Governor counting tests
-- Account abstraction mocks
+- iterate.js
 - String utility tests
 - ERC20 extensions tests
 - ERC721 receiver tests
 - Upgradeable beacon tests
-- EIP7702 account tests
-- Reentrancy guard tests
+- enums.js
+- RLP.test.js
 - Typed structured data
 - Safe casting tests
 - Math utility tests
 - Cryptography helper tests
-- Contract manifest tooling
-- Enumerable set tests
+- Arrays.test.js
+- Checkpoints.js
 - Mandate execution lifecycle
 - ERC1155 receiver tests
 - Governor settings tests
-- Create2 deployment tests
+- random.js
 - Role management tests
-- Upgradeable proxy utilities
-- ERC721 wrapper tests
-- API package configuration
-- ERC20 flash mint tests
+- ERC7786Recipient.test.js
+- hero.tsx
+- TrieProof.test.js
+- Time.test.js
 - Modular account fixtures
 - Protocol manifest schema
 - ERC165 interface tests
-- Contract ABI exports
+- testAsSchedulableOperation
 - Short strings tests
 - Double ended queue tests
 - ERC20 wrapper tests
-- ECDSA recovery tests
-- Account session policy
-- Governor timelock tests
+- BlockTries
+- shouldSupportInterfaces
+- SupportsInterface.behavior.js
 - ERC1155 supply tests
 - Token vesting tests
-- Access control utilities
-- Signature checker tests
+- Account.test.js
+- GovernorCountingFractional.test.js
 - Token timelock tests
 - ERC1363 token tests
 - ERC4907 rental tests
 - Calldata decoding utilities
-- Account permission encoding
-- ERC2771 context tests
-- Token holder tests
-- EIP712 fixture generation
+- MerkleTree.test.js
+- update-comment.js
+- GovernorProposalGuardian.test.js
+- GovernorVotesQuorumFraction.test.js
 - Packed data utilities
-- Governor proposal guards
-- ERC20 temporary approval
+- Memory.test.js
+- MerkleProof.test.js
 - Address utility tests
 - ERC1271 signature tests
 - Web application configuration
 - Execution adapter mocks
-- ERC721 consecutive minting
-- ERC2981 royalty tests
-- ERC20 capped tests
-- Governor votes tests
-- Contract package configuration
-- ERC5805 voting tests
+- fetch-common-contracts.js
+- impersonate
+- access-manager.js
+- Packing.test.js
+- storage.js
+- Proxy.behaviour.js
 - Enumerable map tests
 - Base64 encoding tests
-- RSA signature tests
-- P256 cryptography tests
-- Message hash tests
+- StorageSlot.test.js
+- TransientSlot.test.js
+- SlotDerivation.js
 - SafeERC20 mock tokens
 - ERC721 burnable tests
 - ERC20 pausable tests
-- ERC721 pausable tests
-- ERC1155 pausable tests
-- Token rescue tests
+- shouldBehaveLikeAManagedRestrictedOperation
+- SlotDerivation.t.js
+- BeaconProxy.test.js
 - Cross chain message tests
 - Governor execution tests
 - ERC20 votes tests
 - ERC721 votes tests
 - Clones library tests
-- Multicall utility tests
+- SlotDerivation.test.js
 - Initializable contract tests
 - UUPS upgrade tests
 - Storage slot tests
 - ERC1967 proxy tests
-- Beacon proxy tests
+- Base64.test.js
 - Access managed tests
-- Ownable contract tests
+- ERC20Crosschain.test.js
 - Ownable two step
-- Authority interface tests
-- ERC721 URI storage
-- ERC1155 URI storage
+- ProxyAdmin.test.js
+- Create2.test.js
+- AccessManaged.test.js
 - ERC4626 mock vaults
 - Checkpoints utility tests
-- Timers utility tests
-- Arrays utility tests
-- BitMaps utility tests
-- Comparators utility tests
-- Heap utility tests
-- Circular buffer tests
-- Panic utility tests
-- Nonces utility tests
-- Nonces keyed tests
-- Merkle tree tests
-- Commutative cryptography tests
-- Signature recovery tests
-- WebAuthn verification tests
-- ERC7913 signature tests
+- AuthorityUtils.test.js
+- EIP7702Utils.test.js
+- ERC1967Utils.test.js
+- sanity.test.js
+- UUPSUpgradeable.test.js
+- SafeERC20.test.js
+- ERC6909ContentURI.test.js
+- ERC6909Metadata.test.js
+- ERC721Pausable.test.js
+- ERC20Capped.test.js
+- Base58.test.js
+- @nomicfoundation/hardhat-network-helpers
+- Strings.test.js
+- Heap.test.js
 - ERC7739 signature tests
 - EIP712 verifier tests
-- Account signer tests
-- Account modules tests
-- Account execution tests
-- Governor core tests
+- trie.js
+- Pausable.test.js
+- ReentrancyGuard.test.js
+- account.js
 - Governor storage tests
-- Governor compatibility tests
-- Governor relay tests
-- Governor super quorum
-- Governor sequential proposal ids
+- Checkpoints.test.js
+- ERC721Burnable.test.js
+- lint-staged
 - Governor prevent late quorum
-- Governor timelock control
-- Governor timelock compound
-- Governor timelock access
 - Votes delegation tests
 - Votes timestamp tests
 - ERC1155 core tests
@@ -205,8 +206,7 @@
 - Crosschain messenger tests
 - ERC7786 gateway tests
 - ERC7802 bridge tests
-- ERC7786 aggregator tests
-- ERC3156 flash loan
+- repository
 - IERC1363 interface tests
 - Token common mocks
 - ERC721 crosschain tests
@@ -216,6 +216,7 @@
 - ERC1363 spender tests
 - Token safe transfer
 - Governor vote counting
+- page.tsx
 - Governor compatibility bravo
 - Governor proposal threshold
 - Governor voting delay
@@ -240,12 +241,12 @@
 10. `impersonate()` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `fixture()` --calls--> `impersonate()`  [EXTRACTED]
+  packages/contracts/lib/openzeppelin-contracts/test/access/manager/AccessManaged.test.js → packages/contracts/lib/openzeppelin-contracts/test/helpers/account.js
+- `fixture()` --calls--> `impersonate()`  [EXTRACTED]
+  packages/contracts/lib/openzeppelin-contracts/test/crosschain/BridgeERC20.test.js → packages/contracts/lib/openzeppelin-contracts/test/helpers/account.js
 - `testScheduleOperation()` --calls--> `testAsSchedulableOperation()`  [EXTRACTED]
   packages/contracts/lib/openzeppelin-contracts/test/access/manager/AccessManager.behavior.js → packages/contracts/lib/openzeppelin-contracts/test/access/manager/AccessManager.predicate.js
-- `signBallot()` --calls--> `getDomain()`  [EXTRACTED]
-  packages/contracts/lib/openzeppelin-contracts/test/governance/Governor.test.js → packages/contracts/lib/openzeppelin-contracts/test/helpers/eip712.js
-- `signBallot()` --calls--> `getDomain()`  [EXTRACTED]
-  packages/contracts/lib/openzeppelin-contracts/test/governance/extensions/GovernorCountingOverridable.test.js → packages/contracts/lib/openzeppelin-contracts/test/helpers/eip712.js
 - `signBallot()` --calls--> `getDomain()`  [EXTRACTED]
   packages/contracts/lib/openzeppelin-contracts/test/governance/extensions/GovernorNoncesKeyed.test.js → packages/contracts/lib/openzeppelin-contracts/test/helpers/eip712.js
 - `signExtendedBallot()` --calls--> `getDomain()`  [EXTRACTED]
@@ -254,7 +255,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (225 total, 28 thin omitted)
+## Communities (218 total, 27 thin omitted)
 
 ### Community 0 - "Forge cheatcode documentation"
 Cohesion: 0.06
@@ -264,7 +265,7 @@ Nodes (23): Cheatcode, Cheatcodes, CheatcodesPrinter, cmp_cheatcode(), CmpCheatc
 Cohesion: 0.06
 Nodes (57): bootstrapPage(), brandMarkup(), broadcast(), browserLauncherForPlatform(), chmodOwnerOnly(), clients, companionUrl(), computeAcceptKey() (+49 more)
 
-### Community 2 - "Collection testing utilities"
+### Community 2 - "EnumerableMap.test.js"
 Cohesion: 0.05
 Nodes (38): fromBytes32(), toBytes32(), { capitalize, mapValues }, MAP_TYPES, SET_TYPES, toMapTypeDescr(), toSetTypeDescr(), typeDescr() (+30 more)
 
@@ -272,27 +273,27 @@ Nodes (38): fromBytes32(), toBytes32(), { capitalize, mapValues }, MAP_TYPES, SE
 Cohesion: 0.05
 Nodes (43): dependencies, @aa-sdk/core, @alchemy/aa-infra, @alchemy/common, @alchemy/smart-accounts, @perago/sdk, viem, zod (+35 more)
 
-### Community 4 - "Bridge and access tests"
-Cohesion: 0.06
-Nodes (37): { ethers }, { expect }, fixture(), { impersonate }, { loadFixture }, time, { anyValue }, { ethers } (+29 more)
+### Community 4 - "BridgeERC20.test.js"
+Cohesion: 0.25
+Nodes (7): { ethers }, { expect }, fixture(), { getLocalChain }, { impersonate }, { loadFixture }, { shouldBehaveLikeBridgeERC20 }
 
 ### Community 5 - "OpenZeppelin development dependencies"
 Cohesion: 0.05
 Nodes (43): devDependencies, chai, @changesets/changelog-github, @changesets/cli, @changesets/pre, @changesets/read, eslint, @eslint/compat (+35 more)
 
 ### Community 6 - "Modular account tests"
-Cohesion: 0.07
-Nodes (36): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture, setBalance }, { MODULE_TYPE_VALIDATOR }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeAccountERC7579 } (+28 more)
+Cohesion: 0.08
+Nodes (33): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture, setBalance }, { MODULE_TYPE_VALIDATOR }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeAccountERC7579 } (+25 more)
 
 ### Community 7 - "Cryptographic signing keys"
 Cohesion: 0.06
-Nodes (25): { ERC4337Helper }, { ethers, predeploy }, { expect }, { getDomain }, { loadFixture }, { MAX_UINT64 }, { NonNativeSigner, P256SigningKey, RSASHA256SigningKey, MultiERC7913SigningKey }, { PackedUserOperation } (+17 more)
+Nodes (21): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner, P256SigningKey, RSASHA256SigningKey, WebAuthnSigningKey }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeERC1271 } (+13 more)
 
 ### Community 8 - "Modular account SDK"
 Cohesion: 0.11
 Nodes (38): ACCOUNT_EXECUTE_SELECTOR, AccountCall, accountFactoryAbi, allowlistInputs(), allowlistParameters, assertAddress(), assertSelectors(), assertSessionEntityId() (+30 more)
 
-### Community 9 - "OpenZeppelin package metadata"
+### Community 9 - "openzeppelin-contracts/package.json"
 Cohesion: 0.06
 Nodes (36): __dirname, author, bugs, url, description, files, homepage, keywords (+28 more)
 
@@ -304,13 +305,13 @@ Nodes (26): { ethers }, { expect }, shouldBehaveLikeERC20(), shouldBehaveLikeERC
 Cohesion: 0.11
 Nodes (25): CompiledPlan, StakeAction, stakeActionSchema, SwapAction, swapActionSchema, ExecutionReceipt, executionReceiptSchema, adapterIdSchema (+17 more)
 
-### Community 12 - "ERC4337 test fixtures"
-Cohesion: 0.09
-Nodes (27): { ERC4337Helper }, { ethers, predeploy }, fixture(), { getDomain }, { loadFixture }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeERC1271 } (+19 more)
+### Community 12 - "Account.behavior.js"
+Cohesion: 0.07
+Nodes (31): { ethers, predeploy }, { expect }, { impersonate }, shouldBehaveLikeAccountCore(), shouldBehaveLikeAccountHolder(), { shouldSupportInterfaces }, { SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILURE }, { ERC4337Helper } (+23 more)
 
-### Community 13 - "Votes and clock tests"
-Cohesion: 0.08
-Nodes (25): { expect }, shouldBehaveLikeERC6372(), time, { ethers }, { expect }, { getDomain, Delegation }, { mine }, { shouldBehaveLikeERC6372 } (+17 more)
+### Community 13 - "Votes.behavior.js"
+Cohesion: 0.06
+Nodes (34): { expect }, shouldBehaveLikeERC6372(), time, { ethers }, { expect }, { getDomain, Delegation }, { mine }, { shouldBehaveLikeERC6372 } (+26 more)
 
 ### Community 14 - "Pull request analyzer"
 Cohesion: 0.12
@@ -320,7 +321,7 @@ Nodes (27): analyze_pr(), calculate_complexity(), categorize_size(), detect_lang
 Cohesion: 0.08
 Nodes (21): { ethers }, { expect }, { getDomain, Ballot, ExtendedBallot }, { GovernorHelper }, { loadFixture }, { shouldBehaveLikeNoncesKeyed }, signBallot(), signExtendedBallot() (+13 more)
 
-### Community 16 - "Storage code generators"
+### Community 16 - "format-lines.js"
 Cohesion: 0.10
 Nodes (12): formatLines(), indentEach(), { capitalize }, TYPES, format, { TYPES }, format, { TYPES } (+4 more)
 
@@ -329,8 +330,8 @@ Cohesion: 0.09
 Nodes (20): { ethers }, { expect }, OTHER_ROLE, ROLE, shouldBehaveLikeAccessControl(), shouldBehaveLikeAccessControlDefaultAdminRules(), shouldBehaveLikeAccessControlEnumerable(), { shouldSupportInterfaces } (+12 more)
 
 ### Community 18 - "Smart account behaviors"
-Cohesion: 0.08
-Nodes (24): { ethers, predeploy }, { expect }, { impersonate }, shouldBehaveLikeAccountCore(), shouldBehaveLikeAccountHolder(), { shouldSupportInterfaces }, { SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILURE }, { ERC4337Helper } (+16 more)
+Cohesion: 0.13
+Nodes (21): fixture(), fixture(), fixture(), fixture(), fixture(), fixture(), fixture(), fixture() (+13 more)
 
 ### Community 19 - "User operation helpers"
 Cohesion: 0.12
@@ -393,41 +394,41 @@ Nodes (21): CAKE_SWAP_IN, cakePoolAbi, delay(), erc20Abi, expect(), JOB_BUDGET, 
 Cohesion: 0.12
 Nodes (19): envSetup(), { ethers }, { expect }, shouldBehaveLikeVesting(), time, { envSetup, shouldBehaveLikeVesting }, { ethers }, { expect } (+11 more)
 
-### Community 31 - "Contract clone tests"
-Cohesion: 0.10
-Nodes (14): { ethers }, { expect }, { ethers }, { expect }, { generators }, { loadFixture }, shouldBehaveLikeClone, { ethers } (+6 more)
+### Community 31 - "chai"
+Cohesion: 0.08
+Nodes (17): { ethers }, { expect }, { ethers }, { expect }, { generators }, { loadFixture }, shouldBehaveLikeClone, { ethers } (+9 more)
 
 ### Community 32 - "Web application package"
 Cohesion: 0.10
 Nodes (20): @perago/sdk, @types/node, typescript, viem, name, private, type, version (+12 more)
 
-### Community 33 - "Ownership and burn tests"
-Cohesion: 0.10
-Nodes (13): { ethers }, { expect }, { loadFixture }, { ethers }, { expect }, { loadFixture }, { ethers }, { expect } (+5 more)
+### Community 33 - "hardhat"
+Cohesion: 0.08
+Nodes (15): { ethers }, { expect }, { loadFixture }, { ethers }, { expect }, { loadFixture }, { ethers }, { expect } (+7 more)
 
 ### Community 34 - "Merkle tree generators"
 Cohesion: 0.10
 Nodes (19): { anyValue }, CANCELLER_ROLE, { ethers }, EXECUTOR_ROLE, { expect }, { GovernorHelper, timelockSalt }, { loadFixture }, { PANIC_CODES } (+11 more)
 
-### Community 35 - "ERC1155 behavior tests"
+### Community 35 - "draft-InteroperableAddress.test.js"
 Cohesion: 0.10
 Nodes (16): { addressCoder }, ethereum, { ethers }, { mapValues }, solana, { CHAINS, getLocalChain }, { ethers }, { expect } (+8 more)
 
-### Community 36 - "Proxy deployment helpers"
-Cohesion: 0.10
-Nodes (13): { ethers }, { expect }, { loadFixture }, { ethers }, { expect }, { loadFixture }, { ethers }, { expect } (+5 more)
+### Community 36 - "DoubleEndedQueue.test.js"
+Cohesion: 0.33
+Nodes (4): { ethers }, { expect }, { loadFixture }, { PANIC_CODES }
 
-### Community 37 - "Governor behavior tests"
-Cohesion: 0.11
-Nodes (17): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner, P256SigningKey }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeERC1271 } (+9 more)
+### Community 37 - "AccountP256.test.js"
+Cohesion: 0.20
+Nodes (9): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner, P256SigningKey }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeERC1271 } (+1 more)
 
 ### Community 38 - "Bytes utility tests"
 Cohesion: 0.11
 Nodes (11): { ERC4337Helper }, { ethers, predeploy }, fixture(), { getDomain }, { loadFixture }, { NonNativeSigner, RSASHA256SigningKey }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder } (+3 more)
 
-### Community 39 - "Account factory utilities"
+### Community 39 - "ERC2771Context.test.js"
 Cohesion: 0.12
-Nodes (16): { ethers }, { expect }, fixture(), { getDomain, ForwardRequest }, { impersonate }, { loadFixture }, { MAX_UINT48 }, { shouldBehaveLikeRegularContext } (+8 more)
+Nodes (15): { ethers }, { expect }, { getDomain, ForwardRequest }, { impersonate }, { loadFixture }, { MAX_UINT48 }, { shouldBehaveLikeRegularContext }, { ethers } (+7 more)
 
 ### Community 40 - "Access manager tests"
 Cohesion: 0.13
@@ -449,7 +450,7 @@ Nodes (17): dependencies, drizzle-orm, hono, @perago/sdk, postgres, viem, zod, @
 Cohesion: 0.13
 Nodes (14): Base, FunctionDefinition(), { hasLeadingUnderscore }, ignore, { isFallbackFunction }, minimatch, path, VariableDeclaration() (+6 more)
 
-### Community 45 - "ERC20 permit tests"
+### Community 45 - "AccessManager.predicate.js"
 Cohesion: 0.16
 Nodes (16): { expect }, {
   LIKE_COMMON_IS_EXECUTING,
@@ -466,9 +467,9 @@ Nodes (16): { expect }, {
 Cohesion: 0.11
 Nodes (17): { ERC4337Helper }, { ethers, predeploy }, { expect }, { getDomain }, { loadFixture }, { MAX_UINT64 }, { NonNativeSigner, P256SigningKey, RSASHA256SigningKey, MultiERC7913SigningKey }, { PackedUserOperation } (+9 more)
 
-### Community 47 - "Upgradeable contract tests"
-Cohesion: 0.12
-Nodes (15): { clock, increaseTo }, { ethers, predeploy }, { expect }, { loadFixture }, { MAX_UINT48 }, { packValidationData, UserOperation }, { ValidationRange }, clock (+7 more)
+### Community 47 - "time.js"
+Cohesion: 0.09
+Nodes (20): { clock, increaseTo }, { ethers, predeploy }, { expect }, { loadFixture }, { MAX_UINT48 }, { packValidationData, UserOperation }, { ValidationRange }, clock (+12 more)
 
 ### Community 48 - "SafeERC20 tests"
 Cohesion: 0.12
@@ -478,7 +479,7 @@ Nodes (13): { ethers }, { expect }, shouldBehaveLikeERC6909(), { shouldSupportIn
 Cohesion: 0.12
 Nodes (16): author, bugs, url, description, files, homepage, keywords, license (+8 more)
 
-### Community 50 - "EIP712 domain utilities"
+### Community 50 - "pragma-validity.js"
 Cohesion: 0.12
 Nodes (14): {
   argv: { pattern, skipPatterns, verbose, concurrency, _: artifacts },
@@ -490,7 +491,7 @@ Nodes (10): { default: readChangesets }, { fetch }, getState(), isPublishedOnNpm
 
 ### Community 52 - "Mandate executor authorization"
 Cohesion: 0.12
-Nodes (16): { anyValue }, { ethers }, { expect }, { GovernorHelper }, { hashOperation }, { loadFixture }, { max }, prepareOperation() (+8 more)
+Nodes (16): { anyValue }, { ethers }, { expect }, { GovernorHelper }, { hashOperation }, { loadFixture }, { max }, { ProposalState, VoteType } (+8 more)
 
 ### Community 53 - "Contract lint configuration"
 Cohesion: 0.12
@@ -500,23 +501,23 @@ Nodes (13): { ethers }, { expect }, { getDomain, Ballot }, { GovernorHelper }, {
 Cohesion: 0.13
 Nodes (15): CANCELLER_ROLE, { ethers }, EXECUTOR_ROLE, { expect }, genOperation(), genOperationBatch(), getAddress(), { GovernorHelper } (+7 more)
 
-### Community 55 - "Test assertion helpers"
-Cohesion: 0.15
-Nodes (11): max(), min(), { ethers }, { expect }, { loadFixture }, { max, min }, { shouldBehaveLikeERC20 }, { ethers } (+3 more)
+### Community 55 - "Math.test.js"
+Cohesion: 0.07
+Nodes (22): max(), min(), modExp(), { ethers }, { expect }, { loadFixture }, { max, min }, { shouldBehaveLikeERC20 } (+14 more)
 
-### Community 56 - "Transparent proxy tests"
-Cohesion: 0.12
-Nodes (11): modExp(), { ethers }, { expect }, { generators }, { loadFixture }, { min, max, modExp }, { PANIC_CODES }, { product, range } (+3 more)
+### Community 56 - "Bytes.test.js"
+Cohesion: 0.14
+Nodes (7): { ethers }, { expect }, { generators }, { loadFixture }, lorem, { MAX_UINT128, MAX_UINT64, MAX_UINT32, MAX_UINT16 }, present
 
 ### Community 57 - "Governor quorum tests"
 Cohesion: 0.12
 Nodes (12): { anyValue }, { ethers }, { expect }, { RevertType }, shouldBehaveLikeERC1155(), { shouldSupportInterfaces }, { ethers }, { expect } (+4 more)
 
-### Community 58 - "Time utility tests"
-Cohesion: 0.12
-Nodes (15): files, includes, formatter, enabled, indentStyle, indentWidth, quoteStyle, semicolons (+7 more)
+### Community 58 - "biome.json"
+Cohesion: 0.11
+Nodes (18): css, parser, files, includes, formatter, enabled, indentStyle, indentWidth (+10 more)
 
-### Community 59 - "ERC721 enumerable tests"
+### Community 59 - "fv/run.js"
 Cohesion: 0.12
 Nodes (14): { argv }, { exec }, fs, glob, { hideBin }, limit, yargs, { findAll } (+6 more)
 
@@ -534,9 +535,9 @@ Nodes (15): {
 Cohesion: 0.12
 Nodes (15): { anyValue }, CANCELLER_ROLE, delay, { ethers }, EXECUTOR_ROLE, { expect }, { GovernorHelper, timelockSalt }, { loadFixture } (+7 more)
 
-### Community 63 - "Account abstraction mocks"
-Cohesion: 0.13
-Nodes (13): batchInBlock(), { expect }, { network }, { unique }, { batchInBlock }, { ethers }, { expect }, { getDomain, Delegation } (+5 more)
+### Community 63 - "iterate.js"
+Cohesion: 0.10
+Nodes (17): batchInBlock(), { expect }, { network }, { unique }, { batchInBlock }, { ethers }, { expect }, { getDomain, Delegation } (+9 more)
 
 ### Community 64 - "String utility tests"
 Cohesion: 0.12
@@ -554,13 +555,13 @@ Nodes (15): dependsOn, outputs, cache, dependsOn, persistent, $schema, tasks, bu
 Cohesion: 0.13
 Nodes (15): dependencies, class-variance-authority, clsx, gsap, @gsap/react, lucide-react, motion, next (+7 more)
 
-### Community 68 - "EIP7702 account tests"
-Cohesion: 0.14
-Nodes (11): Enum(), { ethers }, { Enum }, { ethers }, { expect }, { loadFixture }, { PANIC_CODES }, NOTE: Bruce's assets spent got rounded towards infinity (+3 more)
+### Community 68 - "enums.js"
+Cohesion: 0.09
+Nodes (18): { ethers }, { expect }, { GovernorHelper }, { loadFixture }, TOKENS, value, { VoteType }, Enum() (+10 more)
 
-### Community 69 - "Reentrancy guard tests"
-Cohesion: 0.13
-Nodes (12): sum(), { ethers }, { expect }, fixture(), { getDomain, ForwardRequest }, { loadFixture }, { sum }, time (+4 more)
+### Community 69 - "RLP.test.js"
+Cohesion: 0.15
+Nodes (9): { ethers }, { expect }, { MAX_UINT64 }, { ethers }, { expect }, { generators }, { loadFixture }, { MAX_UINT64 } (+1 more)
 
 ### Community 70 - "Typed structured data"
 Cohesion: 0.17
@@ -578,11 +579,11 @@ Nodes (13): compilerOptions, allowJs, jsx, lib, module, moduleResolution, noEmit
 Cohesion: 0.14
 Nodes (5): linksCache, { version }, { isNodeType, findAll }, { slug }, version
 
-### Community 74 - "Contract manifest tooling"
+### Community 74 - "Arrays.test.js"
 Cohesion: 0.16
 Nodes (9): TYPES, bigintSign(), { capitalize }, comparator(), { ethers }, { expect }, { generators }, { loadFixture } (+1 more)
 
-### Community 75 - "Enumerable set tests"
+### Community 75 - "Checkpoints.js"
 Cohesion: 0.14
 Nodes (8): format, { OPTS }, VALUE_SIZES, IMPORTANT: Never accept \`key\` as a user input, since an arbitrary…, NOTE: This is a variant of {upperLookup} that is optimized to find "recent"…, { capitalize }, format, { OPTS }
 
@@ -591,14 +592,14 @@ Cohesion: 0.18
 Nodes (10): format, formatArgsMultiline(), { OPTS }, OPTS, { product }, NOTE: The _empty set_ (i.e. the case where \`proof.length == 1 && leaves.length…, IMPORTANT: Consider memory side-effects when using custom hashing functions, NOTE: This library supports proof verification for merkle trees built using (+2 more)
 
 ### Community 77 - "ERC1155 receiver tests"
-Cohesion: 0.14
-Nodes (13): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner, P256SigningKey, RSASHA256SigningKey, WebAuthnSigningKey }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeERC1271 } (+5 more)
+Cohesion: 0.11
+Nodes (17): { ERC4337Helper }, { ethers, predeploy }, { expect }, { getDomain }, { loadFixture }, { MAX_UINT64 }, { NonNativeSigner, P256SigningKey, RSASHA256SigningKey, MultiERC7913SigningKey }, { PackedUserOperation } (+9 more)
 
 ### Community 78 - "Governor settings tests"
 Cohesion: 0.14
 Nodes (13): CANCELLER_ROLE, delay, { ethers }, EXECUTOR_ROLE, { expect }, { GovernorHelper }, { loadFixture }, { ProposalState, VoteType } (+5 more)
 
-### Community 79 - "Create2 deployment tests"
+### Community 79 - "random.js"
 Cohesion: 0.16
 Nodes (10): { artifacts, ethers }, { generators }, { setCode }, { ethers }, generators, { ethers }, { expect }, { generators } (+2 more)
 
@@ -606,19 +607,19 @@ Nodes (10): { artifacts, ethers }, { generators }, { setCode }, { ethers }, gene
 Cohesion: 0.14
 Nodes (11): aliceP256, bobP256, { ethers }, { expect }, { loadFixture }, { P256SigningKey, NonNativeSigner }, precompile, TEST_MESSAGE (+3 more)
 
-### Community 81 - "Upgradeable proxy utilities"
-Cohesion: 0.14
-Nodes (7): { ethers }, { expect }, { generators }, { loadFixture }, lorem, { MAX_UINT128, MAX_UINT64, MAX_UINT32, MAX_UINT16 }, present
+### Community 81 - "ERC7786Recipient.test.js"
+Cohesion: 0.20
+Nodes (8): attributes, { ethers }, { expect }, { generators }, { getLocalChain }, { loadFixture }, payload, NOTE: here we are only testing the receiver. Failures of the gateway itself…
 
-### Community 82 - "ERC721 wrapper tests"
-Cohesion: 0.15
-Nodes (9): { ethers }, { expect }, { MAX_UINT64 }, { ethers }, { expect }, { generators }, { loadFixture }, { MAX_UINT64 } (+1 more)
+### Community 82 - "hero.tsx"
+Cohesion: 0.20
+Nodes (8): delay(), EASE, HEADLINE_LINES, Hero(), Phase, PHASES, ReceiptSequence(), TONE_COLOR
 
-### Community 83 - "API package configuration"
+### Community 83 - "TrieProof.test.js"
 Cohesion: 0.15
 Nodes (10): { batchInBlock }, { BlockTries }, { Enum }, { ethers }, { expect }, { generators }, { MerklePatriciaTrie, createMerkleProof }, ProofError (+2 more)
 
-### Community 84 - "ERC20 flash mint tests"
+### Community 84 - "Time.test.js"
 Cohesion: 0.18
 Nodes (10): asUint(), { ethers }, { expect }, { loadFixture }, { max }, packDelay(), { product }, SOME_VALUES (+2 more)
 
@@ -634,13 +635,13 @@ Nodes (11): author, bugs, description, files, homepage, license, name, repositor
 Cohesion: 0.24
 Nodes (10): files, getPageTitle(), glob, isString(), menuItems, path, print(), sortItems() (+2 more)
 
-### Community 88 - "Contract ABI exports"
+### Community 88 - "testAsSchedulableOperation"
 Cohesion: 0.21
 Nodes (12): shouldBehaveLikeDelayedAdminOperation(), shouldBehaveLikeNotDelayedAdminOperation(), testScheduleOperation(), shouldBehaveLikeRoleAdminOperation(), afterGrantDelay(), testAsRestrictedOperation(), testAsSchedulableOperation(), callerHasAnExecutionDelay() (+4 more)
 
 ### Community 89 - "Short strings tests"
-Cohesion: 0.17
-Nodes (11): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner, P256SigningKey, WebAuthnSigningKey }, p256Signer, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder } (+3 more)
+Cohesion: 0.10
+Nodes (19): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner, P256SigningKey, WebAuthnSigningKey }, p256Signer, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder } (+11 more)
 
 ### Community 90 - "Double ended queue tests"
 Cohesion: 0.17
@@ -650,13 +651,13 @@ Nodes (10): { anyValue }, { ethers }, { expect }, { GovernorHelper }, iterate, {
 Cohesion: 0.17
 Nodes (11): { anyValue }, defaultDelay, { ethers }, { expect }, { GovernorHelper }, { loadFixture }, { ProposalState, VoteType }, time (+3 more)
 
-### Community 93 - "Account session policy"
+### Community 93 - "shouldSupportInterfaces"
 Cohesion: 0.20
 Nodes (9): { ethers }, { expect }, shouldBehaveLikeERC2981(), { shouldSupportInterfaces }, { ethers }, { expect }, { loadFixture }, { shouldBehaveLikeERC2981 } (+1 more)
 
-### Community 94 - "Governor timelock tests"
-Cohesion: 0.17
-Nodes (9): { ethers }, { loadFixture }, { shouldSupportInterfaces }, { expect }, GOVERNOR_INTERFACE, INTERFACE_IDS, { interfaceId }, { mapValues } (+1 more)
+### Community 94 - "SupportsInterface.behavior.js"
+Cohesion: 0.11
+Nodes (13): { ethers }, { expect }, { loadFixture }, { shouldSupportInterfaces }, { ethers }, { loadFixture }, { shouldSupportInterfaces }, { expect } (+5 more)
 
 ### Community 95 - "ERC1155 supply tests"
 Cohesion: 0.18
@@ -666,13 +667,13 @@ Nodes (10): compilerOptions, allowImportingTsExtensions, declaration, outDir, re
 Cohesion: 0.18
 Nodes (8): RFC-4055, RFC-8017, fs, path, { ethers }, { expect }, { loadFixture }, parse
 
-### Community 97 - "Access control utilities"
-Cohesion: 0.18
-Nodes (10): { ERC4337Helper }, { ethers, predeploy }, fixture(), { getDomain }, { loadFixture }, { NonNativeSigner }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder } (+2 more)
+### Community 97 - "Account.test.js"
+Cohesion: 0.20
+Nodes (9): { ERC4337Helper }, { ethers, predeploy }, { getDomain }, { loadFixture }, { NonNativeSigner }, { PackedUserOperation }, { shouldBehaveLikeAccountCore, shouldBehaveLikeAccountHolder }, { shouldBehaveLikeERC1271 } (+1 more)
 
-### Community 98 - "Signature checker tests"
-Cohesion: 0.18
-Nodes (10): { ethers }, { expect }, { GovernorHelper }, { loadFixture }, { sum }, TOKENS, tokenSupply, value (+2 more)
+### Community 98 - "GovernorCountingFractional.test.js"
+Cohesion: 0.08
+Nodes (22): { ethers }, { expect }, { GovernorHelper }, { loadFixture }, { sum }, TOKENS, tokenSupply, value (+14 more)
 
 ### Community 99 - "Token timelock tests"
 Cohesion: 0.18
@@ -690,19 +691,19 @@ Nodes (10): { ethers }, { expect }, { getDomain, ExtendedBallot }, { GovernorHel
 Cohesion: 0.18
 Nodes (8): { ethers }, { expect }, { getAddressInSlot, ImplementationSlot, AdminSlot }, { impersonate }, { ethers }, { loadFixture }, shouldBehaveLikeProxy, shouldBehaveLikeTransparentUpgradeableProxy
 
-### Community 103 - "Account permission encoding"
+### Community 103 - "MerkleTree.test.js"
 Cohesion: 0.18
 Nodes (8): { ethers }, { expect }, { generators }, { loadFixture }, { PANIC_CODES }, { range }, { StandardMerkleTree }, ZERO
 
-### Community 104 - "ERC2771 context tests"
-Cohesion: 0.20
-Nodes (8): attributes, { ethers }, { expect }, { generators }, { getLocalChain }, { loadFixture }, payload, NOTE: here we are only testing the receiver. Failures of the gateway itself…
+### Community 104 - "update-comment.js"
+Cohesion: 0.22
+Nodes (7): files, fs, gitStatus, proc, semver, [tag], { version }
 
-### Community 105 - "Token holder tests"
+### Community 105 - "GovernorProposalGuardian.test.js"
 Cohesion: 0.20
 Nodes (9): { ethers }, { expect }, { GovernorHelper }, { impersonate }, { loadFixture }, { ProposalState }, TOKENS, tokenSupply (+1 more)
 
-### Community 106 - "EIP712 fixture generation"
+### Community 106 - "GovernorVotesQuorumFraction.test.js"
 Cohesion: 0.20
 Nodes (9): { ethers }, { expect }, { GovernorHelper }, { loadFixture, mine }, { ProposalState, VoteType }, time, TOKENS, tokenSupply (+1 more)
 
@@ -710,11 +711,11 @@ Nodes (9): { ethers }, { expect }, { GovernorHelper }, { loadFixture, mine }, { 
 Cohesion: 0.20
 Nodes (9): { ethers }, { expect }, { GovernorHelper }, { loadFixture }, { ProposalState, VoteType }, time, TOKENS, tokenSupply (+1 more)
 
-### Community 108 - "Governor proposal guards"
-Cohesion: 0.20
-Nodes (9): AMOUNTS, { ethers }, { expect }, { loadFixture }, MODES, { shouldBehaveLikeVotes }, { sum }, time (+1 more)
+### Community 108 - "Memory.test.js"
+Cohesion: 0.25
+Nodes (5): { ethers }, { expect }, { generators }, { loadFixture }, { PANIC_CODES }
 
-### Community 109 - "ERC20 temporary approval"
+### Community 109 - "MerkleProof.test.js"
 Cohesion: 0.24
 Nodes (8): concatSorted(), customHash(), defaultHash(), { ethers }, { expect }, { PANIC_CODES }, { SimpleMerkleTree }, @openzeppelin/merkle-tree
 
@@ -727,34 +728,34 @@ Cohesion: 0.42
 Nodes (7): connect(), nextReconnectDelay(), reloadAfterRecovery(), sessionKey(), setStatus(), showTombstone(), websocketUrl()
 
 ### Community 112 - "Web application configuration"
-Cohesion: 0.22
-Nodes (6): nextConfig, workspaceRoot, metadata, viewport, next, react
+Cohesion: 0.18
+Nodes (8): nextConfig, workspaceRoot, archivo, jetbrains, metadata, viewport, next, react
 
 ### Community 113 - "Execution adapter mocks"
 Cohesion: 0.22
 Nodes (7): { argv }, { extractStorageLayout }, { findAll, astDereferencer, srcDecoder }, fs, { hideBin }, skipKind, skipPath
 
-### Community 114 - "ERC721 consecutive minting"
+### Community 114 - "fetch-common-contracts.js"
 Cohesion: 0.22
 Nodes (8): { argv }, config, { ethers }, fs, { hideBin }, path, { request }, undici
 
-### Community 115 - "ERC2981 royalty tests"
-Cohesion: 0.22
-Nodes (7): files, fs, gitStatus, proc, semver, [tag], { version }
+### Community 115 - "impersonate"
+Cohesion: 0.25
+Nodes (8): impersonate(), fixture(), fixture(), { ethers, predeploy }, { expect }, fixture(), { impersonate }, { loadFixture, mineUpTo, setCode }
 
-### Community 116 - "ERC20 capped tests"
-Cohesion: 0.22
-Nodes (8): CONSUMING_SCHEDULE_STORAGE_SLOT, { ethers }, EXPIRATION, formatAccess(), { MAX_UINT64 }, MINSETBACK, time, { upgradeableSlot }
+### Community 116 - "access-manager.js"
+Cohesion: 0.18
+Nodes (11): prepareOperation(), CONSUMING_SCHEDULE_STORAGE_SLOT, { ethers }, EXPIRATION, formatAccess(), hashOperation(), lazyGetAddress(), { MAX_UINT64 } (+3 more)
 
-### Community 117 - "Governor votes tests"
+### Community 117 - "Packing.test.js"
 Cohesion: 0.25
 Nodes (8): forceDeployCode(), { ethers }, { expect }, fixture(), { forceDeployCode }, { loadFixture }, { product }, { SIZES }
 
-### Community 118 - "Contract package configuration"
+### Community 118 - "storage.js"
 Cohesion: 0.36
 Nodes (8): erc1967Slot(), erc7201format(), erc7201Slot(), { ethers }, getSlot(), setSlot(), { setStorageAt }, upgradeableSlot()
 
-### Community 119 - "ERC5805 voting tests"
+### Community 119 - "Proxy.behaviour.js"
 Cohesion: 0.22
 Nodes (6): { ethers }, { loadFixture }, shouldBehaveLikeProxy, { ethers }, { expect }, { getAddressInSlot, ImplementationSlot }
 
@@ -766,15 +767,15 @@ Nodes (7): coder, { ethers }, { expect }, fakeContract, { loadFixture }, { PANIC
 Cohesion: 0.25
 Nodes (6): decode(), { ethers }, { expect }, FALLBACK_SENTINEL, length(), { loadFixture }
 
-### Community 122 - "RSA signature tests"
+### Community 122 - "StorageSlot.test.js"
 Cohesion: 0.22
 Nodes (7): { ethers }, { expect }, { generators }, { loadFixture }, otherSlot, slot, TYPES
 
-### Community 123 - "P256 cryptography tests"
+### Community 123 - "TransientSlot.test.js"
 Cohesion: 0.22
 Nodes (7): { ethers }, { expect }, { generators }, { loadFixture }, otherSlot, slot, TYPES
 
-### Community 124 - "Message hash tests"
+### Community 124 - "SlotDerivation.js"
 Cohesion: 0.25
 Nodes (4): format, NOTE: This library provides a way to manipulate storage locations in a non-…, sanitize, { TYPES }
 
@@ -790,15 +791,15 @@ Nodes (3): format, LENGTHS, { range }
 Cohesion: 0.29
 Nodes (6): currentBranch, match, matchingDocsBranches, proc, read(), tryRead()
 
-### Community 128 - "ERC721 pausable tests"
+### Community 128 - "shouldBehaveLikeAManagedRestrictedOperation"
 Cohesion: 0.32
 Nodes (7): shouldBehaveLikeAManagedRestrictedOperation(), testScheduleOperation(), shouldBehaveLikeASelfRestrictedOperation(), revertUnauthorized(), testScheduleOperation(), testAsCanCall(), testAsClosable()
 
-### Community 129 - "ERC1155 pausable tests"
-Cohesion: 0.25
-Nodes (7): { ethers }, { expect }, { GovernorHelper }, { loadFixture }, TOKENS, value, { VoteType }
+### Community 129 - "SlotDerivation.t.js"
+Cohesion: 0.29
+Nodes (3): { capitalize }, format, { TYPES }
 
-### Community 130 - "Token rescue tests"
+### Community 130 - "BeaconProxy.test.js"
 Cohesion: 0.29
 Nodes (6): getAddressInSlot(), assertInitialized(), { ethers }, { expect }, { getAddressInSlot, BeaconSlot }, { loadFixture }
 
@@ -822,9 +823,9 @@ Nodes (6): { ethers }, { expect }, { loadFixture }, { secp256k1 }, TEST_MESSAGE,
 Cohesion: 0.29
 Nodes (6): ensureLowerOrderS(), { ethers }, { expect }, { loadFixture }, prepareSignature(), { secp256r1 }
 
-### Community 136 - "Multicall utility tests"
-Cohesion: 0.25
-Nodes (5): { ethers }, { expect }, { generators }, { loadFixture }, { PANIC_CODES }
+### Community 136 - "SlotDerivation.test.js"
+Cohesion: 0.29
+Nodes (5): { erc7201Slot }, { ethers }, { expect }, { generators }, { loadFixture }
 
 ### Community 137 - "Initializable contract tests"
 Cohesion: 0.39
@@ -842,7 +843,7 @@ Nodes (6): command_has_server_id(), command_line_for_pid(), is_brainstorm_server
 Cohesion: 0.29
 Nodes (7): devDependencies, tailwindcss, @tailwindcss/postcss, @types/node, @types/react, @types/react-dom, typescript
 
-### Community 141 - "Beacon proxy tests"
+### Community 141 - "Base64.test.js"
 Cohesion: 0.29
 Nodes (4): RFC-4648, { ethers }, { expect }, { loadFixture }
 
@@ -850,25 +851,25 @@ Nodes (4): RFC-4648, { ethers }, { expect }, { loadFixture }
 Cohesion: 0.29
 Nodes (6): { argv }, fs, { getStorageUpgradeReport }, { hideBin }, newLayout, oldLayout
 
-### Community 143 - "Ownable contract tests"
-Cohesion: 0.29
-Nodes (3): { capitalize }, format, { TYPES }
+### Community 143 - "ERC20Crosschain.test.js"
+Cohesion: 0.17
+Nodes (11): { anyValue }, { ethers }, { expect }, shouldBehaveLikeBridgeERC20(), { anyValue }, { ethers }, { expect }, { getLocalChain } (+3 more)
 
 ### Community 144 - "Ownable two step"
 Cohesion: 0.29
 Nodes (5): { ethers }, { expect }, ids, { loadFixture }, values
 
-### Community 145 - "Authority interface tests"
-Cohesion: 0.29
-Nodes (5): { ethers }, { expect }, { getDomain, domainSeparator, Permit }, { loadFixture }, time
+### Community 145 - "ProxyAdmin.test.js"
+Cohesion: 0.33
+Nodes (4): { ethers }, { expect }, { getAddressInSlot, ImplementationSlot }, { loadFixture }
 
-### Community 146 - "ERC721 URI storage"
+### Community 146 - "Create2.test.js"
 Cohesion: 0.29
 Nodes (5): { ethers }, { expect }, { loadFixture }, { PANIC_CODES }, { RevertType }
 
-### Community 147 - "ERC1155 URI storage"
+### Community 147 - "AccessManaged.test.js"
 Cohesion: 0.29
-Nodes (5): { erc7201Slot }, { ethers }, { expect }, { generators }, { loadFixture }
+Nodes (6): { ethers }, { expect }, fixture(), { impersonate }, { loadFixture }, time
 
 ### Community 148 - "ERC4626 mock vaults"
 Cohesion: 0.33
@@ -878,59 +879,59 @@ Nodes (5): access, baseBranch, changelog, commit, $schema
 Cohesion: 0.40
 Nodes (5): extractSection(), { join }, makeWordRegExp(), { readFileSync }, { version }
 
-### Community 150 - "Timers utility tests"
+### Community 150 - "AuthorityUtils.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { loadFixture }, { MAX_UINT32, MAX_UINT64 }
 
-### Community 151 - "Arrays utility tests"
+### Community 151 - "EIP7702Utils.test.js"
 Cohesion: 0.33
 Nodes (3): { ethers, config }, { expect }, { loadFixture }
 
-### Community 152 - "BitMaps utility tests"
+### Community 152 - "ERC1967Utils.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { getAddressInSlot, setSlot, ImplementationSlot, AdminSlot, BeaconSlot }, { loadFixture }
 
-### Community 153 - "Comparators utility tests"
+### Community 153 - "sanity.test.js"
+Cohesion: 0.40
+Nodes (3): { ethers }, { expect }, { loadFixture, mine }
+
+### Community 154 - "UUPSUpgradeable.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { getAddressInSlot, ImplementationSlot }, { loadFixture }
 
-### Community 154 - "Heap utility tests"
-Cohesion: 0.33
-Nodes (4): { ethers }, { expect }, { getAddressInSlot, ImplementationSlot }, { loadFixture }
-
-### Community 155 - "Circular buffer tests"
+### Community 155 - "SafeERC20.test.js"
 Cohesion: 0.33
 Nodes (3): { ethers }, { expect }, { loadFixture }
 
-### Community 156 - "Panic utility tests"
+### Community 156 - "ERC6909ContentURI.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { loadFixture }, { shouldSupportInterfaces }
 
-### Community 157 - "Nonces utility tests"
+### Community 157 - "ERC6909Metadata.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { loadFixture }, { shouldSupportInterfaces }
 
-### Community 158 - "Nonces keyed tests"
+### Community 158 - "ERC721Pausable.test.js"
 Cohesion: 0.33
 Nodes (4): data, { ethers }, { expect }, { loadFixture }
 
-### Community 159 - "Merkle tree tests"
-Cohesion: 0.33
-Nodes (4): { ethers }, { expect }, { loadFixture }, { shouldSupportInterfaces }
+### Community 159 - "ERC20Capped.test.js"
+Cohesion: 0.40
+Nodes (3): { ethers }, { expect }, { loadFixture }
 
-### Community 160 - "Commutative cryptography tests"
-Cohesion: 0.33
-Nodes (4): { ethers }, { expect }, { loadFixture }, { range }
+### Community 160 - "Base58.test.js"
+Cohesion: 0.40
+Nodes (3): { ethers }, { expect }, { loadFixture }
 
-### Community 161 - "Signature recovery tests"
+### Community 161 - "@nomicfoundation/hardhat-network-helpers"
+Cohesion: 0.07
+Nodes (17): { ethers }, { expect }, { loadFixture }, { ethers }, { expect }, { loadFixture }, { ethers }, { expect } (+9 more)
+
+### Community 162 - "Strings.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { loadFixture }, { PANIC_CODES }
 
-### Community 162 - "WebAuthn verification tests"
-Cohesion: 0.33
-Nodes (4): { ethers }, { expect }, { loadFixture }, { PANIC_CODES }
-
-### Community 163 - "ERC7913 signature tests"
+### Community 163 - "Heap.test.js"
 Cohesion: 0.33
 Nodes (4): { ethers }, { expect }, { loadFixture }, { PANIC_CODES }
 
@@ -945,57 +946,41 @@ Nodes (4): markedCache, marker, { task }, {
   TASK_COMPILE_SOLIDITY_COMPILE,
 }
 
-### Community 166 - "Account signer tests"
+### Community 166 - "trie.js"
 Cohesion: 0.40
 Nodes (4): { ethers }, { MerklePatriciaTrie, createMerkleProof }, @ethereumjs/mpt, ethers
 
-### Community 167 - "Account modules tests"
+### Community 167 - "Pausable.test.js"
 Cohesion: 0.40
 Nodes (3): { ethers }, { expect }, { loadFixture }
 
-### Community 168 - "Account execution tests"
-Cohesion: 0.40
-Nodes (3): { ethers }, { expect }, { loadFixture, mine }
-
-### Community 169 - "Governor core tests"
+### Community 168 - "ReentrancyGuard.test.js"
 Cohesion: 0.40
 Nodes (3): { ethers }, { expect }, { loadFixture }
+
+### Community 169 - "account.js"
+Cohesion: 0.22
+Nodes (6): { ethers }, { impersonateAccount, setBalance }, { ethers }, { expect }, { impersonate }, { loadFixture }
 
 ### Community 170 - "Governor storage tests"
 Cohesion: 0.40
 Nodes (3): { ethers }, { expect }, { loadFixture }
 
-### Community 171 - "Governor compatibility tests"
+### Community 171 - "Checkpoints.test.js"
+Cohesion: 0.40
+Nodes (4): { ethers }, { expect }, { loadFixture }, { OPTS }
+
+### Community 172 - "ERC721Burnable.test.js"
 Cohesion: 0.40
 Nodes (3): { ethers }, { expect }, { loadFixture }
 
-### Community 172 - "Governor relay tests"
-Cohesion: 0.40
-Nodes (3): { ethers }, { expect }, { loadFixture }
-
-### Community 173 - "Governor super quorum"
-Cohesion: 0.40
-Nodes (3): { ethers }, { expect }, { loadFixture }
-
-### Community 174 - "Governor sequential proposal ids"
-Cohesion: 0.40
-Nodes (3): { ethers }, { expect }, { loadFixture }
+### Community 173 - "lint-staged"
+Cohesion: 0.67
+Nodes (3): lint-staged, {contracts,test}/**/*.sol, **/*.{js,ts}
 
 ### Community 175 - "Governor prevent late quorum"
 Cohesion: 0.40
 Nodes (3): { ethers }, { expect }, { loadFixture }
-
-### Community 176 - "Governor timelock control"
-Cohesion: 0.40
-Nodes (3): { ethers }, { expect }, { loadFixture }
-
-### Community 177 - "Governor timelock compound"
-Cohesion: 0.40
-Nodes (3): { ethers }, { expect }, { loadFixture }
-
-### Community 178 - "Governor timelock access"
-Cohesion: 0.40
-Nodes (4): { ethers }, { expect }, { loadFixture }, { OPTS }
 
 ### Community 179 - "Votes delegation tests"
 Cohesion: 0.50
@@ -1004,6 +989,10 @@ Nodes (4): artifactUrl(), blocks, EXPORTS, target
 ### Community 181 - "Votes timestamp tests"
 Cohesion: 0.67
 Nodes (3): callBundler(), JsonRpcResponse, main()
+
+### Community 182 - "ERC1155 core tests"
+Cohesion: 0.16
+Nodes (12): sizes, tones, Wordmark(), NAV, SiteFooter(), TopBar(), UtcClock(), Rail() (+4 more)
 
 ### Community 183 - "ERC721 core tests"
 Cohesion: 0.50
@@ -1033,33 +1022,33 @@ Nodes (3): customRules, rules, solhint-plugin-openzeppelin
 Cohesion: 0.50
 Nodes (3): name, private, version
 
-### Community 196 - "ERC7786 aggregator tests"
-Cohesion: 0.67
-Nodes (3): lint-staged, {contracts,test}/**/*.sol, **/*.{js,ts}
-
-### Community 197 - "ERC3156 flash loan"
+### Community 197 - "repository"
 Cohesion: 0.67
 Nodes (3): repository, type, url
 
+### Community 208 - "page.tsx"
+Cohesion: 0.11
+Nodes (18): EASE, RiseIn(), Unveil(), Caption(), Anatomy(), BINDINGS, BOUNDS, Closing() (+10 more)
+
 ## Knowledge Gaps
-- **1612 isolated node(s):** `crypto`, `http`, `fs`, `path`, `OPCODES` (+1607 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1949 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1633 isolated node(s):** `archivo`, `jetbrains`, `metadata`, `viewport`, `railVariants` (+1628 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1972 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `hardhat` connect `Proxy deployment helpers` to `Collection testing utilities`, `Bridge and access tests`, `Modular account tests`, `Cryptographic signing keys`, `OpenZeppelin package metadata`, `ERC20 behavior tests`, `ERC4337 test fixtures`, `Votes and clock tests`, `Governor nonce tests`, `Access control tests`, `Smart account behaviors`, `User operation helpers`, `Account signature utilities`, `ERC721 behavior tests`, `Access scheduling predicates`, `EIP712 typed data tests`, `Vesting wallet tests`, `Contract clone tests`, `Ownership and burn tests`, `Merkle tree generators`, `ERC1155 behavior tests`, `Governor behavior tests`, `Bytes utility tests`, `Account factory utilities`, `ERC20 permit tests`, `Token bridge mocks`, `Upgradeable contract tests`, `SafeERC20 tests`, `Mandate executor authorization`, `Contract lint configuration`, `Token transfer helpers`, `Test assertion helpers`, `Transparent proxy tests`, `Governor quorum tests`, `Governor counting tests`, `Account abstraction mocks`, `EIP7702 account tests`, `Reentrancy guard tests`, `Contract manifest tooling`, `ERC1155 receiver tests`, `Governor settings tests`, `Create2 deployment tests`, `Role management tests`, `Upgradeable proxy utilities`, `ERC721 wrapper tests`, `API package configuration`, `ERC20 flash mint tests`, `Short strings tests`, `Double ended queue tests`, `ERC20 wrapper tests`, `Account session policy`, `Governor timelock tests`, `Token vesting tests`, `Access control utilities`, `Signature checker tests`, `Token timelock tests`, `ERC1363 token tests`, `ERC4907 rental tests`, `Calldata decoding utilities`, `Account permission encoding`, `ERC2771 context tests`, `Token holder tests`, `EIP712 fixture generation`, `Packed data utilities`, `Governor proposal guards`, `ERC20 temporary approval`, `Address utility tests`, `ERC20 capped tests`, `Governor votes tests`, `Contract package configuration`, `ERC5805 voting tests`, `Enumerable map tests`, `Base64 encoding tests`, `RSA signature tests`, `P256 cryptography tests`, `ERC1155 pausable tests`, `Token rescue tests`, `Cross chain message tests`, `Governor execution tests`, `ERC20 votes tests`, `ERC721 votes tests`, `Clones library tests`, `Multicall utility tests`, `Beacon proxy tests`, `Ownable two step`, `Authority interface tests`, `ERC721 URI storage`, `ERC1155 URI storage`, `Timers utility tests`, `Arrays utility tests`, `BitMaps utility tests`, `Comparators utility tests`, `Heap utility tests`, `Circular buffer tests`, `Panic utility tests`, `Nonces utility tests`, `Nonces keyed tests`, `Merkle tree tests`, `Commutative cryptography tests`, `Signature recovery tests`, `WebAuthn verification tests`, `ERC7913 signature tests`, `Account modules tests`, `Account execution tests`, `Governor core tests`, `Governor storage tests`, `Governor compatibility tests`, `Governor relay tests`, `Governor super quorum`, `Governor sequential proposal ids`, `Governor prevent late quorum`, `Governor timelock control`, `Governor timelock compound`, `Governor timelock access`?**
-  _High betweenness centrality (0.167) - this node is a cross-community bridge._
-- **Why does `@nomicfoundation/hardhat-network-helpers` connect `Ownership and burn tests` to `Collection testing utilities`, `Bridge and access tests`, `Modular account tests`, `Cryptographic signing keys`, `OpenZeppelin package metadata`, `ERC20 behavior tests`, `ERC4337 test fixtures`, `Votes and clock tests`, `Governor nonce tests`, `Access control tests`, `Smart account behaviors`, `Account signature utilities`, `ERC721 behavior tests`, `Access scheduling predicates`, `EIP712 typed data tests`, `Vesting wallet tests`, `Contract clone tests`, `Merkle tree generators`, `ERC1155 behavior tests`, `Proxy deployment helpers`, `Governor behavior tests`, `Bytes utility tests`, `Account factory utilities`, `ERC20 permit tests`, `Token bridge mocks`, `Upgradeable contract tests`, `SafeERC20 tests`, `Mandate executor authorization`, `Contract lint configuration`, `Token transfer helpers`, `Test assertion helpers`, `Transparent proxy tests`, `Governor quorum tests`, `Governor counting tests`, `Account abstraction mocks`, `EIP7702 account tests`, `Reentrancy guard tests`, `Contract manifest tooling`, `ERC1155 receiver tests`, `Governor settings tests`, `Create2 deployment tests`, `Role management tests`, `Upgradeable proxy utilities`, `ERC721 wrapper tests`, `ERC20 flash mint tests`, `Short strings tests`, `Double ended queue tests`, `ERC20 wrapper tests`, `Account session policy`, `Governor timelock tests`, `Token vesting tests`, `Access control utilities`, `Signature checker tests`, `Token timelock tests`, `ERC1363 token tests`, `ERC4907 rental tests`, `Calldata decoding utilities`, `Account permission encoding`, `ERC2771 context tests`, `Token holder tests`, `EIP712 fixture generation`, `Packed data utilities`, `Governor proposal guards`, `Address utility tests`, `Governor votes tests`, `Contract package configuration`, `ERC5805 voting tests`, `Enumerable map tests`, `Base64 encoding tests`, `RSA signature tests`, `P256 cryptography tests`, `ERC1155 pausable tests`, `Token rescue tests`, `Cross chain message tests`, `Governor execution tests`, `ERC20 votes tests`, `ERC721 votes tests`, `Clones library tests`, `Multicall utility tests`, `Beacon proxy tests`, `Ownable two step`, `Authority interface tests`, `ERC721 URI storage`, `ERC1155 URI storage`, `Timers utility tests`, `Arrays utility tests`, `BitMaps utility tests`, `Comparators utility tests`, `Heap utility tests`, `Circular buffer tests`, `Panic utility tests`, `Nonces utility tests`, `Nonces keyed tests`, `Merkle tree tests`, `Commutative cryptography tests`, `Signature recovery tests`, `WebAuthn verification tests`, `ERC7913 signature tests`, `Account modules tests`, `Account execution tests`, `Governor core tests`, `Governor storage tests`, `Governor compatibility tests`, `Governor relay tests`, `Governor super quorum`, `Governor sequential proposal ids`, `Governor prevent late quorum`, `Governor timelock control`, `Governor timelock compound`, `Governor timelock access`?**
-  _High betweenness centrality (0.122) - this node is a cross-community bridge._
-- **Why does `chai` connect `Contract clone tests` to `Collection testing utilities`, `Bridge and access tests`, `Modular account tests`, `Cryptographic signing keys`, `OpenZeppelin package metadata`, `ERC20 behavior tests`, `Votes and clock tests`, `Governor nonce tests`, `Access control tests`, `Smart account behaviors`, `Account signature utilities`, `ERC721 behavior tests`, `Access scheduling predicates`, `EIP712 typed data tests`, `Vesting wallet tests`, `Ownership and burn tests`, `Merkle tree generators`, `ERC1155 behavior tests`, `Proxy deployment helpers`, `Governor behavior tests`, `Account factory utilities`, `ERC20 permit tests`, `Token bridge mocks`, `Upgradeable contract tests`, `SafeERC20 tests`, `Mandate executor authorization`, `Contract lint configuration`, `Token transfer helpers`, `Test assertion helpers`, `Transparent proxy tests`, `Governor quorum tests`, `Governor counting tests`, `Account abstraction mocks`, `EIP7702 account tests`, `Reentrancy guard tests`, `Contract manifest tooling`, `Governor settings tests`, `Create2 deployment tests`, `Role management tests`, `Upgradeable proxy utilities`, `ERC721 wrapper tests`, `API package configuration`, `ERC20 flash mint tests`, `Double ended queue tests`, `ERC20 wrapper tests`, `Account session policy`, `Governor timelock tests`, `Token vesting tests`, `Signature checker tests`, `Token timelock tests`, `ERC1363 token tests`, `ERC4907 rental tests`, `Calldata decoding utilities`, `Account permission encoding`, `ERC2771 context tests`, `Token holder tests`, `EIP712 fixture generation`, `Packed data utilities`, `Governor proposal guards`, `ERC20 temporary approval`, `Address utility tests`, `Governor votes tests`, `ERC5805 voting tests`, `Enumerable map tests`, `Base64 encoding tests`, `RSA signature tests`, `P256 cryptography tests`, `ERC1155 pausable tests`, `Token rescue tests`, `Cross chain message tests`, `Governor execution tests`, `ERC20 votes tests`, `ERC721 votes tests`, `Clones library tests`, `Multicall utility tests`, `Beacon proxy tests`, `Ownable two step`, `Authority interface tests`, `ERC721 URI storage`, `ERC1155 URI storage`, `Timers utility tests`, `Arrays utility tests`, `BitMaps utility tests`, `Comparators utility tests`, `Heap utility tests`, `Circular buffer tests`, `Panic utility tests`, `Nonces utility tests`, `Nonces keyed tests`, `Merkle tree tests`, `Commutative cryptography tests`, `Signature recovery tests`, `WebAuthn verification tests`, `ERC7913 signature tests`, `Account modules tests`, `Account execution tests`, `Governor core tests`, `Governor storage tests`, `Governor compatibility tests`, `Governor relay tests`, `Governor super quorum`, `Governor sequential proposal ids`, `Governor prevent late quorum`, `Governor timelock control`, `Governor timelock compound`, `Governor timelock access`?**
-  _High betweenness centrality (0.105) - this node is a cross-community bridge._
-- **What connects `crypto`, `http`, `fs` to the rest of the system?**
-  _1612 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `hardhat` connect `hardhat` to `EnumerableMap.test.js`, `BridgeERC20.test.js`, `Modular account tests`, `Cryptographic signing keys`, `openzeppelin-contracts/package.json`, `ERC20 behavior tests`, `Account.behavior.js`, `Votes.behavior.js`, `Governor nonce tests`, `Access control tests`, `Smart account behaviors`, `User operation helpers`, `Account signature utilities`, `ERC721 behavior tests`, `Access scheduling predicates`, `EIP712 typed data tests`, `Vesting wallet tests`, `chai`, `Merkle tree generators`, `draft-InteroperableAddress.test.js`, `DoubleEndedQueue.test.js`, `AccountP256.test.js`, `Bytes utility tests`, `ERC2771Context.test.js`, `AccessManager.predicate.js`, `Token bridge mocks`, `time.js`, `SafeERC20 tests`, `Mandate executor authorization`, `Contract lint configuration`, `Token transfer helpers`, `Math.test.js`, `Bytes.test.js`, `Governor quorum tests`, `Governor counting tests`, `iterate.js`, `enums.js`, `RLP.test.js`, `Arrays.test.js`, `ERC1155 receiver tests`, `Governor settings tests`, `random.js`, `Role management tests`, `ERC7786Recipient.test.js`, `TrieProof.test.js`, `Time.test.js`, `Short strings tests`, `Double ended queue tests`, `ERC20 wrapper tests`, `shouldSupportInterfaces`, `SupportsInterface.behavior.js`, `Token vesting tests`, `Account.test.js`, `GovernorCountingFractional.test.js`, `Token timelock tests`, `ERC1363 token tests`, `ERC4907 rental tests`, `Calldata decoding utilities`, `MerkleTree.test.js`, `GovernorProposalGuardian.test.js`, `GovernorVotesQuorumFraction.test.js`, `Packed data utilities`, `Memory.test.js`, `MerkleProof.test.js`, `Address utility tests`, `impersonate`, `access-manager.js`, `Packing.test.js`, `storage.js`, `Proxy.behaviour.js`, `Enumerable map tests`, `Base64 encoding tests`, `StorageSlot.test.js`, `TransientSlot.test.js`, `BeaconProxy.test.js`, `Cross chain message tests`, `Governor execution tests`, `ERC20 votes tests`, `ERC721 votes tests`, `Clones library tests`, `SlotDerivation.test.js`, `Base64.test.js`, `ERC20Crosschain.test.js`, `Ownable two step`, `ProxyAdmin.test.js`, `Create2.test.js`, `AccessManaged.test.js`, `AuthorityUtils.test.js`, `EIP7702Utils.test.js`, `ERC1967Utils.test.js`, `sanity.test.js`, `UUPSUpgradeable.test.js`, `SafeERC20.test.js`, `ERC6909ContentURI.test.js`, `ERC6909Metadata.test.js`, `ERC721Pausable.test.js`, `ERC20Capped.test.js`, `Base58.test.js`, `@nomicfoundation/hardhat-network-helpers`, `Strings.test.js`, `Heap.test.js`, `Pausable.test.js`, `ReentrancyGuard.test.js`, `account.js`, `Governor storage tests`, `Checkpoints.test.js`, `ERC721Burnable.test.js`, `Governor prevent late quorum`?**
+  _High betweenness centrality (0.196) - this node is a cross-community bridge._
+- **Why does `@nomicfoundation/hardhat-network-helpers` connect `@nomicfoundation/hardhat-network-helpers` to `EnumerableMap.test.js`, `BridgeERC20.test.js`, `Modular account tests`, `Cryptographic signing keys`, `openzeppelin-contracts/package.json`, `ERC20 behavior tests`, `Account.behavior.js`, `Votes.behavior.js`, `Governor nonce tests`, `Access control tests`, `Smart account behaviors`, `Account signature utilities`, `ERC721 behavior tests`, `Access scheduling predicates`, `EIP712 typed data tests`, `Vesting wallet tests`, `chai`, `hardhat`, `Merkle tree generators`, `draft-InteroperableAddress.test.js`, `DoubleEndedQueue.test.js`, `AccountP256.test.js`, `Bytes utility tests`, `ERC2771Context.test.js`, `AccessManager.predicate.js`, `Token bridge mocks`, `time.js`, `SafeERC20 tests`, `Mandate executor authorization`, `Contract lint configuration`, `Token transfer helpers`, `Math.test.js`, `Bytes.test.js`, `Governor quorum tests`, `Governor counting tests`, `iterate.js`, `enums.js`, `RLP.test.js`, `Arrays.test.js`, `ERC1155 receiver tests`, `Governor settings tests`, `random.js`, `Role management tests`, `ERC7786Recipient.test.js`, `Time.test.js`, `Short strings tests`, `Double ended queue tests`, `ERC20 wrapper tests`, `shouldSupportInterfaces`, `SupportsInterface.behavior.js`, `Token vesting tests`, `Account.test.js`, `GovernorCountingFractional.test.js`, `Token timelock tests`, `ERC1363 token tests`, `ERC4907 rental tests`, `Calldata decoding utilities`, `MerkleTree.test.js`, `GovernorProposalGuardian.test.js`, `GovernorVotesQuorumFraction.test.js`, `Packed data utilities`, `Memory.test.js`, `Address utility tests`, `impersonate`, `Packing.test.js`, `storage.js`, `Proxy.behaviour.js`, `Enumerable map tests`, `Base64 encoding tests`, `StorageSlot.test.js`, `TransientSlot.test.js`, `BeaconProxy.test.js`, `Cross chain message tests`, `Governor execution tests`, `ERC20 votes tests`, `ERC721 votes tests`, `Clones library tests`, `SlotDerivation.test.js`, `Base64.test.js`, `ERC20Crosschain.test.js`, `Ownable two step`, `ProxyAdmin.test.js`, `Create2.test.js`, `AccessManaged.test.js`, `AuthorityUtils.test.js`, `EIP7702Utils.test.js`, `ERC1967Utils.test.js`, `sanity.test.js`, `UUPSUpgradeable.test.js`, `SafeERC20.test.js`, `ERC6909ContentURI.test.js`, `ERC6909Metadata.test.js`, `ERC721Pausable.test.js`, `ERC20Capped.test.js`, `Base58.test.js`, `Strings.test.js`, `Heap.test.js`, `Pausable.test.js`, `ReentrancyGuard.test.js`, `account.js`, `Governor storage tests`, `Checkpoints.test.js`, `ERC721Burnable.test.js`, `Governor prevent late quorum`?**
+  _High betweenness centrality (0.127) - this node is a cross-community bridge._
+- **Why does `chai` connect `chai` to `EnumerableMap.test.js`, `BridgeERC20.test.js`, `Modular account tests`, `openzeppelin-contracts/package.json`, `ERC20 behavior tests`, `Account.behavior.js`, `Votes.behavior.js`, `Governor nonce tests`, `Access control tests`, `Account signature utilities`, `ERC721 behavior tests`, `Access scheduling predicates`, `EIP712 typed data tests`, `Vesting wallet tests`, `hardhat`, `Merkle tree generators`, `draft-InteroperableAddress.test.js`, `DoubleEndedQueue.test.js`, `ERC2771Context.test.js`, `AccessManager.predicate.js`, `Token bridge mocks`, `time.js`, `SafeERC20 tests`, `Mandate executor authorization`, `Contract lint configuration`, `Token transfer helpers`, `Math.test.js`, `Bytes.test.js`, `Governor quorum tests`, `Governor counting tests`, `iterate.js`, `enums.js`, `RLP.test.js`, `Arrays.test.js`, `ERC1155 receiver tests`, `Governor settings tests`, `random.js`, `Role management tests`, `ERC7786Recipient.test.js`, `TrieProof.test.js`, `Time.test.js`, `Short strings tests`, `Double ended queue tests`, `ERC20 wrapper tests`, `shouldSupportInterfaces`, `SupportsInterface.behavior.js`, `Token vesting tests`, `GovernorCountingFractional.test.js`, `Token timelock tests`, `ERC1363 token tests`, `ERC4907 rental tests`, `Calldata decoding utilities`, `MerkleTree.test.js`, `GovernorProposalGuardian.test.js`, `GovernorVotesQuorumFraction.test.js`, `Packed data utilities`, `Memory.test.js`, `MerkleProof.test.js`, `Address utility tests`, `impersonate`, `Packing.test.js`, `Proxy.behaviour.js`, `Enumerable map tests`, `Base64 encoding tests`, `StorageSlot.test.js`, `TransientSlot.test.js`, `BeaconProxy.test.js`, `Cross chain message tests`, `Governor execution tests`, `ERC20 votes tests`, `ERC721 votes tests`, `Clones library tests`, `SlotDerivation.test.js`, `Base64.test.js`, `ERC20Crosschain.test.js`, `Ownable two step`, `ProxyAdmin.test.js`, `Create2.test.js`, `AccessManaged.test.js`, `AuthorityUtils.test.js`, `EIP7702Utils.test.js`, `ERC1967Utils.test.js`, `sanity.test.js`, `UUPSUpgradeable.test.js`, `SafeERC20.test.js`, `ERC6909ContentURI.test.js`, `ERC6909Metadata.test.js`, `ERC721Pausable.test.js`, `ERC20Capped.test.js`, `Base58.test.js`, `@nomicfoundation/hardhat-network-helpers`, `Strings.test.js`, `Heap.test.js`, `Pausable.test.js`, `ReentrancyGuard.test.js`, `account.js`, `Governor storage tests`, `Checkpoints.test.js`, `ERC721Burnable.test.js`, `Governor prevent late quorum`?**
+  _High betweenness centrality (0.119) - this node is a cross-community bridge._
+- **What connects `archivo`, `jetbrains`, `metadata` to the rest of the system?**
+  _1633 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Forge cheatcode documentation` be split into smaller, more focused modules?**
   _Cohesion score 0.06327006327006326 - nodes in this community are weakly interconnected._
 - **Should `Brainstorming companion server` be split into smaller, more focused modules?**
   _Cohesion score 0.05628415300546448 - nodes in this community are weakly interconnected._
-- **Should `Collection testing utilities` be split into smaller, more focused modules?**
+- **Should `EnumerableMap.test.js` be split into smaller, more focused modules?**
   _Cohesion score 0.053544494720965306 - nodes in this community are weakly interconnected._
