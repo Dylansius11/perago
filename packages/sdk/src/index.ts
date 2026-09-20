@@ -5,6 +5,18 @@ export {
   peragoVerifierAbi,
 } from "./abi/perago-contracts.js";
 export {
+  type AccountPolicy,
+  type AccountPolicyDomain,
+  accountPolicySchema,
+  accountPolicyTypeString,
+  accountPolicyTypes,
+  getAccountPolicyTypedData,
+  hashMandateSessionPermission,
+  type MandateSessionPermissionDocument,
+  mandateSessionPermissionSchema,
+  toMandateSessionPermission,
+} from "./account/account-policy.js";
+export {
   ACCOUNT_EXECUTE_SELECTOR,
   type AccountCall,
   buildUserOperationNonceKey,
@@ -27,6 +39,22 @@ export {
   serializeValidationConfig,
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
+export {
+  type WalletChallengeRequest,
+  walletChallengeRequestSchema,
+  type WalletChallengeVerification,
+  walletChallengeVerificationSchema,
+  type WalletSession,
+  walletSessionSchema,
+} from "./api/auth.js";
+export {
+  type ConfirmPolicyTransitionRequest,
+  confirmPolicyTransitionRequestSchema,
+  type CreateWalletPolicyRequest,
+  createWalletPolicyRequestSchema,
+  type PreparePolicyTransitionRequest,
+  preparePolicyTransitionRequestSchema,
+} from "./api/policies.js";
 export { canonicalJson } from "./canonical-json.js";
 export {
   type CompiledPlan,
