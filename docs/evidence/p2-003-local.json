@@ -3,10 +3,7 @@
   "task": "P2-003",
   "label": "local",
   "observedAt": "2026-09-20",
-  "implementationCommits": [
-    "1311c5b",
-    "83e930a"
-  ],
+  "implementationCommits": ["1311c5b", "83e930a"],
   "checks": [
     {
       "command": "forge test",
@@ -25,8 +22,8 @@
       "result": "13 named invariants plus reachability witness passed; 1000 runs, 100000 calls, 0 handler reverts"
     },
     {
-      "command": "forge snapshot",
-      "result": "113 tests passed; packages/contracts/.gas-snapshot records 125 entries"
+      "command": "forge snapshot --fuzz-seed 0x50455241474f && forge snapshot --check --fuzz-seed 0x50455241474f",
+      "result": "both runs passed 113 tests; packages/contracts/.gas-snapshot records 125 deterministic entries"
     },
     {
       "command": "forge script script/P2PhaseSmoke.s.sol:P2PhaseSmoke",
