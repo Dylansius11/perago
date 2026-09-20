@@ -1,6 +1,6 @@
 # Perago Data Model
 
-**Status:** Proposed MVP data contract
+**Status:** Implemented locally through `P3-001`; API routes and live chain ingestion remain pending
 **System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 

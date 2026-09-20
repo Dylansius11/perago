@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phase 1 complete.** The workspace, toolchain, and package manifests are pinned; the SDK carries the canonical mandate domain, its cross-stack EIP-712 digest fixture, the bounded Modular Account V2 session encoding, and ABIs generated from the compiled contracts.
+**Phases 1 and 2 are complete; Phase 3 is in progress through `P3-001`.** The workspace and package manifests are pinned; the SDK owns the canonical mandate domain and account-abstraction encodings; the locally implemented MandateExecutor has authorization, accepted-attempt, and invariant proof; and the API now has the constrained PostgreSQL lifecycle schema plus transactional duplicate/reorg projection replay.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 
@@ -31,22 +31,22 @@ Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evi
 - a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
 - an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund.
 
-Also built: the `MandateExecutor` authorization, accepted-attempt, and atomic failure boundaries, proven by 110 Foundry tests. Not built yet: the adapters, verifiers, settlement evaluator, API, executor service, and any user interface. The web app is a toolchain scaffold only — no CSS entry, no `components.json`, no component source, no design token, and no screen exists, because design direction remains the user's explicit gate.
+Also built: the approved Perago landing shell, 113 passing Foundry contract tests, and local PostgreSQL persistence that enforces active-policy, nonce, commerce-job, raw-event, terminal-field, immutability, and no-secret-column boundaries. Not built yet: API routes, wallet authentication, planner/compiler, simulations, executor service, production adapters/verifiers, settlement evaluator, or a live MandateExecutor deployment.
 
 ## Planned repository map
 
 ```text
 apps/
-  web/       Toolchain scaffold; design execution held for the user
-  api/       Policy compiler, simulation, lifecycle, receipts
-  executor/  Constrained autonomous execution worker
+  web/       Approved Perago landing shell; product journeys remain pending
+  api/       Lifecycle persistence and chain projections; routes/compiler pending
+  executor/  Constrained autonomous execution worker and existing probes
 packages/
   sdk/       Shared schemas, ABIs, typed clients
   contracts/ Foundry mandate, adapters, verifiers, settlement
 docs/        Product and technical sources of truth
 ```
 
-Current source is the SDK domain and account-encoding layer, the mandate contract's authorization and execution boundaries, read-only executor probes, and the web scaffold. The adapters, verifiers, API, and client journey begin with their approved tasks.
+Current source includes the SDK domain/account layer, MandateExecutor contracts and proofs, read-only executor probes, the approved landing shell, and local API persistence/projection infrastructure. Phase 3 continues with wallet authentication and policy lifecycle.
 
 ## Documentation
 

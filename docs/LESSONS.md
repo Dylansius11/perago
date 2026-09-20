@@ -132,6 +132,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## User insight
 
+### 2026-09-20 - Verification and repository intelligence must be proportional
+
+- Asked to avoid rerunning checks that already passed when the affected surface has not changed, use one final verification at the commit boundary, and skip Graphify when code-relationship analysis does not materially help.
+- Application: during implementation run only the smallest failing/passing check for the changed behavior; run the full affected gate once before completion; treat Graphify as an optional code-navigation tool, never a ritual or completion gate.
+
 ### 2026-09-19 - The user executes the UI; agents prepare only the toolchain seam
 
 - Asked for the frontend scaffold (Tailwind, Motion, shadcn, GSAP skills) and then narrowed it mid-task: install and pin the toolchain, move the brand assets, leave `shadcn init` and every stylesheet to a later agent under the user's own design direction.
