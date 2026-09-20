@@ -441,6 +441,21 @@ contract MandateExecutorExecutionTest is Test {
         _assertNothingMoved();
     }
 
+    /// @notice The executor enforces the signed minimum even when the pinned verifier
+    /// reports an honest shortfall instead of reverting on it.
+    function test_recordsFailureWhenProtocolUnderDeliversButVerifierReportsHonestly() public {
+        swapAdapter.setMode(MockPeragoAdapter.Mode.SHORT_OUTPUT);
+        swapVerifier.setMode(MockPeragoVerifier.Mode.REPORTS_MEASUREMENT);
+
+        PeragoTypes.MandateRecord memory record = _runToTerminal();
+
+        assertEq(uint8(record.status), uint8(PeragoTypes.MandateStatus.FAILED));
+        assertEq(
+            record.failureReasonHash, _reasonHash(abi.encodeWithSelector(MandateExecutor.VerificationFailed.selector))
+        );
+        _assertNothingMoved();
+    }
+
     function test_recordsFailureWhenTheOutputNeverReachesTheRecipient() public {
         swapAdapter.setMode(MockPeragoAdapter.Mode.WITHHOLD_OUTPUT);
 

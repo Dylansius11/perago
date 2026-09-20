@@ -18,7 +18,10 @@ contract MockPeragoVerifier is IPeragoVerifier {
         VERIFY_REVERTS,
         UNDER_MINIMUM,
         FOREIGN_POSTCONDITION,
-        ZERO_EVIDENCE
+        ZERO_EVIDENCE,
+        /// @dev Measures and reports honestly without enforcing the signed minimum: that
+        /// guard belongs to the executor, and an enforcing mock would hide it.
+        REPORTS_MEASUREMENT
     }
 
     error PostconditionUnmet();
