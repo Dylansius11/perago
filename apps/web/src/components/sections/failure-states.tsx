@@ -40,7 +40,10 @@ const FAILURES = [
 
 export function FailureStates() {
   return (
-    <section id="execution" className="scroll-mt-16 border-b border-ruleinvert bg-paper">
+    <section
+      id="execution"
+      className="scroll-mt-16 border-b border-ruleinvert bg-paper"
+    >
       <div className="px-6 py-16 md:px-10">
         <RiseIn>
           <h2 className="max-w-[20ch] text-4xl font-semibold tracking-[-0.03em] md:text-6xl">
@@ -74,8 +77,8 @@ export function FailureStates() {
         <RiseIn delay={0.1} className="mt-10">
           <p className="max-w-[60ch] text-lg leading-relaxed text-fog">
             No generic error screen. Every terminal state carries its reason
-            code and its sentence, because a refusal you can read is the
-            product working.
+            code and its sentence, because a refusal you can read is the product
+            working.
           </p>
         </RiseIn>
       </div>

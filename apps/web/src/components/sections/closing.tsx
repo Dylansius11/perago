@@ -16,9 +16,8 @@ export function Closing() {
         </RiseIn>
         <RiseIn delay={0.08}>
           <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-ink/80">
-            Perago runs on BSC Testnet today. Connect a wallet, set your
-            policy, sign one mandate, and watch it carry through to a public
-            receipt.
+            Perago runs on BSC Testnet today. Connect a wallet, set your policy,
+            sign one mandate, and watch it carry through to a public receipt.
           </p>
         </RiseIn>
         <RiseIn delay={0.14}>
@@ -28,7 +27,10 @@ export function Closing() {
               className="group pressable flex items-center gap-4 bg-ink px-7 py-4 text-paper hover:bg-panel"
             >
               Connect wallet
-              <span aria-hidden className="arrow font-mono group-hover:translate-x-1">
+              <span
+                aria-hidden
+                className="arrow font-mono group-hover:translate-x-1"
+              >
                 &#8594;
               </span>
             </a>
@@ -39,15 +41,18 @@ export function Closing() {
               className="group pressable flex items-center gap-3 border border-ink/40 px-7 py-4 text-ink hover:border-ink"
             >
               Read the contracts
-              <span aria-hidden className="arrow font-mono group-hover:translate-x-1">
+              <span
+                aria-hidden
+                className="arrow font-mono group-hover:translate-x-1"
+              >
                 &#8599;
               </span>
             </a>
           </div>
         </RiseIn>
         <p className="mt-16 font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60">
-          Wallet connection ships with the mandate journey. This page never
-          asks for your keys.
+          Wallet connection ships with the mandate journey. This page never asks
+          for your keys.
         </p>
       </div>
     </section>

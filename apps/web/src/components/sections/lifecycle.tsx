@@ -7,7 +7,14 @@ import { Caption } from "@/components/primitives";
  * card type. Each step is one product fact, two lines of copy, and a mono
  * spec line.
  */
-const STEPS: readonly [StepData, StepData, StepData, StepData, StepData, StepData] = [
+const STEPS: readonly [
+  StepData,
+  StepData,
+  StepData,
+  StepData,
+  StepData,
+  StepData,
+] = [
   {
     n: "01",
     title: "State the goal",
@@ -124,7 +131,9 @@ function StepCell({ data, dark, tail }: StepProps) {
             {copy}
           </p>
         </div>
-        <span className={`font-mono text-[11px] uppercase tracking-[0.16em] ${specColor}`}>
+        <span
+          className={`font-mono text-[11px] uppercase tracking-[0.16em] ${specColor}`}
+        >
           {spec}
         </span>
       </div>
@@ -151,7 +160,7 @@ function PhotoCell() {
           const a = (i * Math.PI) / 12;
           return (
             <line
-              key={i}
+              key={a}
               x1={100 + Math.cos(a) * 78}
               y1={100 + Math.sin(a) * 78}
               x2={100 + Math.cos(a) * 26}

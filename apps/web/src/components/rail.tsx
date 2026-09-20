@@ -20,5 +20,9 @@ export function Rail({
   className?: string;
   children?: React.ReactNode;
 }) {
-  return <div className={cn("min-w-0", railVariants[variant], className)}>{children}</div>;
+  return (
+    <div className={cn("min-w-0", railVariants[variant], className)}>
+      {children}
+    </div>
+  );
 }

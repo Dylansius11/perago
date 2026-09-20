@@ -11,7 +11,9 @@
       "!packages/contracts/cache",
       "!packages/contracts/lib",
       "!packages/contracts/out",
-      "!.agents"
+      "!.agents",
+      "!graphify-out",
+      "!.impeccable"
     ]
   },
   "formatter": {
@@ -23,6 +25,11 @@
     "formatter": {
       "quoteStyle": "double",
       "semicolons": "always"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "linter": {

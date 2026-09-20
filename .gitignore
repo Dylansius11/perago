@@ -29,5 +29,8 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+.impeccable/
+graphify-out/*.sig
+graphify-out/20*/
 
 /reference

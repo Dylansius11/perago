@@ -70,7 +70,8 @@
  * instead of easing.
  */
 @utility pressable {
-  transition-property: color, background-color, border-color, transform, opacity;
+  transition-property:
+    color, background-color, border-color, transform, opacity;
   transition-duration: 220ms;
   transition-timing-function: var(--ease-out-vivid);
 }
@@ -151,7 +152,8 @@ body {
  * texture. Low contrast by design: it sits behind content, never in front.
  */
 .rain {
-  background-image: repeating-linear-gradient(
+  background-image:
+    repeating-linear-gradient(
       90deg,
       transparent 0 23px,
       rgba(52, 211, 153, 0.05) 23px 24px

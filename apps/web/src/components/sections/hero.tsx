@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion, useAnimate } from "motion/react";
+import { motion, useAnimate, useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
 
 /*
@@ -89,8 +89,8 @@ function HeroFoot() {
   const inner = (
     <>
       <p className="max-w-[42ch] text-lg leading-relaxed text-fog">
-        One EIP-712 mandate. Bounded spend, one use, deterministic
-        verification. When the task ends, the authority ends.
+        One EIP-712 mandate. Bounded spend, one use, deterministic verification.
+        When the task ends, the authority ends.
       </p>
       <HeroActions />
     </>
@@ -152,13 +152,48 @@ type Phase = {
 };
 
 const PHASES: Phase[] = [
-  { label: "goal", detail: '"Swap 0.05 BNB to USDT"', status: "STATED", tone: "run" },
-  { label: "policy", detail: "spend <= 0.05 BNB, slippage <= 100 bps", status: "PASS", tone: "pass" },
-  { label: "plan", detail: "PancakeSwap V3, 500 pool", status: "PASS", tone: "pass" },
-  { label: "simulation", detail: "block 47,218,551", status: "PROOF", tone: "pass" },
-  { label: "mandate", detail: "EIP-712, nonce 0007, one use", status: "SIGNED", tone: "pass" },
-  { label: "execution", detail: "UserOperation 0x9df1...e2f1", status: "PERF", tone: "pass" },
-  { label: "receipt", detail: "verifier 0x7c33...41aa", status: "SUCCEEDED", tone: "done" },
+  {
+    label: "goal",
+    detail: '"Swap 0.05 BNB to USDT"',
+    status: "STATED",
+    tone: "run",
+  },
+  {
+    label: "policy",
+    detail: "spend <= 0.05 BNB, slippage <= 100 bps",
+    status: "PASS",
+    tone: "pass",
+  },
+  {
+    label: "plan",
+    detail: "PancakeSwap V3, 500 pool",
+    status: "PASS",
+    tone: "pass",
+  },
+  {
+    label: "simulation",
+    detail: "block 47,218,551",
+    status: "PROOF",
+    tone: "pass",
+  },
+  {
+    label: "mandate",
+    detail: "EIP-712, nonce 0007, one use",
+    status: "SIGNED",
+    tone: "pass",
+  },
+  {
+    label: "execution",
+    detail: "UserOperation 0x9df1...e2f1",
+    status: "PERF",
+    tone: "pass",
+  },
+  {
+    label: "receipt",
+    detail: "verifier 0x7c33...41aa",
+    status: "SUCCEEDED",
+    tone: "done",
+  },
 ];
 
 const TONE_COLOR: Record<Phase["tone"], string> = {

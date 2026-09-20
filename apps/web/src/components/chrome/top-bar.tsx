@@ -50,7 +50,10 @@ export function TopBar() {
               className="group pressable flex items-center gap-3 border-l border-ruleinvert bg-ink px-6 text-[15px] font-medium text-paper hover:bg-signal hover:text-ink"
             >
               Connect wallet
-              <span aria-hidden className="arrow font-mono group-hover:translate-x-1">
+              <span
+                aria-hidden
+                className="arrow font-mono group-hover:translate-x-1"
+              >
                 &#8594;
               </span>
             </a>

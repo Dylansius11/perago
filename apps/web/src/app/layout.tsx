@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
 import { Archivo, JetBrains_Mono } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 const archivo = Archivo({

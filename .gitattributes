@@ -1,3 +1,4 @@
+* text=auto eol=lf
 graphify-out/graph.json merge=graphify text eol=lf
 graphify-out/*.json text eol=lf
 graphify-out/*.html text eol=lf

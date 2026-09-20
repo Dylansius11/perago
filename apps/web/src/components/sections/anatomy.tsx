@@ -52,7 +52,9 @@ export function Anatomy() {
                   <span className="font-mono text-[13px] text-signal-ink">
                     {field}
                   </span>
-                  <span className="font-mono text-[13px] text-ink">{value}</span>
+                  <span className="font-mono text-[13px] text-ink">
+                    {value}
+                  </span>
                   <span className="col-span-2 mt-1 text-sm text-fog md:col-span-1 md:mt-0">
                     {note}
                   </span>
