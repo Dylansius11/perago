@@ -5,7 +5,7 @@ import {
   uint256StringSchema,
 } from "../domain/primitives.js";
 
-const signatureSchema = z
+export const signatureSchema = z
   .string()
   .regex(/^0x[0-9a-fA-F]{130}$/u, "expected a 65-byte signature")
   .transform((value) => value.toLowerCase() as `0x${string}`);

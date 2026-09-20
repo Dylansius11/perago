@@ -215,6 +215,13 @@ export const walletPolicies = pgTable(
     status: policyStatus().notNull(),
     policyDocument: jsonb("policy_document").notNull(),
     policyHash: bytea("policy_hash").notNull(),
+    permissionDocument: jsonb("permission_document"),
+    permissionHash: bytea("permission_hash"),
+    permissionCallData: bytea("permission_call_data"),
+    permissionUserOperationHash: bytea("permission_user_operation_hash"),
+    permissionTxHash: bytea("permission_tx_hash"),
+    activationCallData: bytea("activation_call_data"),
+    activationUserOperationHash: bytea("activation_user_operation_hash"),
     activationTxHash: bytea("activation_tx_hash"),
     activationBlockNumber: bigint("activation_block_number", {
       mode: "bigint",
@@ -235,8 +242,24 @@ export const walletPolicies = pgTable(
       sql`octet_length(${table.policyHash}) = 32`,
     ),
     check(
+      "wallet_policy_permission_hash_length",
+      sql`${table.permissionHash} is null or octet_length(${table.permissionHash}) = 32`,
+    ),
+    check(
+      "wallet_policy_permission_user_operation_hash_length",
+      sql`${table.permissionUserOperationHash} is null or octet_length(${table.permissionUserOperationHash}) = 32`,
+    ),
+    check(
+      "wallet_policy_permission_tx_hash_length",
+      sql`${table.permissionTxHash} is null or octet_length(${table.permissionTxHash}) = 32`,
+    ),
+    check(
+      "wallet_policy_activation_user_operation_hash_length",
+      sql`${table.activationUserOperationHash} is null or octet_length(${table.activationUserOperationHash}) = 32`,
+    ),
+    check(
       "wallet_policy_activation_fields",
-      sql`${table.status} <> 'ACTIVE' or (${table.activationTxHash} is not null and ${table.activationBlockNumber} is not null and ${table.activatedAt} is not null)`,
+      sql`${table.status} <> 'ACTIVE' or (${table.permissionDocument} is not null and ${table.permissionHash} is not null and ${table.permissionCallData} is not null and ${table.permissionUserOperationHash} is not null and ${table.permissionTxHash} is not null and ${table.activationCallData} is not null and ${table.activationUserOperationHash} is not null and ${table.activationTxHash} is not null and ${table.activationBlockNumber} is not null and ${table.activatedAt} is not null)`,
     ),
     check(
       "wallet_policy_terminal_fields",

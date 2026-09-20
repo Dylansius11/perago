@@ -67,3 +67,81 @@ end;
 $$;
 create trigger wallet_session_identity_immutable before update on wallet_sessions
   for each row execute function protect_wallet_session_identity();
+
+alter table wallet_policies
+  add column permission_document jsonb,
+  add column permission_hash bytea,
+  add column permission_call_data bytea,
+  add column permission_user_operation_hash bytea,
+  add column permission_tx_hash bytea,
+  add column activation_call_data bytea,
+  add column activation_user_operation_hash bytea;
+
+alter table wallet_policies
+  drop constraint wallet_policy_activation_fields,
+  add constraint wallet_policy_permission_hash_length check (
+    permission_hash is null or octet_length(permission_hash) = 32
+  ),
+  add constraint wallet_policy_permission_user_operation_hash_length check (
+    permission_user_operation_hash is null
+      or octet_length(permission_user_operation_hash) = 32
+  ),
+  add constraint wallet_policy_permission_tx_hash_length check (
+    permission_tx_hash is null or octet_length(permission_tx_hash) = 32
+  ),
+  add constraint wallet_policy_activation_user_operation_hash_length check (
+    activation_user_operation_hash is null
+      or octet_length(activation_user_operation_hash) = 32
+  ),
+  add constraint wallet_policy_activation_fields check (
+    status <> 'ACTIVE' or (
+      permission_document is not null
+      and permission_hash is not null
+      and permission_call_data is not null
+      and permission_user_operation_hash is not null
+      and permission_tx_hash is not null
+      and activation_call_data is not null
+      and activation_user_operation_hash is not null
+      and activation_tx_hash is not null
+      and activation_block_number is not null
+      and activated_at is not null
+    )
+  );
+
+create function enforce_wallet_policy_transition() returns trigger language plpgsql as $$
+begin
+  if new.status = old.status then
+    return new;
+  end if;
+  if (old.status = 'DRAFT' and new.status in ('ACTIVATING', 'REVOKED'))
+    or (old.status = 'ACTIVATING' and new.status in ('ACTIVE', 'REVOKED'))
+    or (old.status = 'ACTIVE' and new.status in ('SUPERSEDED', 'REVOKED')) then
+    return new;
+  end if;
+  raise exception 'illegal wallet policy transition from % to %', old.status, new.status;
+end;
+$$;
+create trigger wallet_policy_transition before update on wallet_policies
+  for each row execute function enforce_wallet_policy_transition();
+
+create function protect_wallet_policy_evidence() returns trigger language plpgsql as $$
+begin
+  if old.status <> 'DRAFT' and (
+    new.permission_document is distinct from old.permission_document
+    or new.permission_hash is distinct from old.permission_hash
+    or new.permission_call_data is distinct from old.permission_call_data
+    or new.permission_user_operation_hash is distinct from old.permission_user_operation_hash
+    or new.permission_tx_hash is distinct from old.permission_tx_hash
+    or new.activation_call_data is distinct from old.activation_call_data
+    or new.activation_user_operation_hash is distinct from old.activation_user_operation_hash
+    or new.activation_tx_hash is distinct from old.activation_tx_hash
+    or new.activation_block_number is distinct from old.activation_block_number
+    or new.activated_at is distinct from old.activated_at
+  ) then
+    raise exception 'wallet policy activation evidence is immutable after submission';
+  end if;
+  return new;
+end;
+$$;
+create trigger wallet_policy_evidence_immutable before update on wallet_policies
+  for each row execute function protect_wallet_policy_evidence();

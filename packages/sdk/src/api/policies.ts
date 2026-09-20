@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { mandateSessionPermissionSchema } from "../account/account-policy.js";
+import { signatureSchema } from "./auth.js";
 import {
   hashSchema,
   uint48StringSchema,
@@ -18,10 +19,27 @@ export const preparePolicyTransitionRequestSchema = z.strictObject({
   validUntil: uint48StringSchema,
 });
 
-export const confirmPolicyTransitionRequestSchema = z.strictObject({
-  transactionHash: hashSchema,
-  userOperationHash: hashSchema,
+export const confirmPolicyActivationRequestSchema =
+  preparePolicyTransitionRequestSchema.extend({
+    permissionTransactionHash: hashSchema,
+    permissionUserOperationHash: hashSchema,
+    rootSignature: signatureSchema,
+    transactionHash: hashSchema,
+    userOperationHash: hashSchema,
+  });
+
+export const preparePolicyRevocationRequestSchema = z.strictObject({
+  validUntil: uint48StringSchema,
 });
+
+export const confirmPolicyRevocationRequestSchema =
+  preparePolicyRevocationRequestSchema.extend({
+    permissionTransactionHash: hashSchema,
+    permissionUserOperationHash: hashSchema,
+    rootSignature: signatureSchema,
+    transactionHash: hashSchema,
+    userOperationHash: hashSchema,
+  });
 
 export type CreateWalletPolicyRequest = z.infer<
   typeof createWalletPolicyRequestSchema
@@ -29,6 +47,12 @@ export type CreateWalletPolicyRequest = z.infer<
 export type PreparePolicyTransitionRequest = z.infer<
   typeof preparePolicyTransitionRequestSchema
 >;
-export type ConfirmPolicyTransitionRequest = z.infer<
-  typeof confirmPolicyTransitionRequestSchema
+export type ConfirmPolicyActivationRequest = z.infer<
+  typeof confirmPolicyActivationRequestSchema
+>;
+export type PreparePolicyRevocationRequest = z.infer<
+  typeof preparePolicyRevocationRequestSchema
+>;
+export type ConfirmPolicyRevocationRequest = z.infer<
+  typeof confirmPolicyRevocationRequestSchema
 >;

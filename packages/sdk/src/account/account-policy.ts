@@ -1,12 +1,20 @@
 import { z } from "zod";
-import { keccak256 } from "viem";
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  keccak256,
+  stringToHex,
+  type Hex,
+} from "viem";
 
 import {
   encodeInstallMandateSession,
+  encodeUninstallMandateSession,
   MAX_SESSION_ENTITY_ID,
   type MandateSessionPermission,
   PRIVILEGED_SELECTORS,
 } from "./modular-account.js";
+import { mandateExecutorAbi } from "../abi/perago-contracts.js";
 import {
   addressSchema,
   hashSchema,
@@ -19,6 +27,9 @@ import {
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const zeroHash = `0x${"0".repeat(64)}`;
+const policyRevocationDomain = keccak256(
+  stringToHex("PERAGO_POLICY_REVOKED"),
+);
 const nonzeroAddressSchema = addressSchema.refine(
   (value) => value !== zeroAddress,
   "address must not be zero",
@@ -144,6 +155,43 @@ export function hashMandateSessionPermission(input: unknown) {
   return keccak256(encodeInstallMandateSession(toMandateSessionPermission(input)));
 }
 
+export function hashMandateSessionRevocation(input: unknown) {
+  return keccak256(
+    encodeUninstallMandateSession(toMandateSessionPermission(input)),
+  );
+}
+
+export function hashPolicyRevocation(policyHashInput: unknown) {
+  const policyHash = hashSchema.parse(policyHashInput);
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "bytes32" }],
+      [policyRevocationDomain, policyHash],
+    ),
+  );
+}
+
+function accountPolicyContractValue(policy: AccountPolicy) {
+  return {
+    ...policy,
+    chainId: BigInt(policy.chainId),
+    ownerEpoch: BigInt(policy.ownerEpoch),
+    validUntil: Number(policy.validUntil),
+  };
+}
+
+export function encodeSetAccountPolicy(
+  policyInput: unknown,
+  rootSignature: Hex,
+) {
+  const policy = accountPolicySchema.parse(policyInput);
+  return encodeFunctionData({
+    abi: mandateExecutorAbi,
+    args: [accountPolicyContractValue(policy), rootSignature],
+    functionName: "setAccountPolicy",
+  });
+}
+
 export function getAccountPolicyTypedData(
   policyInput: unknown,
   domainInput: unknown,
@@ -161,12 +209,7 @@ export function getAccountPolicyTypedData(
       chainId: BigInt(domain.chainId),
       verifyingContract: domain.verifyingContract,
     },
-    message: {
-      ...policy,
-      chainId: BigInt(policy.chainId),
-      ownerEpoch: BigInt(policy.ownerEpoch),
-      validUntil: Number(policy.validUntil),
-    },
+    message: accountPolicyContractValue(policy),
     primaryType: "AccountPolicy",
     types: accountPolicyTypes,
   } as const;
