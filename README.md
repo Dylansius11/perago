@@ -62,7 +62,7 @@ Current source is the SDK domain and account-encoding layer, the mandate contrac
 
 ## Honest limitations
 
-- Perago has no mandate contract implementation, live endpoint, deployment, or signed onchain transaction evidence yet; the account-abstraction proof is local replay of verified chain-97 bytecode, not a submitted UserOperation.
+- Perago has a locally implemented and invariant-tested `MandateExecutor`, but no live API endpoint, contract deployment, or signed MandateExecutor transaction evidence yet; the account-abstraction proof is local replay of verified chain-97 bytecode, not a submitted MandateExecutor operation.
 - ERC-8183 and ERC-8004 are draft standards; integration details can change.
 - Session-key, staking, payment-token, and testnet deployment capabilities remain gated on source and onchain validation described in the technical documents.
 - Simulation reduces execution risk but cannot guarantee future chain state.

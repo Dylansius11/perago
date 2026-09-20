@@ -1,6 +1,6 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** `MandateExecutor` authorization, accepted-attempt, and atomic failure boundaries implemented and tested (`P2-001`, `P2-002`); the stateful invariant suite (`P2-003`), the two adapters, the two verifiers, and `OutcomeEvaluator` remain specified and unimplemented
+**Status:** `MandateExecutor` authorization, accepted-attempt, atomic failure boundaries, and the stateful invariant suite are implemented and locally verified (`P2-001`–`P2-003`); the two production adapters, the two production verifiers, and `OutcomeEvaluator` remain specified and unimplemented
 **Requirements:** [`../PRD.md`](../PRD.md)
 **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
@@ -557,7 +557,9 @@ The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or misma
 
 ### Stateful invariant handler
 
-Actors: root owner, smart account, executor, attacker, adapter, verifier, evaluator. Actions: configure policy, authorize, begin, perform, revoke, expire, settle, duplicate/reorder calls, advance time, mutate protocol outcome. Assert all 12 invariants after every sequence.
+The implemented `P2-003` handler models the root owner, smart account, executor, attacker, pinned adapters, and pinned verifiers. Its 17 explicit actions configure policy, authorize, begin, perform, revoke, expire, duplicate/reorder calls, advance time, and mutate protocol outcomes. `MandateExecutorInvariant.t.sol` asserts the 12 safety properties plus the named-caller boundary after every sequence; it passed 1,000 runs × 100 calls locally on 2026-09-20.
+
+The commerce property proves that one ERC-8183 job can bind one mandate and that one mandate can emit one terminal receipt. `P6-002`/`P6-003` will extend the handler with `OutcomeEvaluator` and settlement actions; actual evaluator-driven ERC-8183 settlement is not claimed by `P2-003`.
 
 ### Fork/testnet tests
 

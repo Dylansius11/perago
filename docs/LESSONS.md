@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-20 - Use deterministic witnesses for mutation audit, not random stateful scheduling
+
+- Observed: the stateful invariant suite passed 256 runs, but repeated source mutations were caught intermittently even though their adversarial actions appeared hundreds of times in the call distribution.
+- Root cause: a stateful fuzz campaign proves properties over sampled sequences; it does not guarantee the exact prerequisite state and action ordering that makes every injected fault observable in every run.
+- Rule: keep stateful campaigns for sequence exploration, add deterministic reachability/regression witnesses for each load-bearing guard, and run mutation audit against the combined deterministic, fuzz, and invariant suite.
+
 ### 2026-09-19 - A guard is unproven until a mutation of it fails a test
 
 - Observed: the full `P2-002` suite passed on the first run, yet deleting the subcall gas bound (`gas: available - FAILURE_RECORD_GAS` to `gas: available`) still passed all 49 tests, because at the 2,000,000 gas the test supplied, the EIP-150 1/64 remainder was itself enough to write the terminal `FAILED` record.
