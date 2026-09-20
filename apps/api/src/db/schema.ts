@@ -94,6 +94,41 @@ const createdAt = timestamp("created_at", { withTimezone: true })
 const updatedAt = timestamp("updated_at", { withTimezone: true })
   .notNull()
   .defaultNow();
+export const walletAuthChallenges = pgTable(
+  "wallet_auth_challenges",
+  {
+    id: uuid().primaryKey(),
+    domain: text().notNull(),
+    uri: text().notNull(),
+    chainId: bigint("chain_id", { mode: "bigint" }).notNull(),
+    accountAddress: bytea("account_address").notNull(),
+    rootOwnerAddress: bytea("root_owner_address").notNull(),
+    nonce: text().notNull().unique(),
+    message: text().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt,
+  },
+  (table) => [
+    check(
+      "wallet_auth_challenge_account_length",
+      sql`octet_length(${table.accountAddress}) = 20`,
+    ),
+    check(
+      "wallet_auth_challenge_owner_length",
+      sql`octet_length(${table.rootOwnerAddress}) = 20`,
+    ),
+    check(
+      "wallet_auth_challenge_expiry",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+    check(
+      "wallet_auth_challenge_consumption",
+      sql`${table.consumedAt} is null or ${table.consumedAt} >= ${table.createdAt}`,
+    ),
+  ],
+);
+
 
 export const wallets = pgTable(
   "wallets",
@@ -138,6 +173,35 @@ export const wallets = pgTable(
     ),
   ],
 );
+export const walletSessions = pgTable(
+  "wallet_sessions",
+  {
+    tokenHash: bytea("token_hash").primaryKey(),
+    walletId: uuid("wallet_id")
+      .notNull()
+      .references(() => wallets.id),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt,
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("wallet_session_wallet_idx").on(table.walletId),
+    index("wallet_session_expiry_idx").on(table.expiresAt),
+    check(
+      "wallet_session_token_hash_length",
+      sql`octet_length(${table.tokenHash}) = 32`,
+    ),
+    check(
+      "wallet_session_expiry",
+      sql`${table.expiresAt} > ${table.createdAt}`,
+    ),
+    check(
+      "wallet_session_revocation",
+      sql`${table.revokedAt} is null or ${table.revokedAt} >= ${table.createdAt}`,
+    ),
+  ],
+);
+
 
 export const walletPolicies = pgTable(
   "wallet_policies",
