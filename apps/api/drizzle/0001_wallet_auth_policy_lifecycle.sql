@@ -118,6 +118,12 @@ alter table wallet_policies
       and activated_at is not null
     )
   ),
+  add constraint wallet_policy_activation_atomic_evidence check (
+    status <> 'ACTIVE' or (
+      permission_user_operation_hash = activation_user_operation_hash
+      and permission_tx_hash = activation_tx_hash
+    )
+  ),
   add constraint wallet_policy_revocation_fields check (
     status <> 'REVOKED'
     or permission_document is null

@@ -7,13 +7,16 @@ import {
   keccak256,
   type PublicClient,
 } from "viem";
-import { entryPoint07Abi } from "viem/account-abstraction";
+import {
+  entryPoint07Abi,
+  getUserOperationHash,
+} from "viem/account-abstraction";
 import { describe, expect, it } from "vitest";
 
 import type { PolicyChainExpectation } from "./policies.js";
 import { createViemPolicyChainVerifier } from "./policy-chain.js";
 
-const account = "0x1111111111111111111111111111111111111111";
+const account: Address = "0x1111111111111111111111111111111111111111";
 const owner = "0x2222222222222222222222222222222222222222";
 const executor = "0x3333333333333333333333333333333333333333";
 const entryPoint = "0x4444444444444444444444444444444444444444";
@@ -21,7 +24,7 @@ const implementation = "0x5555555555555555555555555555555555555555";
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const policyHash = `0x${"aa".repeat(32)}` as Hash;
 const permissionHash = `0x${"bb".repeat(32)}` as Hash;
-const policyUserOpHash = `0x${"cc".repeat(32)}` as Hash;
+const transitionCallData = "0x1234";
 const policyTxHash = `0x${"ee".repeat(32)}` as Hash;
 const blockHash = `0x${"12".repeat(32)}` as Hash;
 
@@ -34,29 +37,49 @@ const expectation: PolicyChainExpectation = {
   rootOwner: owner,
   transactionHash: policyTxHash,
   transition: "ACTIVATE",
-  transitionCallData: "0x1234",
-  userOperationHash: policyUserOpHash,
+  transitionCallData,
+  userOperationHash: userOperationHash(transitionCallData),
 };
 
-function userOperationInput(callData: Hex): Hex {
+function packedUserOperation(callData: Hex, nonce = 0n) {
+  return {
+    accountGasLimits: `0x${"00".repeat(32)}` as Hex,
+    callData,
+    gasFees: `0x${"00".repeat(32)}` as Hex,
+    initCode: "0x" as Hex,
+    nonce,
+    paymasterAndData: "0x" as Hex,
+    preVerificationGas: 0n,
+    sender: account,
+    signature: "0x" as Hex,
+  };
+}
+
+function userOperationHash(callData: Hex, nonce = 0n): Hash {
+  return getUserOperationHash({
+    chainId: 97,
+    entryPointAddress: entryPoint,
+    entryPointVersion: "0.7",
+    userOperation: {
+      callData,
+      callGasLimit: 0n,
+      maxFeePerGas: 0n,
+      maxPriorityFeePerGas: 0n,
+      nonce,
+      preVerificationGas: 0n,
+      sender: account,
+      signature: "0x",
+      verificationGasLimit: 0n,
+    },
+  });
+}
+
+function userOperationInput(
+  operations = [packedUserOperation(transitionCallData)],
+): Hex {
   return encodeFunctionData({
     abi: entryPoint07Abi,
-    args: [
-      [
-        {
-          accountGasLimits: `0x${"00".repeat(32)}`,
-          callData,
-          gasFees: `0x${"00".repeat(32)}`,
-          initCode: "0x",
-          nonce: 0n,
-          paymasterAndData: "0x",
-          preVerificationGas: 0n,
-          sender: account,
-          signature: "0x",
-        },
-      ],
-      zeroAddress,
-    ],
+    args: [operations, zeroAddress],
     functionName: "handleOps",
   });
 }
@@ -108,7 +131,11 @@ function accountPolicyLog() {
   };
 }
 
-function client(currentBlock = 103n): PublicClient {
+function client(
+  currentBlock = 103n,
+  operations = [packedUserOperation(transitionCallData)],
+  eventUserOperationHash = expectation.userOperationHash,
+): PublicClient {
   const code: Record<string, Hex> = {
     [entryPoint]: "0x01",
     [implementation]: "0x02",
@@ -130,7 +157,7 @@ function client(currentBlock = 103n): PublicClient {
     },
     async getTransaction() {
       return {
-        input: userOperationInput(expectation.transitionCallData),
+        input: userOperationInput(operations),
         to: entryPoint,
       };
     },
@@ -139,7 +166,7 @@ function client(currentBlock = 103n): PublicClient {
         blockHash,
         blockNumber: 100n,
         logs: [
-          userOperationLog(policyUserOpHash, policyTxHash),
+          userOperationLog(eventUserOperationHash, policyTxHash),
           accountPolicyLog(),
         ],
         status: "success",
@@ -200,6 +227,37 @@ describe("P3-002 policy chain confirmation", () => {
       verifier().verify({
         ...expectation,
         transitionCallData: "0xabcd",
+      }),
+    ).rejects.toThrow("lacks the expected smart-account call");
+  });
+
+  it("rejects a transaction whose event and calldata belong to different UserOperations", async () => {
+    const otherCallData = "0xabcd";
+    const otherUserOperationHash = userOperationHash(otherCallData);
+    const splitEvidenceVerifier = createViemPolicyChainVerifier({
+      client: client(
+        103n,
+        [
+          packedUserOperation(otherCallData),
+          packedUserOperation(transitionCallData, 1n),
+        ],
+        otherUserOperationHash,
+      ),
+      confirmationDepth: 3,
+      entryPoint,
+      expectedCodeHashes: {
+        [entryPoint]: keccak256("0x01"),
+        [implementation]: keccak256("0x02"),
+        [executor]: keccak256("0x03"),
+      },
+      implementation,
+      mandateExecutor: executor,
+    });
+
+    await expect(
+      splitEvidenceVerifier.verify({
+        ...expectation,
+        userOperationHash: otherUserOperationHash,
       }),
     ).rejects.toThrow("lacks the expected smart-account call");
   });

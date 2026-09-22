@@ -278,6 +278,10 @@ export const walletPolicies = pgTable(
       sql`${table.status} <> 'ACTIVE' or (${table.permissionDocument} is not null and ${table.permissionHash} is not null and ${table.permissionCallData} is not null and ${table.permissionUserOperationHash} is not null and ${table.permissionTxHash} is not null and ${table.activationCallData} is not null and ${table.activationUserOperationHash} is not null and ${table.activationTxHash} is not null and ${table.activationBlockNumber} is not null and ${table.activatedAt} is not null)`,
     ),
     check(
+      "wallet_policy_activation_atomic_evidence",
+      sql`${table.status} <> 'ACTIVE' or (${table.permissionUserOperationHash} = ${table.activationUserOperationHash} and ${table.permissionTxHash} = ${table.activationTxHash})`,
+    ),
+    check(
       "wallet_policy_terminal_fields",
       sql`${table.status} not in ('SUPERSEDED', 'REVOKED') or ${table.terminalAt} is not null`,
     ),

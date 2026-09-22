@@ -254,6 +254,103 @@ describe("P3-002 wallet policy lifecycle", () => {
     expect(revokedRow?.revocation_call_data?.length).toBeGreaterThan(4);
   });
 
+  it("rejects split permission and policy activation evidence in PostgreSQL", async () => {
+    const draft = await createWalletPolicy(sql, identity, { policy });
+    await sql`
+      update wallet_policies set status = 'ACTIVATING',
+        permission_document = ${sql.json(transition.permission)},
+        permission_hash = ${Buffer.alloc(32, 1)},
+        permission_call_data = ${Buffer.from("01", "hex")},
+        permission_user_operation_hash = ${Buffer.alloc(32, 2)},
+        permission_tx_hash = ${Buffer.alloc(32, 3)},
+        activation_call_data = ${Buffer.from("02", "hex")},
+        activation_user_operation_hash = ${Buffer.alloc(32, 4)},
+        activation_tx_hash = ${Buffer.alloc(32, 5)},
+        activation_block_number = 1,
+        activated_at = ${now}
+      where id = ${draft.policyId}
+    `;
+
+    await expect(
+      sql`
+        update wallet_policies set status = 'ACTIVE'
+        where id = ${draft.policyId}
+      `,
+    ).rejects.toMatchObject({
+      constraint_name: "wallet_policy_activation_atomic_evidence",
+    });
+  });
+
+  it("rejects revocation when the wallet owner epoch changes after chain verification", async () => {
+    const draft = await createWalletPolicy(sql, identity, { policy });
+    const activation = await preparePolicyActivation(
+      sql,
+      identity,
+      draft.policyId,
+      transition,
+      config,
+    );
+    await confirmPolicyActivation(
+      sql,
+      identity,
+      draft.policyId,
+      {
+        ...transition,
+        rootSignature: await owner.signTypedData(activation.typedData),
+        transactionHash: txHash,
+        userOperationHash: userOpHash,
+      },
+      config,
+      confirmedVerifier({
+        activePolicyHash: draft.policyHash,
+        ownerEpoch: "1",
+        permissionHash: hashMandateSessionPermission(transition.permission),
+      }),
+    );
+
+    const revocation = await preparePolicyRevocation(
+      sql,
+      identity,
+      draft.policyId,
+      { validUntil: "1789912800" },
+      config,
+    );
+    const confirmed = confirmedVerifier({
+      activePolicyHash: revocation.revocationHash,
+      ownerEpoch: "1",
+      permissionHash: revocation.permissionHash,
+    });
+    const ownerChangedDuringVerification: PolicyChainVerifier = {
+      async verify(expectation) {
+        await sql`
+          update wallets set owner_epoch = 2
+          where id = ${identity.walletId}
+        `;
+        return confirmed.verify(expectation);
+      },
+    };
+
+    await expect(
+      confirmPolicyRevocation(
+        sql,
+        identity,
+        draft.policyId,
+        {
+          rootSignature: await owner.signTypedData(revocation.typedData),
+          transactionHash: txHash,
+          userOperationHash: userOpHash,
+          validUntil: "1789912800",
+        },
+        config,
+        ownerChangedDuringVerification,
+      ),
+    ).rejects.toThrow("wallet owner epoch changed while confirming");
+    const [row] = await sql<{ status: string }[]>`
+      select status from wallet_policies where id = ${draft.policyId}
+    `;
+    expect(row?.status).toBe("ACTIVE");
+  });
+
   it("rejects broader permissions and stale chain observations", async () => {
     const draft = await createWalletPolicy(sql, identity, { policy });
     await expect(

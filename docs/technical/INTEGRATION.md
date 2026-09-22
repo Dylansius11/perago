@@ -1,7 +1,7 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Evidence-backed foundation; no Perago deployment or live integration proof exists yet
-**Reviewed:** 2026-09-17
+**Status:** Evidence-backed through `P3-002`; chain-97 account, protocol, settlement, and atomic policy-transition proofs exist, while production adapters and deployment remain pending
+**Reviewed:** 2026-09-22
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Evidence policy and statuses
@@ -22,10 +22,10 @@ No entry is marked “integrated” in this phase.
 | Integration | MVP use | Status | Decision |
 | --- | --- | --- | --- |
 | BNB Smart Chain Testnet | Execution chain | `verified` | Selected; chain 97 executes Perago account, swap, stake, and settlement traffic today. |
-| External self-custodial wallet | Root owner | `proposed` | Selected; EVM wallet connector remains implementation work. A disposable key stands in for automated evidence. |
+| External self-custodial wallet | Root owner | `verified` | User-controlled MetaMask signatures activated and revoked the P3-002 policy on chain 97; the product wallet-connector journey remains implementation work. |
 | Alchemy Modular Account V2 | ERC-4337 smart account | `verified` | Selected; deployment, ownership, bounded session, and forbidden-shape rejection are proven on chain 97. |
 | Alchemy Bundler + Gas Manager | UserOperation transport/sponsorship | `verified` | Selected initial provider; sponsored and owner-paid paths both proven, and the owner-paid fallback is automatic. |
-| MandateExecutor | One-use semantic authority | `proposed` | Perago-owned contract; required even with smart-account permissions. |
+| MandateExecutor | One-use semantic authority | `proposed` | A real non-upgradeable instance is verified for the P3-002 policy probe only; production adapters/verifiers and `SC-D-005` remain unresolved. |
 | BNB Agent SDK | ERC-8183 helpers/BNB ecosystem utilities | `needs re-verification` | Evaluate narrowly; do not adopt its key provider or SDK wholesale. |
 | Altana EIP-7702 sessions | Alternate session path | `verified in reference repo` | Not selected; historical experiment and current official SDK mention are insufficient for Perago's exact guarantees. |
 | Trust Wallet Agent Kit | Alternate wallet/agent runtime | `proposed` | Not selected for MVP; no need beside the chosen ERC-4337 path. |
@@ -94,6 +94,8 @@ Perago pins these contracts. Code at every address below was read on chain 97 an
 
 The derived account address is a CREATE2 result over factory, salt, owner, and the implementation bytecode, so the implementation address is load-bearing: a stale value points funds at an unreachable account. Chain-97 ownership and bounded execution are proven: the disposable root owner `0x2E42E0FB693765715014934282b9A7d3cF0c3818` deployed and drove account `0x2863167c8653b9369Ef51De203742A3429AC57E2` through the Alchemy bundler, including one owner-paid operation and one fully sponsored operation whose `actualGasCost` was `0`. Transaction hashes are recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and the manifest.
 
+For `P3-002`, the user-controlled root `0x712683F374Cd524F6336E87D577Fc39d1102930A` deployed the derived account `0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944`. One owner-paid root UserOperation atomically installed the bounded session and activated the policy; a second atomically uninstalled the session and wrote the revocation policy. The exact transaction, UserOperation, block, account-state, and probe-deployment evidence is in [`../evidence/bsc-testnet.p3-policy-live.json`](../evidence/bsc-testnet.p3-policy-live.json) and [`../../deployments/bsc-testnet.p3-policy-probe.json`](../../deployments/bsc-testnet.p3-policy-probe.json). The deployment's mock adapters/verifiers and 3,600-second window are not production evidence.
+
 ### 4.2 Session permission shape
 
 Alchemy's official [session-key permission reference](https://www.alchemy.com/docs/wallets/reference/wallet-apis-session-keys) documents expiry, ERC-20 cumulative allowance, gas limit, contract access, account-function, functions-on-contract, functions-on-all-contracts, and dangerous `root` permissions.
@@ -119,6 +121,8 @@ A contract/function allowlist can still permit malicious arguments. MandateExecu
 - A public standards-compatible bundler (Pimlico documents BNB Testnet support) is a candidate fallback only after the same EntryPoint/version probe.
 - A bundler cannot be allowed to select calls, payee, or mandate fields.
 - Paymaster policies are capped by chain, account, target selectors, gas, request rate, and total budget.
+- The P3-002 transitions were intentionally owner-paid; no Gas Manager policy was used or required.
+- Before sponsoring later calls, validate Alchemy's current dashboard semantics and restrict the policy to chain 97, sender `0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944`, the exact approved account call shape, bounded gas/request counts, and a small total budget. Sponsorship is never an authorization boundary.
 - Rate limits are provider/account-specific and were not found as a stable universal value; read the active plan/dashboard during Phase 1 and configure backoff from observed headers/errors.
 
 ### 4.4 Alternatives

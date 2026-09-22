@@ -489,14 +489,22 @@ export async function confirmPolicyRevocation(
   assertConfirmedObservation(observation, expectation);
 
   await sql.begin(async (tx) => {
-    const [locked] = await tx<{ status: string }[]>`
-      select status from wallet_policies
-      where id = ${policyId} and wallet_id = ${identity.walletId}
-      for update
+    const [locked] = await tx<PolicyRow[]>`
+      select p.id, p.wallet_id, p.version, p.status, p.policy_document,
+        p.policy_hash, p.permission_document, w.chain_id::text,
+        w.account_address, w.root_owner_address, w.owner_epoch::text
+      from wallet_policies p
+      join wallets w on w.id = p.wallet_id
+      where p.id = ${policyId}
+      for update of p, w
     `;
     if (!locked) throw new Error("wallet policy was not found");
+    assertIdentity(locked, identity);
     if (locked.status !== "ACTIVE") {
       throw new Error("policy revocation state changed while confirming");
+    }
+    if (expectedOwnerEpoch(locked) !== observation.ownerEpoch) {
+      throw new Error("wallet owner epoch changed while confirming");
     }
     await tx`
       update wallet_policies set status = 'REVOKED',

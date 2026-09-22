@@ -2,6 +2,7 @@ import { type Address, type Hash, mandateExecutorAbi } from "@perago/sdk";
 import {
   decodeEventLog,
   decodeFunctionData,
+  encodeAbiParameters,
   getAddress,
   type Hex,
   keccak256,
@@ -26,8 +27,55 @@ type ViemPolicyChainVerifierConfig = {
   mandateExecutor: Address;
 };
 
+type PackedUserOperation = {
+  accountGasLimits: Hash;
+  callData: Hex;
+  gasFees: Hash;
+  initCode: Hex;
+  nonce: bigint;
+  paymasterAndData: Hex;
+  preVerificationGas: bigint;
+  sender: Address;
+  signature: Hex;
+};
+
 function sameHex(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
+}
+
+function hashPackedUserOperation(
+  operation: PackedUserOperation,
+  chainId: bigint,
+  entryPoint: Address,
+): Hash {
+  const packed = encodeAbiParameters(
+    [
+      { type: "address" },
+      { type: "uint256" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+      { type: "uint256" },
+      { type: "bytes32" },
+      { type: "bytes32" },
+    ],
+    [
+      operation.sender,
+      operation.nonce,
+      keccak256(operation.initCode),
+      keccak256(operation.callData),
+      operation.accountGasLimits,
+      operation.preVerificationGas,
+      operation.gasFees,
+      keccak256(operation.paymasterAndData),
+    ],
+  );
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "address" }, { type: "uint256" }],
+      [keccak256(packed), entryPoint, chainId],
+    ),
+  );
 }
 
 function assertConfiguredCodePins(config: ViemPolicyChainVerifierConfig): void {
@@ -108,8 +156,10 @@ function assertSuccessfulUserOperation(
 async function assertExactUserOperationCall(
   client: PublicClient,
   transactionHash: Hash,
+  userOperationHash: Hash,
   account: Address,
   expectedCallData: Hex,
+  chainId: bigint,
   entryPoint: Address,
 ): Promise<void> {
   const transaction = await client.getTransaction({ hash: transactionHash });
@@ -131,7 +181,11 @@ async function assertExactUserOperationCall(
     const matched = operations.some(
       (operation) =>
         sameHex(operation.sender, account) &&
-        sameHex(operation.callData, expectedCallData),
+        sameHex(operation.callData, expectedCallData) &&
+        sameHex(
+          hashPackedUserOperation(operation, chainId, entryPoint),
+          userOperationHash,
+        ),
     );
     if (!matched) {
       throw new Error(
@@ -272,8 +326,10 @@ export function createViemPolicyChainVerifier(
       await assertExactUserOperationCall(
         normalizedConfig.client,
         expectation.transactionHash,
+        expectation.userOperationHash,
         expectation.account,
         expectation.transitionCallData,
+        BigInt(expectation.chainId),
         normalizedConfig.entryPoint,
       );
       assertPolicyEvent(receipt, expectation, normalizedConfig.mandateExecutor);

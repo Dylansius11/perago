@@ -10,6 +10,7 @@
     "probe:account-session": "node --env-file-if-exists=../../.env src/probes/account-session.ts",
     "probe:bundler": "node --env-file-if-exists=../../.env src/probes/bundler.ts",
     "probe:integrations": "node --env-file-if-exists=../../.env src/probes/integrations.ts",
+    "probe:policy-live": "node --env-file-if-exists=../../.env src/probes/policy-live.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "probe:account-live": "node --env-file-if-exists=../../.env src/probes/account-live.ts",
     "probe:protocol-live": "node --env-file-if-exists=../../.env src/probes/protocol-live.ts"

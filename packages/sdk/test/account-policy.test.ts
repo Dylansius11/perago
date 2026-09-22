@@ -128,8 +128,21 @@ describe("P3-002 SDK policy API", () => {
       "bytes32 permissionHash",
       "uint48 validUntil",
     ]);
+    expect(typedData.types.EIP712Domain).toEqual([
+      { name: "name", type: "string" },
+      { name: "version", type: "string" },
+      { name: "chainId", type: "uint256" },
+      { name: "verifyingContract", type: "address" },
+    ]);
     expect(permissionHash).toMatch(/^0x[0-9a-f]{64}$/u);
-    expect(hashTypedData(typedData)).toMatch(/^0x[0-9a-f]{64}$/u);
+    const walletPayloadDigest = hashTypedData(typedData);
+    expect(walletPayloadDigest).toMatch(/^0x[0-9a-f]{64}$/u);
+    expect(walletPayloadDigest).toBe(
+      hashTypedData({
+        ...typedData,
+        types: { AccountPolicy: typedData.types.AccountPolicy },
+      }),
+    );
     expect(() =>
       getAccountPolicyTypedData(typedData.message, {
         chainId: "56",

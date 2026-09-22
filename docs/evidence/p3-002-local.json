@@ -8,7 +8,9 @@
     "9cd9ab7",
     "92faadf",
     "acb4d75",
-    "d7f2778"
+    "d7f2778",
+    "d631d18",
+    "cbc9b0a"
   ],
   "environment": {
     "database": "PostgreSQL 16.10",
@@ -19,11 +21,11 @@
   "checks": [
     {
       "command": "pnpm --filter @perago/api test:db",
-      "result": "7 passed, 0 failed across persistence, signed wallet authentication, policy lifecycle, and real Hono request paths against a clean local PostgreSQL schema"
+      "result": "9 passed, 0 failed across persistence, signed wallet authentication, policy lifecycle, atomic evidence constraints, owner-epoch race rejection, and real Hono request paths against a clean local PostgreSQL schema"
     },
     {
       "command": "pnpm exec vitest run apps/api/src/services/policy-chain.test.ts",
-      "result": "4 passed, 0 failed; exact confirmed UserOperations, AccountPolicySet state, confirmation depth, exact calldata rejection, and pinned bytecode drift were exercised"
+      "result": "5 passed, 0 failed; exact confirmed UserOperations, same-operation event/calldata binding, AccountPolicySet state, confirmation depth, exact calldata rejection, and pinned bytecode drift were exercised"
     },
     {
       "command": "pnpm --filter @perago/api typecheck",
@@ -31,7 +33,7 @@
     },
     {
       "command": "pnpm run check",
-      "result": "Biome checked 87 files with no fixes; all four configured workspace typecheck tasks and both configured workspace test tasks passed"
+      "result": "Biome checked 90 files with no fixes; all four configured workspace typecheck tasks passed; SDK passed 33 tests and API chain verification passed 5 tests"
     }
   ],
   "acceptance": {
@@ -50,12 +52,12 @@
     ]
   },
   "scope": {
-    "proved": "local signed authentication, one-use challenge and hashed session persistence, authenticated HTTP policy routes, policy transition constraints, and the Viem verifier's deterministic treatment of EntryPoint calldata, UserOperation events, AccountPolicySet, accountConfig, canonical blocks, and pinned code",
-    "notClaimed": "BSC Testnet policy activation or revocation, a deployed MandateExecutor address, live Alchemy bundler or Gas Manager submission, production confirmation depth, hosted Supabase/PostgreSQL compatibility, or the accepted architecture's single-UserOperation policy transition"
+    "proved": "local signed authentication, one-use challenge and hashed session persistence, authenticated HTTP policy routes, one-UserOperation policy transition encoding, MetaMask-compatible EIP-712 payloads, and deterministic Viem treatment of EntryPoint calldata, UserOperation events, AccountPolicySet, accountConfig, canonical blocks, and pinned code",
+    "notClaimed": "This local artifact alone does not claim live BSC execution, production adapters/verifiers, production confirmation depth, hosted PostgreSQL compatibility, or sponsored policy transitions."
   },
-  "blockers": [
-    "MandateExecutor remains proposed and has no pinned BSC Testnet deployment manifest.",
-    "A live smoke needs fresh user-controlled root-wallet signing and rotated provider credentials; previously exposed disposable credentials must not be reused.",
-    "The local confirmation API models permission and policy evidence as separate exact UserOperations, while ARCHITECTURE.md specifies one root-authorized UserOperation; the live account path must prove an atomic encoding or the user must approve a specification change."
-  ]
+  "relatedEvidence": {
+    "livePolicyTransitions": "docs/evidence/bsc-testnet.p3-policy-live.json",
+    "probeDeployment": "deployments/bsc-testnet.p3-policy-probe.json"
+  },
+  "blockers": []
 }

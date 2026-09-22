@@ -1,6 +1,6 @@
 # Perago Data Model
 
-**Status:** Implemented locally through `P3-002`; live policy transition evidence and hosted deployment remain pending
+**Status:** Implemented through `P3-002`, including live atomic policy-transition evidence; hosted deployment remains pending
 **System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
@@ -172,13 +172,17 @@ Immutable, versioned policy documents.
 | `policy_hash` | bytea | 32 bytes, not null |
 | `permission_document` | jsonb | exact narrow session permission, nullable before submission |
 | `permission_hash` | bytea | 32-byte commitment, nullable before submission |
-| `permission_call_data` | bytea | exact install/uninstall calldata |
-| `permission_user_operation_hash` | bytea | 32-byte account-operation identity |
-| `permission_tx_hash` | bytea | 32-byte EntryPoint transaction identity |
-| `activation_call_data` | bytea | exact smart-account call to `setAccountPolicy` |
-| `activation_user_operation_hash` | bytea | 32-byte account-operation identity |
-| `activation_tx_hash` | bytea | nullable until activation submission |
+| `permission_call_data` | bytea | exact bounded session install calldata embedded in the activation batch |
+| `permission_user_operation_hash` | bytea | same 32-byte operation identity as `activation_user_operation_hash` |
+| `permission_tx_hash` | bytea | same EntryPoint transaction identity as `activation_tx_hash` |
+| `activation_call_data` | bytea | exact smart-account batch that installs permission and calls `setAccountPolicy` atomically |
+| `activation_user_operation_hash` | bytea | 32-byte atomic activation operation identity |
+| `activation_tx_hash` | bytea | nullable until atomic activation submission |
 | `activation_block_number` | bigint | nullable until confirmed |
+| `revocation_call_data` | bytea | exact smart-account batch that uninstalls permission and writes the revocation policy atomically |
+| `revocation_user_operation_hash` | bytea | 32-byte atomic revocation operation identity |
+| `revocation_tx_hash` | bytea | nullable until atomic revocation submission |
+| `revocation_block_number` | bigint | nullable until confirmed |
 | `created_at` | timestamptz | not null |
 | `activated_at` | timestamptz | nullable |
 | `terminal_at` | timestamptz | nullable for supersede/revoke |
@@ -188,8 +192,9 @@ Constraints:
 - unique `(wallet_id, version)` and `(wallet_id, policy_hash)`;
 - at most one `ACTIVE` row per wallet via partial unique index;
 - immutable `policy_document`, `policy_hash`, and `version` after insert;
-- `ACTIVE` requires exact permission and activation calldata, UserOperation hashes, transaction hashes, confirmation block, and activation time;
-- activation evidence becomes immutable when the draft leaves `DRAFT`;
+- `ACTIVE` requires exact permission and activation calldata, one shared UserOperation hash, one shared transaction hash, a confirmation block, and activation time;
+- `REVOKED` requires immutable atomic revocation calldata, UserOperation hash, transaction hash, confirmation block, and terminal time;
+- activation evidence becomes immutable when the draft leaves `DRAFT`, and revocation evidence is immutable once written;
 - only `DRAFT → ACTIVATING → ACTIVE`, `ACTIVE → SUPERSEDED`, and legal revocation transitions are accepted;
 - `SUPERSEDED`/`REVOKED` require `terminal_at`.
 
