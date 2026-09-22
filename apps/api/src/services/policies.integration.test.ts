@@ -6,26 +6,19 @@ import {
   type PreparePolicyTransitionRequest,
   type WalletPolicy,
 } from "@perago/sdk";
-import { privateKeyToAccount } from "viem/accounts";
 import postgres from "postgres";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { privateKeyToAccount } from "viem/accounts";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { WalletIdentity } from "../auth/wallet-auth.js";
 import {
   confirmPolicyActivation,
   confirmPolicyRevocation,
   createWalletPolicy,
-  preparePolicyActivation,
-  preparePolicyRevocation,
   type PolicyChainVerifier,
   type PolicyServiceConfig,
+  preparePolicyActivation,
+  preparePolicyRevocation,
 } from "./policies.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
@@ -38,7 +31,10 @@ if (!databaseUrl) {
 const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
 const migrations = [
   new URL("../../drizzle/0000_constrained_lifecycle.sql", import.meta.url),
-  new URL("../../drizzle/0001_wallet_auth_policy_lifecycle.sql", import.meta.url),
+  new URL(
+    "../../drizzle/0001_wallet_auth_policy_lifecycle.sql",
+    import.meta.url,
+  ),
 ];
 const owner = privateKeyToAccount(
   "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",

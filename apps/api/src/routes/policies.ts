@@ -10,10 +10,10 @@ import {
   confirmPolicyActivation,
   confirmPolicyRevocation,
   createWalletPolicy,
-  preparePolicyActivation,
-  preparePolicyRevocation,
   type PolicyChainVerifier,
   type PolicyServiceConfig,
+  preparePolicyActivation,
+  preparePolicyRevocation,
 } from "../services/policies.js";
 
 type PolicyRouteBindings = {
@@ -32,12 +32,12 @@ export function createPolicyRoutes(input: {
 
   routes.use("*", async (context, next) => {
     const authorization = context.req.header("authorization");
-    const match = /^Bearer ([A-Za-z0-9_-]{43,128})$/u.exec(
-      authorization ?? "",
-    );
+    const match = /^Bearer ([A-Za-z0-9_-]{43,128})$/u.exec(authorization ?? "");
     if (!match?.[1]) {
       return context.json(
-        { error: { code: "AUTH_REQUIRED", message: "wallet session required" } },
+        {
+          error: { code: "AUTH_REQUIRED", message: "wallet session required" },
+        },
         401,
       );
     }
@@ -52,7 +52,9 @@ export function createPolicyRoutes(input: {
       );
     } catch {
       return context.json(
-        { error: { code: "AUTH_INVALID", message: "wallet session is invalid" } },
+        {
+          error: { code: "AUTH_INVALID", message: "wallet session is invalid" },
+        },
         401,
       );
     }

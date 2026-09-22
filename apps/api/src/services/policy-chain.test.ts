@@ -1,14 +1,10 @@
-import {
-  mandateExecutorAbi,
-  type Address,
-  type Hash,
-} from "@perago/sdk";
+import { type Address, type Hash, mandateExecutorAbi } from "@perago/sdk";
 import {
   encodeAbiParameters,
   encodeEventTopics,
   encodeFunctionData,
-  keccak256,
   type Hex,
+  keccak256,
   type PublicClient,
 } from "viem";
 import { entryPoint07Abi } from "viem/account-abstraction";
@@ -111,11 +107,7 @@ function accountPolicyLog() {
     blockHash,
     blockNumber: 100n,
     data: encodeAbiParameters(
-      [
-        { type: "uint64" },
-        { type: "bytes32" },
-        { type: "bytes32" },
-      ],
+      [{ type: "uint64" }, { type: "bytes32" }, { type: "bytes32" }],
       [1n, policyHash, permissionHash],
     ),
     logIndex: 1,
@@ -142,7 +134,7 @@ function client(currentBlock = 103n): PublicClient {
       return 97;
     },
     async getBlock() {
-      return { timestamp: 1_790_000_000n };
+      return { hash: blockHash, timestamp: 1_790_000_000n };
     },
     async getBlockNumber() {
       return currentBlock;
@@ -169,6 +161,7 @@ function client(currentBlock = 103n): PublicClient {
             ? [userOperationLog(policyUserOpHash, hash), accountPolicyLog()]
             : [userOperationLog(permissionUserOpHash, hash)],
         status: "success",
+        transactionHash: hash,
       };
     },
     async readContract() {

@@ -2,12 +2,12 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   deriveSemiModularAccountAddress,
   MODULAR_ACCOUNT_V2_ADDRESSES,
+  type WalletChallengeRequest,
   walletChallengeRequestSchema,
   walletChallengeVerificationSchema,
-  type WalletChallengeRequest,
 } from "@perago/sdk";
-import { recoverMessageAddress } from "viem";
 import type { Sql, TransactionSql } from "postgres";
+import { recoverMessageAddress } from "viem";
 
 const SUPPORTED_CHAIN_ID = "97";
 const ACCOUNT_TYPE = "ALCHEMY_MODULAR_V2";
@@ -105,7 +105,9 @@ function assertSupportedAccount(request: WalletChallengeRequest): void {
   if (request.chainId !== SUPPORTED_CHAIN_ID) {
     throw new RangeError(`unsupported chain ${request.chainId}`);
   }
-  const expected = deriveSemiModularAccountAddress({ owner: request.rootOwner });
+  const expected = deriveSemiModularAccountAddress({
+    owner: request.rootOwner,
+  });
   if (expected.toLowerCase() !== request.account) {
     throw new RangeError("smart account does not match the root owner");
   }
@@ -200,9 +202,8 @@ export async function verifyWalletChallenge(
   config: WalletAuthConfig,
 ) {
   validateConfig(config);
-  const verification = walletChallengeVerificationSchema.parse(
-    verificationInput,
-  );
+  const verification =
+    walletChallengeVerificationSchema.parse(verificationInput);
   const now = config.now();
 
   return sql.begin(async (tx) => {

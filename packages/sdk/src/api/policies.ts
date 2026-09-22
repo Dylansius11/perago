@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 import { mandateSessionPermissionSchema } from "../account/account-policy.js";
-import { signatureSchema } from "./auth.js";
 import {
   hashSchema,
   uint48StringSchema,
   uint64StringSchema,
 } from "../domain/primitives.js";
 import { walletPolicySchema } from "../domain/wallet-policy.js";
+import { signatureSchema } from "./auth.js";
 
 export const createWalletPolicyRequestSchema = z.strictObject({
   policy: walletPolicySchema,

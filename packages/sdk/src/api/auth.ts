@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-  addressSchema,
-  uint256StringSchema,
-} from "../domain/primitives.js";
+import { addressSchema, uint256StringSchema } from "../domain/primitives.js";
 
 export const signatureSchema = z
   .string()

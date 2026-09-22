@@ -1,13 +1,13 @@
-import { mandateExecutorAbi, type Address, type Hash } from "@perago/sdk";
+import { type Address, type Hash, mandateExecutorAbi } from "@perago/sdk";
 import {
   decodeEventLog,
   decodeFunctionData,
   getAddress,
-  keccak256,
-  TransactionReceiptNotFoundError,
   type Hex,
+  keccak256,
   type PublicClient,
   type TransactionReceipt,
+  TransactionReceiptNotFoundError,
 } from "viem";
 import { entryPoint07Abi } from "viem/account-abstraction";
 
@@ -31,7 +31,10 @@ function sameHex(left: string, right: string): boolean {
 }
 
 function assertConfiguredCodePins(config: ViemPolicyChainVerifierConfig): void {
-  if (!Number.isSafeInteger(config.confirmationDepth) || config.confirmationDepth < 1) {
+  if (
+    !Number.isSafeInteger(config.confirmationDepth) ||
+    config.confirmationDepth < 1
+  ) {
     throw new RangeError("confirmation depth must be a positive integer");
   }
   for (const address of [
@@ -64,12 +67,21 @@ function assertSuccessfulUserOperation(
   account: Address,
   entryPoint: Address,
 ): void {
+  if (!sameHex(receipt.transactionHash, transactionHash)) {
+    throw new Error(`receipt does not match transaction ${transactionHash}`);
+  }
   if (receipt.status !== "success") {
     throw new Error(`transaction ${transactionHash} reverted`);
   }
 
   const matched = receipt.logs.some((log) => {
-    if (!sameHex(log.address, entryPoint)) return false;
+    if (
+      log.removed ||
+      !sameHex(log.address, entryPoint) ||
+      !sameHex(log.transactionHash, transactionHash)
+    ) {
+      return false;
+    }
     try {
       const decoded = decodeEventLog({
         abi: entryPoint07Abi,
@@ -87,7 +99,9 @@ function assertSuccessfulUserOperation(
     }
   });
   if (!matched) {
-    throw new Error(`transaction ${transactionHash} lacks the expected successful UserOperation`);
+    throw new Error(
+      `transaction ${transactionHash} lacks the expected successful UserOperation`,
+    );
   }
 }
 
@@ -100,7 +114,9 @@ async function assertExactUserOperationCall(
 ): Promise<void> {
   const transaction = await client.getTransaction({ hash: transactionHash });
   if (!transaction.to || !sameHex(transaction.to, entryPoint)) {
-    throw new Error(`transaction ${transactionHash} did not call the pinned EntryPoint`);
+    throw new Error(
+      `transaction ${transactionHash} did not call the pinned EntryPoint`,
+    );
   }
 
   try {
@@ -141,7 +157,13 @@ function assertPolicyEvent(
   mandateExecutor: Address,
 ): void {
   const matched = receipt.logs.some((log) => {
-    if (!sameHex(log.address, mandateExecutor)) return false;
+    if (
+      log.removed ||
+      !sameHex(log.address, mandateExecutor) ||
+      !sameHex(log.transactionHash, expectation.transactionHash)
+    ) {
+      return false;
+    }
     try {
       const decoded = decodeEventLog({
         abi: mandateExecutorAbi,
@@ -160,7 +182,11 @@ function assertPolicyEvent(
       return false;
     }
   });
-  if (!matched) throw new Error("policy transaction lacks the exact AccountPolicySet event");
+  if (!matched) {
+    throw new Error(
+      "policy transaction lacks the exact AccountPolicySet event",
+    );
+  }
 }
 
 async function assertPinnedCode(
@@ -185,6 +211,18 @@ async function assertPinnedCode(
   }
 }
 
+async function assertCanonicalReceipt(
+  client: PublicClient,
+  receipt: TransactionReceipt,
+): Promise<void> {
+  const block = await client.getBlock({ blockNumber: receipt.blockNumber });
+  if (!block.hash || !sameHex(block.hash, receipt.blockHash)) {
+    throw new Error(
+      `receipt block ${receipt.blockNumber} is no longer canonical`,
+    );
+  }
+}
+
 export function createViemPolicyChainVerifier(
   config: ViemPolicyChainVerifierConfig,
 ): PolicyChainVerifier {
@@ -198,7 +236,9 @@ export function createViemPolicyChainVerifier(
       ]),
     ),
     implementation: getAddress(config.implementation).toLowerCase() as Address,
-    mandateExecutor: getAddress(config.mandateExecutor).toLowerCase() as Address,
+    mandateExecutor: getAddress(
+      config.mandateExecutor,
+    ).toLowerCase() as Address,
   };
   assertConfiguredCodePins(normalizedConfig);
 
@@ -227,6 +267,10 @@ export function createViemPolicyChainVerifier(
         return { status: "PENDING" };
       }
 
+      await Promise.all([
+        assertCanonicalReceipt(normalizedConfig.client, policyReceipt),
+        assertCanonicalReceipt(normalizedConfig.client, permissionReceipt),
+      ]);
       assertSuccessfulUserOperation(
         policyReceipt,
         expectation.transactionHash,
@@ -283,10 +327,15 @@ export function createViemPolicyChainVerifier(
       if (
         !sameHex(accountConfig.rootOwner, expectation.rootOwner) ||
         accountConfig.ownerEpoch !== BigInt(expectation.ownerEpoch) ||
-        !sameHex(accountConfig.activePolicyHash, expectation.activePolicyHash) ||
+        !sameHex(
+          accountConfig.activePolicyHash,
+          expectation.activePolicyHash,
+        ) ||
         !sameHex(accountConfig.permissionHash, expectation.permissionHash)
       ) {
-        throw new Error("confirmed account policy state does not match the transition");
+        throw new Error(
+          "confirmed account policy state does not match the transition",
+        );
       }
 
       const block = await normalizedConfig.client.getBlock({ blockNumber });

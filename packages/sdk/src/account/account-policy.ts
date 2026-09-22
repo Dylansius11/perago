@@ -1,12 +1,21 @@
-import { z } from "zod";
 import {
   encodeAbiParameters,
   encodeFunctionData,
+  type Hex,
   keccak256,
   stringToHex,
-  type Hex,
 } from "viem";
-
+import { z } from "zod";
+import { mandateExecutorAbi } from "../abi/perago-contracts.js";
+import {
+  addressSchema,
+  hasDuplicates,
+  hashSchema,
+  selectorSchema,
+  uint48StringSchema,
+  uint64StringSchema,
+  uint256StringSchema,
+} from "../domain/primitives.js";
 import {
   encodeInstallMandateSession,
   encodeUninstallMandateSession,
@@ -14,22 +23,10 @@ import {
   type MandateSessionPermission,
   PRIVILEGED_SELECTORS,
 } from "./modular-account.js";
-import { mandateExecutorAbi } from "../abi/perago-contracts.js";
-import {
-  addressSchema,
-  hashSchema,
-  hasDuplicates,
-  selectorSchema,
-  uint48StringSchema,
-  uint64StringSchema,
-  uint256StringSchema,
-} from "../domain/primitives.js";
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 const zeroHash = `0x${"0".repeat(64)}`;
-const policyRevocationDomain = keccak256(
-  stringToHex("PERAGO_POLICY_REVOKED"),
-);
+const policyRevocationDomain = keccak256(stringToHex("PERAGO_POLICY_REVOKED"));
 const nonzeroAddressSchema = addressSchema.refine(
   (value) => value !== zeroAddress,
   "address must not be zero",
@@ -71,7 +68,8 @@ export const mandateSessionPermissionSchema = z
     if (permission.selectors.some((selector) => privileged.has(selector))) {
       context.addIssue({
         code: "custom",
-        message: "session selectors must not grant privileged account authority",
+        message:
+          "session selectors must not grant privileged account authority",
         path: ["selectors"],
       });
     }
@@ -152,7 +150,9 @@ export function toMandateSessionPermission(
 }
 
 export function hashMandateSessionPermission(input: unknown) {
-  return keccak256(encodeInstallMandateSession(toMandateSessionPermission(input)));
+  return keccak256(
+    encodeInstallMandateSession(toMandateSessionPermission(input)),
+  );
 }
 
 export function hashMandateSessionRevocation(input: unknown) {
@@ -214,4 +214,3 @@ export function getAccountPolicyTypedData(
     types: accountPolicyTypes,
   } as const;
 }
-

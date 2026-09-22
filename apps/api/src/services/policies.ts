@@ -10,11 +10,11 @@ import {
   encodeSetAccountPolicy,
   encodeUninstallMandateSession,
   getAccountPolicyTypedData,
+  type Hash,
   hashMandateSessionPermission,
   hashMandateSessionRevocation,
   hashPolicyRevocation,
   hashWalletPolicy,
-  type Hash,
   type MandateSessionPermissionDocument,
   mandateSessionPermissionSchema,
   preparePolicyRevocationRequestSchema,
@@ -22,8 +22,8 @@ import {
   type Selector,
   toMandateSessionPermission,
 } from "@perago/sdk";
-import { verifyTypedData } from "viem";
 import type { JSONValue, Sql } from "postgres";
+import { verifyTypedData } from "viem";
 
 import type { WalletIdentity } from "../auth/wallet-auth.js";
 
@@ -144,7 +144,9 @@ function assertActivationPermission(
     throw new Error("session permission is broader than the perform selector");
   }
   if (permission.nativeSpendLimit !== "0") {
-    throw new Error("MandateExecutor session permission cannot spend native value");
+    throw new Error(
+      "MandateExecutor session permission cannot spend native value",
+    );
   }
   if (permission.sessionSigner === identity.rootOwner) {
     throw new Error("root owner cannot be installed as an executor session");
@@ -322,10 +324,7 @@ export async function confirmPolicyActivation(
   if (!validSignature) throw new Error("account policy signature is invalid");
 
   const accountPolicyCallData = encodeAccountExecute({
-    data: encodeSetAccountPolicy(
-      prepared.accountPolicy,
-      request.rootSignature,
-    ),
+    data: encodeSetAccountPolicy(prepared.accountPolicy, request.rootSignature),
     target: config.mandateExecutor,
     value: 0n,
   });
@@ -428,7 +427,10 @@ export async function preparePolicyRevocation(
     rootOwner: identity.rootOwner,
     validUntil: request.validUntil,
   } satisfies AccountPolicy;
-  if (BigInt(request.validUntil) <= BigInt(Math.floor(config.now().getTime() / 1000))) {
+  if (
+    BigInt(request.validUntil) <=
+    BigInt(Math.floor(config.now().getTime() / 1000))
+  ) {
     throw new Error("policy revocation has expired");
   }
 
@@ -467,13 +469,11 @@ export async function confirmPolicyRevocation(
     address: identity.rootOwner,
     signature: request.rootSignature,
   });
-  if (!validSignature) throw new Error("policy revocation signature is invalid");
+  if (!validSignature)
+    throw new Error("policy revocation signature is invalid");
 
   const accountPolicyCallData = encodeAccountExecute({
-    data: encodeSetAccountPolicy(
-      prepared.accountPolicy,
-      request.rootSignature,
-    ),
+    data: encodeSetAccountPolicy(prepared.accountPolicy, request.rootSignature),
     target: config.mandateExecutor,
     value: 0n,
   });
@@ -516,4 +516,3 @@ export async function confirmPolicyRevocation(
 
   return { status: "REVOKED" as const };
 }
-

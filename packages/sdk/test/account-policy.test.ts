@@ -53,7 +53,9 @@ describe("P3-002 SDK policy API", () => {
   });
 
   it("rejects root, privileged, duplicate, and unbounded session permissions", () => {
-    expect(mandateSessionPermissionSchema.parse(permission)).toEqual(permission);
+    expect(mandateSessionPermissionSchema.parse(permission)).toEqual(
+      permission,
+    );
     expect(() =>
       mandateSessionPermissionSchema.parse({ ...permission, entityId: 0 }),
     ).toThrow();

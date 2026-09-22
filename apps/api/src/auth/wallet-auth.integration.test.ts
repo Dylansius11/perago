@@ -3,8 +3,8 @@ import {
   deriveSemiModularAccountAddress,
   type WalletChallengeRequest,
 } from "@perago/sdk";
-import { privateKeyToAccount } from "viem/accounts";
 import postgres from "postgres";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -24,7 +24,10 @@ if (!databaseUrl) {
 const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
 const migrations = [
   new URL("../../drizzle/0000_constrained_lifecycle.sql", import.meta.url),
-  new URL("../../drizzle/0001_wallet_auth_policy_lifecycle.sql", import.meta.url),
+  new URL(
+    "../../drizzle/0001_wallet_auth_policy_lifecycle.sql",
+    import.meta.url,
+  ),
 ];
 const owner = privateKeyToAccount(
   "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

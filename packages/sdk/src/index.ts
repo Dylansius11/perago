@@ -43,24 +43,24 @@ export {
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
 export {
-  type WalletChallengeRequest,
-  walletChallengeRequestSchema,
-  type WalletChallengeVerification,
-  walletChallengeVerificationSchema,
-  type WalletSession,
-  walletSessionSchema,
   signatureSchema,
+  type WalletChallengeRequest,
+  type WalletChallengeVerification,
+  type WalletSession,
+  walletChallengeRequestSchema,
+  walletChallengeVerificationSchema,
+  walletSessionSchema,
 } from "./api/auth.js";
 export {
   type ConfirmPolicyActivationRequest,
-  confirmPolicyActivationRequestSchema,
   type ConfirmPolicyRevocationRequest,
-  confirmPolicyRevocationRequestSchema,
   type CreateWalletPolicyRequest,
+  confirmPolicyActivationRequestSchema,
+  confirmPolicyRevocationRequestSchema,
   createWalletPolicyRequestSchema,
   type PreparePolicyRevocationRequest,
-  preparePolicyRevocationRequestSchema,
   type PreparePolicyTransitionRequest,
+  preparePolicyRevocationRequestSchema,
   preparePolicyTransitionRequestSchema,
 } from "./api/policies.js";
 export { canonicalJson } from "./canonical-json.js";

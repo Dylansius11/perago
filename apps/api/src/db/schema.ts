@@ -129,7 +129,6 @@ export const walletAuthChallenges = pgTable(
   ],
 );
 
-
 export const wallets = pgTable(
   "wallets",
   {
@@ -201,7 +200,6 @@ export const walletSessions = pgTable(
     ),
   ],
 );
-
 
 export const walletPolicies = pgTable(
   "wallet_policies",

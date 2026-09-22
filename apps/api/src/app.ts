@@ -1,6 +1,6 @@
-import { ZodError } from "zod";
 import { Hono } from "hono";
 import type { Sql } from "postgres";
+import { ZodError } from "zod";
 
 import { createAuthRoutes } from "./auth/routes.js";
 import type { WalletAuthConfig } from "./auth/wallet-auth.js";

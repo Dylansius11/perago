@@ -3,8 +3,8 @@ import {
   deriveSemiModularAccountAddress,
   getAccountPolicyTypedData,
 } from "@perago/sdk";
-import { privateKeyToAccount } from "viem/accounts";
 import postgres from "postgres";
+import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createApiApp } from "./app.js";
@@ -72,9 +72,18 @@ afterAll(async () => {
 
 describe("P3-002 API route smoke", () => {
   it("authenticates a real signature and activates a validated policy through Hono", async () => {
-    const app = createApiApp({ authConfig, policyConfig, policyVerifier: verifier, sql });
+    const app = createApiApp({
+      authConfig,
+      policyConfig,
+      policyVerifier: verifier,
+      sql,
+    });
     const challengeResponse = await app.request("/auth/challenges", {
-      body: JSON.stringify({ account, chainId: "97", rootOwner: owner.address }),
+      body: JSON.stringify({
+        account,
+        chainId: "97",
+        rootOwner: owner.address,
+      }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -110,9 +119,7 @@ describe("P3-002 API route smoke", () => {
           chainId: "97",
           maxSlippageBps: "100",
           maxTaskLifetimeSeconds: "3600",
-          protectedAssets: [
-            "0x6666666666666666666666666666666666666666",
-          ],
+          protectedAssets: ["0x6666666666666666666666666666666666666666"],
           schemaVersion: "1",
           services: ["SWAP"],
           version: "1",
