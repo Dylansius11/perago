@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests --exclude \"**/*.integration.test.ts\"",
-    "test:db": "vitest run src/db/persistence.integration.test.ts",
+    "test:db": "vitest run --maxWorkers=1 --no-file-parallelism src/db/persistence.integration.test.ts src/auth/wallet-auth.integration.test.ts src/services/policies.integration.test.ts src/app.integration.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
