@@ -75,7 +75,11 @@ alter table wallet_policies
   add column permission_user_operation_hash bytea,
   add column permission_tx_hash bytea,
   add column activation_call_data bytea,
-  add column activation_user_operation_hash bytea;
+  add column activation_user_operation_hash bytea,
+  add column revocation_call_data bytea,
+  add column revocation_user_operation_hash bytea,
+  add column revocation_tx_hash bytea,
+  add column revocation_block_number bigint;
 
 alter table wallet_policies
   drop constraint wallet_policy_activation_fields,
@@ -93,6 +97,13 @@ alter table wallet_policies
     activation_user_operation_hash is null
       or octet_length(activation_user_operation_hash) = 32
   ),
+  add constraint wallet_policy_revocation_user_operation_hash_length check (
+    revocation_user_operation_hash is null
+      or octet_length(revocation_user_operation_hash) = 32
+  ),
+  add constraint wallet_policy_revocation_tx_hash_length check (
+    revocation_tx_hash is null or octet_length(revocation_tx_hash) = 32
+  ),
   add constraint wallet_policy_activation_fields check (
     status <> 'ACTIVE' or (
       permission_document is not null
@@ -105,6 +116,17 @@ alter table wallet_policies
       and activation_tx_hash is not null
       and activation_block_number is not null
       and activated_at is not null
+    )
+  ),
+  add constraint wallet_policy_revocation_fields check (
+    status <> 'REVOKED'
+    or permission_document is null
+    or (
+      revocation_call_data is not null
+      and revocation_user_operation_hash is not null
+      and revocation_tx_hash is not null
+      and revocation_block_number is not null
+      and terminal_at is not null
     )
   );
 
@@ -139,6 +161,15 @@ begin
     or new.activated_at is distinct from old.activated_at
   ) then
     raise exception 'wallet policy activation evidence is immutable after submission';
+  end if;
+  if old.status = 'REVOKED' and (
+    new.revocation_call_data is distinct from old.revocation_call_data
+    or new.revocation_user_operation_hash is distinct from old.revocation_user_operation_hash
+    or new.revocation_tx_hash is distinct from old.revocation_tx_hash
+    or new.revocation_block_number is distinct from old.revocation_block_number
+    or new.terminal_at is distinct from old.terminal_at
+  ) then
+    raise exception 'wallet policy revocation evidence is immutable';
   end if;
   return new;
 end;

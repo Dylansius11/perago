@@ -224,6 +224,12 @@ export const walletPolicies = pgTable(
     activationBlockNumber: bigint("activation_block_number", {
       mode: "bigint",
     }),
+    revocationCallData: bytea("revocation_call_data"),
+    revocationUserOperationHash: bytea("revocation_user_operation_hash"),
+    revocationTxHash: bytea("revocation_tx_hash"),
+    revocationBlockNumber: bigint("revocation_block_number", {
+      mode: "bigint",
+    }),
     createdAt,
     activatedAt: timestamp("activated_at", { withTimezone: true }),
     terminalAt: timestamp("terminal_at", { withTimezone: true }),
@@ -254,6 +260,18 @@ export const walletPolicies = pgTable(
     check(
       "wallet_policy_activation_user_operation_hash_length",
       sql`${table.activationUserOperationHash} is null or octet_length(${table.activationUserOperationHash}) = 32`,
+    ),
+    check(
+      "wallet_policy_revocation_user_operation_hash_length",
+      sql`${table.revocationUserOperationHash} is null or octet_length(${table.revocationUserOperationHash}) = 32`,
+    ),
+    check(
+      "wallet_policy_revocation_tx_hash_length",
+      sql`${table.revocationTxHash} is null or octet_length(${table.revocationTxHash}) = 32`,
+    ),
+    check(
+      "wallet_policy_revocation_fields",
+      sql`${table.status} <> 'REVOKED' or ${table.permissionDocument} is null or (${table.revocationCallData} is not null and ${table.revocationUserOperationHash} is not null and ${table.revocationTxHash} is not null and ${table.revocationBlockNumber} is not null and ${table.terminalAt} is not null)`,
     ),
     check(
       "wallet_policy_activation_fields",

@@ -10,6 +10,7 @@ export {
   accountPolicySchema,
   accountPolicyTypeString,
   accountPolicyTypes,
+  encodeAccountPolicyTransition,
   encodeSetAccountPolicy,
   getAccountPolicyTypedData,
   hashMandateSessionPermission,

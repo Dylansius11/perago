@@ -48,12 +48,8 @@ const performSelector = "0x12345678";
 const now = new Date("2026-09-20T12:00:00.000Z");
 const txHash =
   "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const permissionTxHash =
-  "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const userOpHash =
   "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
-const permissionUserOpHash =
-  "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
 
 const identity: WalletIdentity = {
   account: account.toLowerCase() as `0x${string}`,
@@ -111,7 +107,8 @@ function confirmedVerifier(input: {
   rootOwner?: `0x${string}`;
 }): PolicyChainVerifier {
   return {
-    async verify() {
+    async verify(expectation) {
+      expect(expectation.transitionCallData.slice(0, 10)).toBe("0x34fcd5be");
       return {
         account: identity.account,
         activePolicyHash: input.activePolicyHash,
@@ -178,8 +175,6 @@ describe("P3-002 wallet policy lifecycle", () => {
         draft.policyId,
         {
           ...transition,
-          permissionTransactionHash: permissionTxHash,
-          permissionUserOperationHash: permissionUserOpHash,
           rootSignature,
           transactionHash: txHash,
           userOperationHash: userOpHash,
@@ -200,8 +195,6 @@ describe("P3-002 wallet policy lifecycle", () => {
       draft.policyId,
       {
         ...transition,
-        permissionTransactionHash: permissionTxHash,
-        permissionUserOperationHash: permissionUserOpHash,
         rootSignature,
         transactionHash: txHash,
         userOperationHash: userOpHash,
@@ -228,8 +221,6 @@ describe("P3-002 wallet policy lifecycle", () => {
       identity,
       draft.policyId,
       {
-        permissionTransactionHash: permissionTxHash,
-        permissionUserOperationHash: permissionUserOpHash,
         rootSignature: revocationSignature,
         transactionHash: txHash,
         userOperationHash: userOpHash,
@@ -243,6 +234,24 @@ describe("P3-002 wallet policy lifecycle", () => {
       }),
     );
     expect(revoked.status).toBe("REVOKED");
+    const [revokedRow] = await sql<
+      {
+        revocation_block_number: string | null;
+        revocation_call_data: Buffer | null;
+        revocation_tx_hash: Buffer | null;
+        revocation_user_operation_hash: Buffer | null;
+      }[]
+    >`
+      select revocation_block_number::text, revocation_call_data,
+        revocation_tx_hash, revocation_user_operation_hash
+      from wallet_policies where id = ${draft.policyId}
+    `;
+    expect(revokedRow).toMatchObject({
+      revocation_block_number: "1234",
+      revocation_tx_hash: Buffer.from(txHash.slice(2), "hex"),
+      revocation_user_operation_hash: Buffer.from(userOpHash.slice(2), "hex"),
+    });
+    expect(revokedRow?.revocation_call_data?.length).toBeGreaterThan(4);
   });
 
   it("rejects broader permissions and stale chain observations", async () => {
@@ -278,8 +287,6 @@ describe("P3-002 wallet policy lifecycle", () => {
         draft.policyId,
         {
           ...transition,
-          permissionTransactionHash: permissionTxHash,
-          permissionUserOperationHash: permissionUserOpHash,
           rootSignature,
           transactionHash: txHash,
           userOperationHash: userOpHash,

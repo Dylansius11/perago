@@ -172,8 +172,6 @@ describe("P3-002 API route smoke", () => {
       {
         body: JSON.stringify({
           ...transition,
-          permissionTransactionHash: `0x${"bb".repeat(32)}`,
-          permissionUserOperationHash: `0x${"cc".repeat(32)}`,
           rootSignature,
           transactionHash: hash,
           userOperationHash: `0x${"dd".repeat(32)}`,

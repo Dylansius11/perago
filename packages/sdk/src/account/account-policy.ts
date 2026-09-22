@@ -8,6 +8,7 @@ import {
 import { z } from "zod";
 import { mandateExecutorAbi } from "../abi/perago-contracts.js";
 import {
+  type Address,
   addressSchema,
   hasDuplicates,
   hashSchema,
@@ -17,6 +18,7 @@ import {
   uint256StringSchema,
 } from "../domain/primitives.js";
 import {
+  encodeAccountExecuteBatch,
   encodeInstallMandateSession,
   encodeUninstallMandateSession,
   MAX_SESSION_ENTITY_ID,
@@ -190,6 +192,27 @@ export function encodeSetAccountPolicy(
     args: [accountPolicyContractValue(policy), rootSignature],
     functionName: "setAccountPolicy",
   });
+}
+
+export function encodeAccountPolicyTransition(input: {
+  account: Address;
+  mandateExecutor: Address;
+  permissionCallData: Hex;
+  policy: AccountPolicy;
+  rootSignature: Hex;
+}) {
+  return encodeAccountExecuteBatch([
+    {
+      data: input.permissionCallData,
+      target: input.account,
+      value: 0n,
+    },
+    {
+      data: encodeSetAccountPolicy(input.policy, input.rootSignature),
+      target: input.mandateExecutor,
+      value: 0n,
+    },
+  ]);
 }
 
 export function getAccountPolicyTypedData(

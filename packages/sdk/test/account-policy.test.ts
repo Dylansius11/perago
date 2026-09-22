@@ -5,6 +5,7 @@ import {
   ACCOUNT_EXECUTE_SELECTOR,
   accountPolicyTypeString,
   accountPolicyTypes,
+  confirmPolicyActivationRequestSchema,
   getAccountPolicyTypedData,
   hashMandateSessionPermission,
   mandateSessionPermissionSchema,
@@ -48,6 +49,26 @@ describe("P3-002 SDK policy API", () => {
         chainId: "97",
         rootOwner: owner,
         redirect: "https://attacker.test",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts one atomic transition identity and rejects split evidence", () => {
+    const request = {
+      ownerEpoch: "1",
+      permission,
+      rootSignature: `0x${"11".repeat(65)}`,
+      transactionHash: `0x${"22".repeat(32)}`,
+      userOperationHash: `0x${"33".repeat(32)}`,
+      validUntil: permission.validUntil,
+    };
+    expect(confirmPolicyActivationRequestSchema.parse(request)).toEqual(
+      request,
+    );
+    expect(() =>
+      confirmPolicyActivationRequestSchema.parse({
+        ...request,
+        permissionTransactionHash: `0x${"44".repeat(32)}`,
       }),
     ).toThrow();
   });

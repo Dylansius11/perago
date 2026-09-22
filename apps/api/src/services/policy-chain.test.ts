@@ -22,33 +22,19 @@ const zeroAddress = "0x0000000000000000000000000000000000000000";
 const policyHash = `0x${"aa".repeat(32)}` as Hash;
 const permissionHash = `0x${"bb".repeat(32)}` as Hash;
 const policyUserOpHash = `0x${"cc".repeat(32)}` as Hash;
-const permissionUserOpHash = `0x${"dd".repeat(32)}` as Hash;
 const policyTxHash = `0x${"ee".repeat(32)}` as Hash;
-const permissionTxHash = `0x${"ff".repeat(32)}` as Hash;
 const blockHash = `0x${"12".repeat(32)}` as Hash;
 
 const expectation: PolicyChainExpectation = {
   account,
-  accountPolicy: {
-    account,
-    chainId: "97",
-    ownerEpoch: "1",
-    permissionHash,
-    policyHash,
-    rootOwner: owner,
-    validUntil: "2000000000",
-  },
-  accountPolicyCallData: "0x1234",
   activePolicyHash: policyHash,
   chainId: "97",
   ownerEpoch: "1",
-  permissionCallData: "0x5678",
   permissionHash,
-  permissionTransactionHash: permissionTxHash,
-  permissionUserOperationHash: permissionUserOpHash,
   rootOwner: owner,
   transactionHash: policyTxHash,
   transition: "ACTIVATE",
+  transitionCallData: "0x1234",
   userOperationHash: policyUserOpHash,
 };
 
@@ -142,26 +128,22 @@ function client(currentBlock = 103n): PublicClient {
     async getCode({ address }: { address: Address }) {
       return code[address];
     },
-    async getTransaction({ hash }: { hash: Hash }) {
+    async getTransaction() {
       return {
-        input: userOperationInput(
-          hash === policyTxHash
-            ? expectation.accountPolicyCallData
-            : expectation.permissionCallData,
-        ),
+        input: userOperationInput(expectation.transitionCallData),
         to: entryPoint,
       };
     },
-    async getTransactionReceipt({ hash }: { hash: Hash }) {
+    async getTransactionReceipt() {
       return {
         blockHash,
         blockNumber: 100n,
-        logs:
-          hash === policyTxHash
-            ? [userOperationLog(policyUserOpHash, hash), accountPolicyLog()]
-            : [userOperationLog(permissionUserOpHash, hash)],
+        logs: [
+          userOperationLog(policyUserOpHash, policyTxHash),
+          accountPolicyLog(),
+        ],
         status: "success",
-        transactionHash: hash,
+        transactionHash: policyTxHash,
       };
     },
     async readContract() {
@@ -217,7 +199,7 @@ describe("P3-002 policy chain confirmation", () => {
     await expect(
       verifier().verify({
         ...expectation,
-        accountPolicyCallData: "0xabcd",
+        transitionCallData: "0xabcd",
       }),
     ).rejects.toThrow("lacks the expected smart-account call");
   });

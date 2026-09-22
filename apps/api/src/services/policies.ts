@@ -5,9 +5,8 @@ import {
   confirmPolicyActivationRequestSchema,
   confirmPolicyRevocationRequestSchema,
   createWalletPolicyRequestSchema,
-  encodeAccountExecute,
+  encodeAccountPolicyTransition,
   encodeInstallMandateSession,
-  encodeSetAccountPolicy,
   encodeUninstallMandateSession,
   getAccountPolicyTypedData,
   type Hash,
@@ -37,18 +36,14 @@ export type PolicyServiceConfig = {
 
 export type PolicyChainExpectation = {
   account: Address;
-  accountPolicy: AccountPolicy;
-  accountPolicyCallData: `0x${string}`;
   activePolicyHash: Hash;
   chainId: string;
   ownerEpoch: string;
-  permissionCallData: `0x${string}`;
   permissionHash: Hash;
-  permissionTransactionHash: Hash;
-  permissionUserOperationHash: Hash;
   rootOwner: Address;
   transactionHash: Hash;
   transition: "ACTIVATE" | "REVOKE";
+  transitionCallData: `0x${string}`;
   userOperationHash: Hash;
 };
 
@@ -323,25 +318,23 @@ export async function confirmPolicyActivation(
   });
   if (!validSignature) throw new Error("account policy signature is invalid");
 
-  const accountPolicyCallData = encodeAccountExecute({
-    data: encodeSetAccountPolicy(prepared.accountPolicy, request.rootSignature),
-    target: config.mandateExecutor,
-    value: 0n,
+  const transitionCallData = encodeAccountPolicyTransition({
+    account: identity.account,
+    mandateExecutor: config.mandateExecutor,
+    permissionCallData: prepared.permissionCallData,
+    policy: prepared.accountPolicy,
+    rootSignature: request.rootSignature,
   });
   const expectation: PolicyChainExpectation = {
     account: identity.account,
-    accountPolicy: prepared.accountPolicy,
-    accountPolicyCallData,
     activePolicyHash: prepared.policyHash,
     chainId: identity.chainId,
     ownerEpoch: prepared.accountPolicy.ownerEpoch,
-    permissionCallData: prepared.permissionCallData,
     permissionHash: prepared.permissionHash,
-    permissionTransactionHash: request.permissionTransactionHash,
-    permissionUserOperationHash: request.permissionUserOperationHash,
     rootOwner: identity.rootOwner,
     transactionHash: request.transactionHash,
     transition: "ACTIVATE",
+    transitionCallData,
     userOperationHash: request.userOperationHash,
   };
   const observation = await verifier.verify(expectation);
@@ -378,9 +371,9 @@ export async function confirmPolicyActivation(
         permission_document = ${tx.json(request.permission as unknown as JSONValue)},
         permission_hash = ${asBuffer(prepared.permissionHash)},
         permission_call_data = ${asBuffer(prepared.permissionCallData)},
-        permission_user_operation_hash = ${asBuffer(request.permissionUserOperationHash)},
-        permission_tx_hash = ${asBuffer(request.permissionTransactionHash)},
-        activation_call_data = ${asBuffer(accountPolicyCallData)},
+        permission_user_operation_hash = ${asBuffer(request.userOperationHash)},
+        permission_tx_hash = ${asBuffer(request.transactionHash)},
+        activation_call_data = ${asBuffer(transitionCallData)},
         activation_user_operation_hash = ${asBuffer(request.userOperationHash)},
         activation_tx_hash = ${asBuffer(request.transactionHash)},
         activation_block_number = ${observation.blockNumber.toString()},
@@ -472,25 +465,23 @@ export async function confirmPolicyRevocation(
   if (!validSignature)
     throw new Error("policy revocation signature is invalid");
 
-  const accountPolicyCallData = encodeAccountExecute({
-    data: encodeSetAccountPolicy(prepared.accountPolicy, request.rootSignature),
-    target: config.mandateExecutor,
-    value: 0n,
+  const transitionCallData = encodeAccountPolicyTransition({
+    account: identity.account,
+    mandateExecutor: config.mandateExecutor,
+    permissionCallData: prepared.permissionCallData,
+    policy: prepared.accountPolicy,
+    rootSignature: request.rootSignature,
   });
   const expectation: PolicyChainExpectation = {
     account: identity.account,
-    accountPolicy: prepared.accountPolicy,
-    accountPolicyCallData,
     activePolicyHash: prepared.revocationHash,
     chainId: identity.chainId,
     ownerEpoch: prepared.accountPolicy.ownerEpoch,
-    permissionCallData: prepared.permissionCallData,
     permissionHash: prepared.permissionHash,
-    permissionTransactionHash: request.permissionTransactionHash,
-    permissionUserOperationHash: request.permissionUserOperationHash,
     rootOwner: identity.rootOwner,
     transactionHash: request.transactionHash,
     transition: "REVOKE",
+    transitionCallData,
     userOperationHash: request.userOperationHash,
   };
   const observation = await verifier.verify(expectation);
@@ -509,6 +500,10 @@ export async function confirmPolicyRevocation(
     }
     await tx`
       update wallet_policies set status = 'REVOKED',
+        revocation_call_data = ${asBuffer(transitionCallData)},
+        revocation_user_operation_hash = ${asBuffer(request.userOperationHash)},
+        revocation_tx_hash = ${asBuffer(request.transactionHash)},
+        revocation_block_number = ${observation.blockNumber.toString()},
         terminal_at = ${observation.observedAt}
       where id = ${policyId}
     `;

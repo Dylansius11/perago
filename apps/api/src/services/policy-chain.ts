@@ -249,68 +249,36 @@ export function createViemPolicyChainVerifier(
         throw new Error("policy evidence is from the wrong chain");
       }
 
-      const [policyReceipt, permissionReceipt] = await Promise.all([
-        receiptOrPending(normalizedConfig.client, expectation.transactionHash),
-        receiptOrPending(
-          normalizedConfig.client,
-          expectation.permissionTransactionHash,
-        ),
-      ]);
-      if (!policyReceipt || !permissionReceipt) return { status: "PENDING" };
+      const receipt = await receiptOrPending(
+        normalizedConfig.client,
+        expectation.transactionHash,
+      );
+      if (!receipt) return { status: "PENDING" };
 
       const currentBlock = await normalizedConfig.client.getBlockNumber();
       const requiredDepth = BigInt(normalizedConfig.confirmationDepth);
-      if (
-        currentBlock - policyReceipt.blockNumber + 1n < requiredDepth ||
-        currentBlock - permissionReceipt.blockNumber + 1n < requiredDepth
-      ) {
+      if (currentBlock - receipt.blockNumber + 1n < requiredDepth) {
         return { status: "PENDING" };
       }
 
-      await Promise.all([
-        assertCanonicalReceipt(normalizedConfig.client, policyReceipt),
-        assertCanonicalReceipt(normalizedConfig.client, permissionReceipt),
-      ]);
+      await assertCanonicalReceipt(normalizedConfig.client, receipt);
       assertSuccessfulUserOperation(
-        policyReceipt,
+        receipt,
         expectation.transactionHash,
         expectation.userOperationHash,
         expectation.account,
         normalizedConfig.entryPoint,
       );
-      assertSuccessfulUserOperation(
-        permissionReceipt,
-        expectation.permissionTransactionHash,
-        expectation.permissionUserOperationHash,
+      await assertExactUserOperationCall(
+        normalizedConfig.client,
+        expectation.transactionHash,
         expectation.account,
+        expectation.transitionCallData,
         normalizedConfig.entryPoint,
       );
-      await Promise.all([
-        assertExactUserOperationCall(
-          normalizedConfig.client,
-          expectation.transactionHash,
-          expectation.account,
-          expectation.accountPolicyCallData,
-          normalizedConfig.entryPoint,
-        ),
-        assertExactUserOperationCall(
-          normalizedConfig.client,
-          expectation.permissionTransactionHash,
-          expectation.account,
-          expectation.permissionCallData,
-          normalizedConfig.entryPoint,
-        ),
-      ]);
-      assertPolicyEvent(
-        policyReceipt,
-        expectation,
-        normalizedConfig.mandateExecutor,
-      );
+      assertPolicyEvent(receipt, expectation, normalizedConfig.mandateExecutor);
 
-      const blockNumber =
-        policyReceipt.blockNumber > permissionReceipt.blockNumber
-          ? policyReceipt.blockNumber
-          : permissionReceipt.blockNumber;
+      const blockNumber = receipt.blockNumber;
       await assertPinnedCode(
         normalizedConfig.client,
         normalizedConfig,

@@ -21,8 +21,6 @@ export const preparePolicyTransitionRequestSchema = z.strictObject({
 
 export const confirmPolicyActivationRequestSchema =
   preparePolicyTransitionRequestSchema.extend({
-    permissionTransactionHash: hashSchema,
-    permissionUserOperationHash: hashSchema,
     rootSignature: signatureSchema,
     transactionHash: hashSchema,
     userOperationHash: hashSchema,
@@ -34,8 +32,6 @@ export const preparePolicyRevocationRequestSchema = z.strictObject({
 
 export const confirmPolicyRevocationRequestSchema =
   preparePolicyRevocationRequestSchema.extend({
-    permissionTransactionHash: hashSchema,
-    permissionUserOperationHash: hashSchema,
     rootSignature: signatureSchema,
     transactionHash: hashSchema,
     userOperationHash: hashSchema,
