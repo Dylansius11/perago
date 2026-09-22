@@ -166,14 +166,16 @@ An LLM candidate becomes executable only after every deterministic stage passes,
 ### 5.1 Policy setup and activation
 
 1. Web connects the user's external root wallet and deterministically derives the supported Modular Account V2 address for chain 97.
-2. Before first use, web/API validate EntryPoint, factory, implementation, validation module, and permission-module bytecode against the pinned deployment manifest.
-3. User provides policy fields; API validates addresses, decimals, enum values, duplicate assets/protocols, caps, slippage, recipients, expiry, and session ceiling.
-4. SDK canonicalizes the immutable policy document and computes `policyHash`.
-5. Web prepares one root-authorized UserOperation that registers/refreshes the root-owner epoch in MandateExecutor, sets `activePolicyHash`, and installs or replaces the executor permission with exact target/function/token/time ceilings. No root/global permission is allowed.
-6. The Alchemy bundler simulates and submits the UserOperation; a paymaster may sponsor it under a Perago policy capped by chain, method, account, and budget.
-7. API waits for configured confirmation depth and verifies smart account, root owner, EntryPoint, policy hash, permission configuration, chain, and events directly onchain.
-8. In one database transaction, the matching policy becomes `ACTIVE` and the previous active version becomes `SUPERSEDED`.
-9. Indexer later confirms the same events; reconciliation repairs any missed API write.
+2. API issues a short-lived challenge bound to its domain and URI, chain 97, root owner, derived smart account, random nonce, issue time, and expiry.
+3. The root wallet signs that exact message. API recovers the signer, locks and consumes the challenge once, creates or validates the wallet identity, and returns an opaque short-lived bearer token while persisting only its hash.
+4. Before first use, web/API validate EntryPoint, factory, implementation, validation module, and permission-module bytecode against the pinned deployment manifest.
+5. User provides policy fields; API validates addresses, decimals, enum values, duplicate assets/protocols, caps, slippage, recipients, expiry, and session ceiling.
+6. SDK canonicalizes the immutable policy document and computes `policyHash`.
+7. Web prepares one root-authorized UserOperation that registers/refreshes the root-owner epoch in MandateExecutor, sets `activePolicyHash`, and installs or replaces the executor permission with exact target/function/token/time ceilings. No root/global permission is allowed.
+8. The Alchemy bundler simulates and submits the UserOperation; a paymaster may sponsor it under a Perago policy capped by chain, method, account, and budget.
+9. API waits for configured confirmation depth and verifies smart account, root owner, EntryPoint, exact calldata and UserOperation events, policy hash, permission configuration, chain, canonical receipt blocks, and pinned bytecode directly onchain.
+10. In one database transaction, the matching policy becomes `ACTIVE` and the previous active version becomes `SUPERSEDED`.
+11. Indexer later confirms the same events; reconciliation repairs any missed API write.
 
 A draft policy or provider-side permission record has no execution effect. Offchain `ACTIVE` is a projection of the confirmed onchain policy hash and account permission state.
 

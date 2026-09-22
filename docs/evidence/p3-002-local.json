@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "task": "P3-002",
+  "label": "local",
+  "observedAt": "2026-09-22",
+  "implementationCommits": [
+    "2ad1d5f",
+    "9cd9ab7",
+    "92faadf",
+    "acb4d75",
+    "d7f2778"
+  ],
+  "environment": {
+    "database": "PostgreSQL 16.10",
+    "containerImage": "postgres:16.10-alpine",
+    "chainClient": "synthetic Viem PublicClient fixture",
+    "note": "The database and HTTP paths are real local integrations. The chain verifier fixture exercises decoded EntryPoint transactions, logs, block confirmation, contract state, and bytecode commitments without claiming a live BSC transaction."
+  },
+  "checks": [
+    {
+      "command": "pnpm --filter @perago/api test:db",
+      "result": "7 passed, 0 failed across persistence, signed wallet authentication, policy lifecycle, and real Hono request paths against a clean local PostgreSQL schema"
+    },
+    {
+      "command": "pnpm exec vitest run apps/api/src/services/policy-chain.test.ts",
+      "result": "4 passed, 0 failed; exact confirmed UserOperations, AccountPolicySet state, confirmation depth, exact calldata rejection, and pinned bytecode drift were exercised"
+    },
+    {
+      "command": "pnpm --filter @perago/api typecheck",
+      "result": "passed with no TypeScript diagnostics"
+    },
+    {
+      "command": "pnpm run check",
+      "result": "Biome checked 87 files with no fixes; all four configured workspace typecheck tasks and both configured workspace test tasks passed"
+    }
+  ],
+  "acceptance": {
+    "authentication": [
+      "the signed message binds domain, URI, root owner, derived smart account, chain 97, random nonce, issue time, and expiry",
+      "a row lock and database trigger permit exactly one challenge consumption",
+      "the API returns an opaque bearer token and stores only its SHA-256 hash",
+      "replay, expiry, account-owner mismatch, and invalid bearer tokens reject"
+    ],
+    "policyLifecycle": [
+      "policy documents are immutable and monotonically versioned",
+      "the session permission is restricted to the derived account, MandateExecutor target, perform selector, zero native spend, non-root session signer, and policy expiry",
+      "activation and revocation require a recovered root EIP-712 signature",
+      "ACTIVE or REVOKED is persisted only after exact confirmed chain evidence",
+      "stale owner, account, epoch, policy, permission, calldata, event, code hash, receipt block, or chain rejects"
+    ]
+  },
+  "scope": {
+    "proved": "local signed authentication, one-use challenge and hashed session persistence, authenticated HTTP policy routes, policy transition constraints, and the Viem verifier's deterministic treatment of EntryPoint calldata, UserOperation events, AccountPolicySet, accountConfig, canonical blocks, and pinned code",
+    "notClaimed": "BSC Testnet policy activation or revocation, a deployed MandateExecutor address, live Alchemy bundler or Gas Manager submission, production confirmation depth, hosted Supabase/PostgreSQL compatibility, or the accepted architecture's single-UserOperation policy transition"
+  },
+  "blockers": [
+    "MandateExecutor remains proposed and has no pinned BSC Testnet deployment manifest.",
+    "A live smoke needs fresh user-controlled root-wallet signing and rotated provider credentials; previously exposed disposable credentials must not be reused.",
+    "The local confirmation API models permission and policy evidence as separate exact UserOperations, while ARCHITECTURE.md specifies one root-authorized UserOperation; the live account path must prove an atomic encoding or the user must approve a specification change."
+  ]
+}

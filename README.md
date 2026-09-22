@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1 and 2 are complete; Phase 3 is in progress through `P3-001`.** The workspace and package manifests are pinned; the SDK owns the canonical mandate domain and account-abstraction encodings; the locally implemented MandateExecutor has authorization, accepted-attempt, and invariant proof; and the API now has the constrained PostgreSQL lifecycle schema plus transactional duplicate/reorg projection replay.
+**Phases 1 and 2 are complete; Phase 3 has local implementation through `P3-002`, whose live acceptance proof remains open.** The SDK owns the canonical mandate and policy domains; MandateExecutor has authorization, accepted-attempt, and invariant proof; and the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, and deterministic onchain-transition verification.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 
@@ -31,14 +31,14 @@ Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evi
 - a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
 - an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund.
 
-Also built: the approved Perago landing shell, 113 passing Foundry contract tests, and local PostgreSQL persistence that enforces active-policy, nonce, commerce-job, raw-event, terminal-field, immutability, and no-secret-column boundaries. Not built yet: API routes, wallet authentication, planner/compiler, simulations, executor service, production adapters/verifiers, settlement evaluator, or a live MandateExecutor deployment.
+Also built: the approved Perago landing shell, 113 passing Foundry contract tests, local PostgreSQL lifecycle constraints and reorg-safe projections, one-use root-wallet challenge authentication, and the policy activation/revocation service. The latter is local evidence only: no MandateExecutor is deployed on BSC Testnet yet, and the required live activation/revoke smoke has not passed. Not built yet: planner/compiler, simulations, executor service, production adapters/verifiers, settlement evaluator, or the full product journey.
 
 ## Planned repository map
 
 ```text
 apps/
   web/       Approved Perago landing shell; product journeys remain pending
-  api/       Lifecycle persistence and chain projections; routes/compiler pending
+  api/       Persistence, wallet authentication, policy lifecycle; compiler/simulation pending
   executor/  Constrained autonomous execution worker and existing probes
 packages/
   sdk/       Shared schemas, ABIs, typed clients
@@ -46,7 +46,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Current source includes the SDK domain/account layer, MandateExecutor contracts and proofs, read-only executor probes, the approved landing shell, and local API persistence/projection infrastructure. Phase 3 continues with wallet authentication and policy lifecycle.
+Current source includes the SDK domain/account layer, MandateExecutor contracts and proofs, read-only executor probes, the approved landing shell, and local API persistence, authentication, policy, and chain-verification infrastructure. Phase 3 remains on `P3-002` until its live BSC Testnet proof passes.
 
 ## Documentation
 

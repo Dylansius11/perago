@@ -1,6 +1,6 @@
 # Perago Data Model
 
-**Status:** Implemented locally through `P3-001`; API routes and live chain ingestion remain pending
+**Status:** Implemented locally through `P3-002`; live policy transition evidence and hosted deployment remain pending
 **System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
@@ -36,6 +36,7 @@ Canonical encodings and hashes are owned by `packages/sdk`. JSON documents are s
 ```mermaid
 erDiagram
   WALLETS ||--o{ WALLET_POLICIES : owns
+  WALLETS ||--o{ WALLET_SESSIONS : authenticates
   WALLETS ||--o{ TASKS : requests
   WALLET_POLICIES ||--o{ TASKS : constrains
   TASKS ||--o{ SIMULATIONS : evaluates
@@ -99,7 +100,24 @@ Only `ACTIVE` adapters may enter a new simulation or mandate.
 
 ## 5. Tables
 
-### 5.1 `wallets`
+### 5.1 `wallet_auth_challenges`
+
+One-use root-wallet authentication messages created before a wallet session exists.
+
+| Column | Type | Constraints / meaning |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `domain` / `uri` | text | not null; deployment origin binding |
+| `chain_id` | bigint | not null |
+| `account_address` / `root_owner_address` | bytea | exactly 20 bytes |
+| `nonce` | text | unique, cryptographically random |
+| `message` | text | immutable exact signed message |
+| `expires_at` / `created_at` | timestamptz | expiry must follow creation |
+| `consumed_at` | timestamptz | nullable; may transition from null exactly once |
+
+The message binds domain, URI, root owner, derived smart account, chain, nonce, issue time, and expiry. A row lock plus the immutability trigger makes verification one-use under concurrency.
+
+### 5.2 `wallets`
 
 One row per smart account on a chain.
 
@@ -126,7 +144,20 @@ Constraints:
 
 No private key, embedded-wallet share, session key, or recovery material is stored.
 
-### 5.2 `wallet_policies`
+### 5.3 `wallet_sessions`
+
+Short-lived API authorization for a verified wallet identity.
+
+| Column | Type | Constraints / meaning |
+| --- | --- | --- |
+| `token_hash` | bytea | PK; 32-byte SHA-256 hash, never the bearer token |
+| `wallet_id` | uuid | FK `wallets.id`, not null |
+| `expires_at` / `created_at` | timestamptz | expiry must follow creation |
+| `revoked_at` | timestamptz | nullable; may transition from null exactly once |
+
+The opaque bearer token is returned once. Authentication hashes the presented token and accepts only an unexpired, unrevoked row.
+
+### 5.4 `wallet_policies`
 
 Immutable, versioned policy documents.
 
@@ -139,6 +170,13 @@ Immutable, versioned policy documents.
 | `status` | `policy_status` | not null |
 | `policy_document` | jsonb | not null; canonical fields described by PRD |
 | `policy_hash` | bytea | 32 bytes, not null |
+| `permission_document` | jsonb | exact narrow session permission, nullable before submission |
+| `permission_hash` | bytea | 32-byte commitment, nullable before submission |
+| `permission_call_data` | bytea | exact install/uninstall calldata |
+| `permission_user_operation_hash` | bytea | 32-byte account-operation identity |
+| `permission_tx_hash` | bytea | 32-byte EntryPoint transaction identity |
+| `activation_call_data` | bytea | exact smart-account call to `setAccountPolicy` |
+| `activation_user_operation_hash` | bytea | 32-byte account-operation identity |
 | `activation_tx_hash` | bytea | nullable until activation submission |
 | `activation_block_number` | bigint | nullable until confirmed |
 | `created_at` | timestamptz | not null |
@@ -150,12 +188,14 @@ Constraints:
 - unique `(wallet_id, version)` and `(wallet_id, policy_hash)`;
 - at most one `ACTIVE` row per wallet via partial unique index;
 - immutable `policy_document`, `policy_hash`, and `version` after insert;
-- `ACTIVE` requires activation transaction/block and onchain active hash equality;
+- `ACTIVE` requires exact permission and activation calldata, UserOperation hashes, transaction hashes, confirmation block, and activation time;
+- activation evidence becomes immutable when the draft leaves `DRAFT`;
+- only `DRAFT → ACTIVATING → ACTIVE`, `ACTIVE → SUPERSEDED`, and legal revocation transitions are accepted;
 - `SUPERSEDED`/`REVOKED` require `terminal_at`.
 
 Daily cap usage is derived from confirmed `SUCCEEDED` and economically spent `FAILED` receipt evidence for the policy's declared day window. The corresponding smart-account permission uses the same token ceiling and expiry as an onchain backstop. Do not maintain an unbounded or non-rebuildable mutable counter.
 
-### 5.3 `tasks`
+### 5.5 `tasks`
 
 User-authored intent plus the deterministic compilation result.
 
@@ -185,7 +225,7 @@ Constraints:
 - a rejected task cannot have a mandate;
 - unknown JSON fields are rejected before persistence, not silently retained.
 
-### 5.4 `simulations`
+### 5.6 `simulations`
 
 Immutable result for one exact plan at one chain context.
 
@@ -212,7 +252,7 @@ Constraints:
 - immutable after insert except a derived `STALE` marker;
 - signable only when `PASSED`, unexpired, canonical block, active policy unchanged, adapter still `ACTIVE`, and current adapter code hash matches.
 
-### 5.5 `mandates`
+### 5.7 `mandates`
 
 One signed authorization and its chain-derived lifecycle projection.
 
@@ -252,7 +292,7 @@ Constraints:
 - terminal states require terminal transaction, reason, and timestamp;
 - state changes after `SIGNED` are accepted only from confirmed events or a verified direct chain read.
 
-### 5.6 `executions`
+### 5.8 `executions`
 
 Operational record for the single allowed mandate attempt.
 
@@ -282,7 +322,7 @@ Constraints:
 
 Detailed transport attempts may be stored in a bounded JSON audit field or structured logs; a separate table is added only if production diagnosis requires it.
 
-### 5.7 `verification_results`
+### 5.9 `verification_results`
 
 One immutable normalized verifier result per execution.
 
@@ -307,7 +347,7 @@ Constraints:
 - immutable;
 - `PASSED` is valid only when the matching contract receipt event says success.
 
-### 5.8 `execution_receipts`
+### 5.10 `execution_receipts`
 
 Public, immutable receipt projection. Private text is represented only by hashes.
 
@@ -338,7 +378,7 @@ Constraints:
 - non-success cannot have a settlement transaction that completed payment;
 - every field must reconcile to confirmed contract logs.
 
-### 5.9 `chain_events`
+### 5.11 `chain_events`
 
 Append-only raw event ledger.
 
@@ -362,7 +402,7 @@ Append-only raw event ledger.
 
 Rows are never deleted during normal reconciliation. An event may move `OBSERVED → CONFIRMED` or `OBSERVED/CONFIRMED → ORPHANED`; payload fields are immutable.
 
-### 5.10 `indexer_checkpoints`
+### 5.12 `indexer_checkpoints`
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
@@ -375,7 +415,7 @@ Rows are never deleted during normal reconciliation. An event may move `OBSERVED
 
 Checkpoint update and the corresponding event batch commit in one transaction. On hash mismatch, the indexer rewinds to the last canonical ancestor and replays projections.
 
-### 5.11 `protocol_adapters`
+### 5.13 `protocol_adapters`
 
 Small persisted deployment registry, not a protocol marketplace.
 
@@ -410,8 +450,8 @@ Constraints:
 
 | From | To | Required evidence |
 | --- | --- | --- |
-| DRAFT | ACTIVATING | Submitted smart-account UserOperation/transaction for exact policy hash |
-| ACTIVATING | ACTIVE | Confirmed `ActivePolicyHashSet` event and current onchain read |
+| DRAFT | ACTIVATING | Confirmed exact policy and permission evidence is persisted before the terminal transition in the same transaction; pending submissions remain `DRAFT` |
+| ACTIVATING | ACTIVE | Confirmed exact `AccountPolicySet` event, successful permission UserOperation, current `accountConfig`, canonical receipt blocks, and pinned code hashes |
 | ACTIVE | SUPERSEDED | Confirmed activation of a later version |
 | DRAFT/ACTIVE | REVOKED | User cancellation before activation or confirmed zero/new policy hash invalidating it |
 
@@ -437,6 +477,8 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 
 | API capability | Reads | Writes |
 | --- | --- | --- |
+| Request authentication challenge | none | immutable `wallet_auth_challenges` row |
+| Verify challenge | locked challenge + derived account | consume challenge once, upsert `wallets`, create hashed `wallet_sessions` row |
 | Create/read policy | `wallets`, `wallet_policies` | new `wallet_policies` draft |
 | Activate policy | `wallets`, `wallet_policies`, `chain_events` | activation projection after user submission |
 | Create intent | `wallets`, active policy | `tasks` |
@@ -469,7 +511,8 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 | Intent/plan/policy/simulation hashes | Indefinite for receipt verification |
 | Full immutable policy and typed plan | Account lifetime plus 90 days; export/delete subject to onchain hash permanence |
 | Signatures | Until mandate terminal plus 90 days; public by nature but access/audit restricted |
-| Session/private keys, wallet shares, recovery data | Never stored |
+| Wallet authentication challenges and hashed bearer sessions | Delete after expiry plus operational audit window; raw bearer tokens are never stored |
+| Executor/session signing private keys, wallet shares, recovery data | Never stored |
 | Raw chain events and public receipts | Indefinite |
 | Structured application logs | 14 days for hackathon, redacted |
 | Planner request/response | 7 days maximum, no secrets; disable provider training where configurable |
@@ -478,4 +521,4 @@ Public receipt responses never expose raw intent text, private policy detail, IP
 
 ## 10. Deliberately omitted tables
 
-No users/profile table is required for the wallet-first MVP; `wallets` is the principal. No agents, listings, categories, reputation, leaderboard, sessions, token prices, generic transactions, or marketplace jobs table is created. ERC-8183 job state remains onchain and its identity/status is projected through mandate/receipt fields. Add a separate job projection only if query load or multiple jobs per mandate later proves it necessary.
+No users/profile table is required for the wallet-first MVP; `wallets` is the principal. No agents, listings, categories, reputation, leaderboard, token prices, generic transactions, or marketplace jobs table is created. The narrowly scoped `wallet_sessions` table is API authentication state, not a wallet/session signing-key store. ERC-8183 job state remains onchain and its identity/status is projected through mandate/receipt fields. Add a separate job projection only if query load or multiple jobs per mandate later proves it necessary.
