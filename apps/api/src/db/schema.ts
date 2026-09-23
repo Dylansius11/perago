@@ -388,6 +388,27 @@ export const tasks = pgTable(
       "task_passing_plan_fields",
       sql`${table.status} not in ('READY_TO_SIMULATE', 'SIMULATED', 'READY_TO_SIGN', 'SIGNED') or (${table.compiledPlan} is not null and ${table.planHash} is not null and ${table.compilerVersion} is not null and ${table.policyDecision} is not null and ${table.policyDecisionHash} is not null)`,
     ),
+    check(
+      "task_decision_fields_together",
+      sql`(${table.policyDecision} is null) = (${table.policyDecisionHash} is null) and (${table.policyDecision} is null) = (${table.compilerVersion} is null)`,
+    ),
+    check(
+      "task_plan_fields_together",
+      sql`(${table.compiledPlan} is null) = (${table.planHash} is null) and (${table.compiledPlan} is null or ${table.policyDecision} is not null)`,
+    ),
+    check(
+      "task_uncompiled_fields",
+      sql`${table.status} not in ('DRAFT', 'COMPILING') or (${table.policyDecision} is null and ${table.compiledPlan} is null)`,
+    ),
+    check(
+      "task_rejected_fields",
+      sql`${table.status} <> 'REJECTED_POLICY' or (${table.policyDecision} is not null and ${table.compiledPlan} is null)`,
+    ),
+    check(
+      "task_cancellation_time",
+      sql`(${table.status} = 'CANCELLED') = (${table.cancelledAt} is not null)`,
+    ),
+    index("task_wallet_policy_idx").on(table.walletPolicyId),
   ],
 );
 

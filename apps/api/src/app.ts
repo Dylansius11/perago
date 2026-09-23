@@ -4,17 +4,22 @@ import { ZodError } from "zod";
 
 import { createAuthRoutes } from "./auth/routes.js";
 import type { WalletAuthConfig } from "./auth/wallet-auth.js";
+import type { Planner } from "./planner/provider.js";
 import { createPolicyRoutes } from "./routes/policies.js";
+import { createTaskRoutes } from "./routes/tasks.js";
 import type {
   PolicyChainVerifier,
   PolicyServiceConfig,
 } from "./services/policies.js";
+import type { TaskServiceConfig } from "./services/tasks.js";
 
 export function createApiApp(input: {
   authConfig: WalletAuthConfig;
+  planner: Planner;
   policyConfig: PolicyServiceConfig;
   policyVerifier: PolicyChainVerifier;
   sql: Sql;
+  taskConfig: TaskServiceConfig;
 }) {
   const app = new Hono();
   app.route("/auth", createAuthRoutes(input.sql, input.authConfig));
@@ -25,6 +30,15 @@ export function createApiApp(input: {
       policyConfig: input.policyConfig,
       policyVerifier: input.policyVerifier,
       sql: input.sql,
+    }),
+  );
+  app.route(
+    "/tasks",
+    createTaskRoutes({
+      authConfig: input.authConfig,
+      planner: input.planner,
+      sql: input.sql,
+      taskConfig: input.taskConfig,
     }),
   );
 

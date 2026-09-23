@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import type { Sql } from "postgres";
 
 import {
-  authenticateWalletSession,
-  type WalletAuthConfig,
-  type WalletIdentity,
-} from "../auth/wallet-auth.js";
+  requireWalletSession,
+  type WalletRouteBindings,
+} from "../auth/middleware.js";
+import type { WalletAuthConfig } from "../auth/wallet-auth.js";
 import {
   confirmPolicyActivation,
   confirmPolicyRevocation,
@@ -16,50 +16,15 @@ import {
   preparePolicyRevocation,
 } from "../services/policies.js";
 
-type PolicyRouteBindings = {
-  Variables: {
-    wallet: WalletIdentity;
-  };
-};
-
 export function createPolicyRoutes(input: {
   authConfig: WalletAuthConfig;
   policyConfig: PolicyServiceConfig;
   policyVerifier: PolicyChainVerifier;
   sql: Sql;
 }) {
-  const routes = new Hono<PolicyRouteBindings>();
+  const routes = new Hono<WalletRouteBindings>();
 
-  routes.use("*", async (context, next) => {
-    const authorization = context.req.header("authorization");
-    const match = /^Bearer ([A-Za-z0-9_-]{43,128})$/u.exec(authorization ?? "");
-    if (!match?.[1]) {
-      return context.json(
-        {
-          error: { code: "AUTH_REQUIRED", message: "wallet session required" },
-        },
-        401,
-      );
-    }
-    try {
-      context.set(
-        "wallet",
-        await authenticateWalletSession(
-          input.sql,
-          match[1],
-          input.authConfig.now(),
-        ),
-      );
-    } catch {
-      return context.json(
-        {
-          error: { code: "AUTH_INVALID", message: "wallet session is invalid" },
-        },
-        401,
-      );
-    }
-    await next();
-  });
+  routes.use("*", requireWalletSession(input.sql, input.authConfig));
 
   routes.post("/", async (context) => {
     const created = await createWalletPolicy(
