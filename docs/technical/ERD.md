@@ -262,6 +262,7 @@ Constraints:
 - unique `(task_id, sequence)` and `simulation_hash`;
 - immutable after insert except a derived `STALE` marker;
 - signable only when `PASSED`, unexpired, canonical block, active policy unchanged, adapter still `ACTIVE`, and current adapter code hash matches.
+- a task enters `SIMULATED` or `READY_TO_SIGN` only while its highest-`sequence` simulation is `PASSED` (trigger `task_signable_evidence`, migration `0003`); a `SIGNED` task requires its `SIGNED` mandate.
 
 ### 5.7 `mandates`
 
@@ -302,6 +303,7 @@ Constraints:
 - signed fields and signature are immutable;
 - terminal states require terminal transaction, reason, and timestamp;
 - state changes after `SIGNED` are accepted only from confirmed events or a verified direct chain read.
+- a mandate is inserted only as `SIGNED`, only against the task's latest `PASSED` simulation with the same adapter and chain while the task is `READY_TO_SIGN`, and only under the wallet's `ACTIVE` policy (trigger `mandate_insert_evidence`, migration `0003`).
 
 ### 5.8 `executions`
 
@@ -330,6 +332,7 @@ Constraints:
 - active lease requires owner and future expiry;
 - retries reuse identical signed payload/action and reconcile chain/UserOperation status first;
 - `TERMINAL` requires matching mandate terminal state, not just a worker decision.
+- a row is inserted only as `QUEUED` with no lease and zero submission attempts, and only for a `SIGNED` mandate (trigger `execution_insert_queue`, migration `0003`).
 
 Detailed transport attempts may be stored in a bounded JSON audit field or structured logs; a separate table is added only if production diagnosis requires it.
 

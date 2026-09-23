@@ -1,7 +1,7 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Evidence-backed through `P3-002`; chain-97 account, protocol, settlement, and atomic policy-transition proofs exist, while production adapters and deployment remain pending
-**Reviewed:** 2026-09-22
+**Status:** Evidence-backed through `P3-004`; chain-97 account, protocol, settlement, atomic policy-transition, production adapter, and pre-signature simulation proofs exist, while the executor lifecycle through a smart account remains pending
+**Reviewed:** 2026-09-23
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Evidence policy and statuses
@@ -35,7 +35,7 @@ No entry is marked “integrated” in this phase.
 | PancakeSwap CAKE Pool | Single-asset stake | `verified` | Selected; deposit, share position, and fee-bearing withdrawal proven from the smart account. |
 | USD1 | Mainnet payment-token candidate | `needs re-verification` | Official BSC mainnet address exists; not a testnet token. |
 | APEX payment token (United Stables `U`) | ERC-8183 demo payment token | `verified` | Selected; upstream labels it USDC, onchain it is `U`. No faucet: funded through one V2 pair. |
-| Quote + pinned `eth_call` + UserOp simulation | Pre-sign simulation | `proposed` | Initial simulation source; add no third-party simulator until evidence requires it. |
+| Quote + pinned `eth_call` state override | Pre-sign simulation | `verified` | Selected in `P3-004`: a QuoterV2 quote or exact-path share estimate at one pinned block, then the account's exact calls run against the production executor, adapter, verifier, and protocol through one `eth_call` with a state override (section 11). Proven on a chain-97 fork and read-only on chain 97 ([evidence](../evidence/bsc-testnet.fork.phase3-smoke.json)). Bundler UserOperation simulation belongs to execution (`P4-002`), because a mandate cannot be authorized before it is signed. No third-party simulator is added. |
 | Groq `openai/gpt-oss-120b` | Untrusted intent planner | `verified` | Selected in `P3-003`; strict `json_schema` constrained decoding returned only the closed candidate across a ten-intent matrix on 2026-09-23 ([evidence](../evidence/p3-003-planner-live.json)). It never authorizes; the deterministic compiler owns every value. Sources: [structured outputs](https://console.groq.com/docs/structured-outputs), [data retention](https://console.groq.com/docs/your-data). |
 
 ## 3. BNB Smart Chain
@@ -111,7 +111,7 @@ Perago allows only the combination now proven enforceable on the deployed module
 
 Both locally replayed chain-97 bytecode and signed chain-97 execution confirm the enforcement: the allowlisted call is accepted, while an unrelated target and an unallowlisted selector fail the allowlist hook, `installValidation` and a revoked session fail validation lookup, a self-call exceeds the account's self-call recursion guard, an over-limit spend reverts before any value moves, and an expired session fails the time-range window. Each rejection reason is decoded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md).
 
-Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. Token spend for a swap must therefore be authorized inside one account-executed call, or bounded by the AllowlistModule ERC-20 spend limit. That choice is decision gate `D-004` and is resolved with the swap adapter, not by widening the session.
+Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. The production adapters did not remove the need: `MandateExecutor.executeCore` pulls exactly `maxInput` from the account with `transferFrom`, so the account must grant that exact allowance to MandateExecutor in the same execution as `perform`, either inside one account-executed call or bounded by the AllowlistModule ERC-20 spend limit. That choice is decision gate `D-004`, now owned by `P4-002`, and it is never resolved by widening the session. The `P3-004` simulation already runs the account calls as `approve(MandateExecutor, maxInput)` then `perform`, and shows that a successful attempt consumes the approval exactly while a `FAILED` attempt leaves it unconsumed, so the execution path must also clear it.
 
 A contract/function allowlist can still permit malicious arguments. MandateExecutor independently validates the root Task Mandate, action hash, amount, recipient, protocol, nonce, and postcondition.
 
@@ -276,26 +276,33 @@ It documents 18 decimals. USD1 is a mainnet candidate, not a BSC Testnet address
 
 ## 11. Simulation source and limitations
 
-### Initial deterministic stack
+### Implemented deterministic stack (`P3-004`)
 
-1. Read smart-account/token balances, active policy, nonces, account/module/adapter code hashes, protocol state, and latest safe block.
-2. Pin a block number/hash for all compatible reads.
-3. Obtain protocol quote from PancakeSwap `QuoterV2` or staking share/price views.
-4. Compile the exact closed action and Task Mandate fields.
-5. Run `eth_call`/Viem `simulateContract` for adapter validation/execution from the intended call context where possible.
-6. Run ERC-4337 UserOperation gas/simulation through the selected bundler for account permission/paymaster validation.
-7. Re-read expected recipient/position balances and compute the advertised expected delta/minimum.
-8. Store all requests, results, code hashes, block context, quote deadline, and limitations in `SimulationResult`.
+Implemented in `apps/api/src/simulation/` and verified by `pnpm --filter @perago/api smoke:phase3` ([evidence](../evidence/bsc-testnet.fork.phase3-smoke.json)).
+
+1. Pin one block: the `finalized` tag on a live chain (`SC-D-005`), `latest` on a local fork, which has no separate finality. Every read below uses that block number.
+2. Read the account's `accountConfig`, the ERC-1967 implementation slot, and the code hashes of the account, MandateExecutor, adapter, verifier, and protocol target; confirm the executor pins this adapter and verifier and every code hash matches the reviewed manifest. Refuse an unregistered account, a mismatched owner, epoch, or policy hash, an executor that requires an ERC-8183 job Perago cannot yet create, a session permission that expires before the mandate, and an input balance below the spend.
+3. Estimate the outcome: PancakeSwap `QuoterV2.quoteExactInputSingle` for a swap; for a stake, the exact path itself run once with `minPositionOut = 1`, because the CAKE Pool mints shares against its live balance. The signed minimum is the estimate less the plan's slippage bound, rounded down; a zero minimum is refused.
+4. Build the canonical action, `actionHash`, `postconditionHash`, a random 128-bit nonce, the chain-time expiry, and a quote deadline no later than that expiry.
+5. Run the account's exact execution calls in one `eth_call` at the pinned block: `MandateSimulationHarness` runtime code is installed at the account address by state override, MandateExecutor's `_mandates[digest]` record is overridden to `EXECUTING` for a one-off simulation executor key (storage slot 2, `forge inspect MandateExecutor storageLayout`), and the harness calls `approve(MandateExecutor, maxInput)` then the real `perform`. MandateExecutor, adapter, verifier, and protocol all run their deployed code. The harness reverts if the injected record is not where the executor reads it, so a layout drift fails closed. A `PASSED` result requires `SUCCEEDED`, exact spend, an outcome at or above the minimum, and no allowance left.
+6. Store the request, the result, every code hash, the block, and the quote deadline in `SimulationResult`; its hash is the mandate's `simulationHash`, and the mandate is derived from the document alone (`taskMandateFromSimulation`).
+
+The fork suite `test/fork/MandateSimulationHarness.fork.t.sol` proves step 5 predicts the real `authorize` → `beginExecution` → `approve` → `perform` path from the same state: equal spend, equal outcome delta, and an identical `verificationHash`, for both the swap and the stake.
+
+`eth_simulateV1` was measured and rejected as the primary mechanism on 2026-09-23: Alchemy's chain-97 endpoint serves it, but a local anvil fork answers every `eth_simulateV1` request with `Required data unavailable`, while `eth_call` state overrides work on both. One mechanism serves the fork smoke and the live chain.
+
+### Freshness at prepare and signature
+
+Preparing the signing payload and accepting a signature each re-read, at a newly pinned block: the canonical hash at the simulated height, chain time against the quote deadline, the policy row and the onchain active policy hash, the onchain and stored owner and epoch, the account code and implementation, the executor, adapter, verifier, and protocol code hashes, and the nonce. Any change marks the simulation `STALE`, returns the task to `READY_TO_SIMULATE`, and refuses with a `STALE_*` reason code. Signature acceptance also re-runs the exact path with the signed mandate itself, evaluates `authorize` with `eth_call` from the bound executor, and re-runs every Wallet Policy rule, including the rolling daily cap, inside the transaction that writes the mandate.
 
 ### Limitations
 
 - `eth_call` proves execution against one state snapshot; it does not guarantee inclusion state or ordering.
 - Quoter output is not a minimum; the signed `minOutput` is derived from the user's slippage bound.
-- Bundler simulation may differ from inclusion and is provider-operated.
-- Public BSC RPCs may not expose full state diffs or trace methods.
+- The simulation skips account validation (session signature, permission hooks, EntryPoint accounting). Those are proven in `P1-003`/`P3-002` and are simulated through the bundler at execution time (`P4-002`).
 - Balance before/expected-after values are estimates until a transaction is mined.
 - MEV can move price within accepted limits; exceeding limits must revert.
-- A third-party simulator is not added unless Phase 3 cannot produce judge-verifiable facts with this stack. If added, its result remains advisory and contract limits stay authoritative.
+- A third-party simulator is not added: this stack produced judge-verifiable facts in `P3-004`. If one is ever added, its result stays advisory and contract limits stay authoritative.
 
 ## 12. Address and capability validation procedure
 

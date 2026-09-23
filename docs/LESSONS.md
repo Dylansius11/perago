@@ -4,6 +4,24 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-23 - Simulate the exact onchain path with `eth_call` state overrides, not `eth_simulateV1`
+
+- Observed: Alchemy's chain-97 endpoint serves `eth_simulateV1`, but a local anvil fork answers every request with `Required data unavailable`, so a simulator built on it could never be proven on the fork.
+- Root cause: `eth_simulateV1` support differs by node implementation, while `eth_call` with code and storage overrides is served identically by the live RPC and the fork.
+- Rule: run preflight as one pinned-block `eth_call` that installs a never-deployed harness at the account address and overrides only the one mandate record needed to reach `perform`. Prove on a fork that it predicts the real `authorize` → `beginExecution` → `perform` path (equal spend, outcome, and `verificationHash`). Any slot-layout drift then fails closed, never open.
+
+### 2026-09-23 - A rejection test must break exactly one invariant
+
+- Observed: the mutation audit showed that deleting the SDK `maxInput`, `minOutput`, and `recipient` equality checks survived the tests that claimed to cover them.
+- Root cause: each fixture changed one field, which also broke a neighbouring check (spent balance or postcondition hash), so the suite rejected the fixture for another reason.
+- Rule: a rejection fixture keeps every other commitment consistent with the changed field, so that only the guard under test can reject it; confirm with a mutation audit of each guard.
+
+### 2026-09-23 - A fork whale trade needs a price limit
+
+- Observed: an unbounded 50 WBNB `exactInputSingle` on a thin chain-97 pool hung the anvil fork past a 180-second RPC timeout.
+- Root cause: the swap crossed to the tick bound, and the fork lazily fetched every empty tick-bitmap word from the remote RPC.
+- Rule: bound a fork price-moving trade with `sqrtPriceLimitX96` derived from the pool's current `slot0`, just past the move the test needs.
+
 ### 2026-09-23 - Forge does not load the repository root `.env`; a green fork suite may be reading the machine environment
 
 - Observed: the chain-97 fork suite ran without any env loading, which looked like Forge reading the root `.env`; a newly added `PERAGO_BSC_MAINNET_RPC` then silently skipped the whole mainnet suite.

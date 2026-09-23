@@ -196,6 +196,7 @@ The smart-account session permission is transport authority only: it may submit 
 - Constrained executor with idempotent UserOperation/transaction reconciliation.
 - Adapter-specific verification and public Execution Receipt.
 - ERC-8183 job linkage and settlement after successful verification.
+- A BSC Testnet-only tBNB faucet in the web client, so a tester can fund a smart account's gas and swap input without leaving Perago (`PRD-F-018`).
 
 ### Explicit non-goals
 
@@ -235,6 +236,7 @@ The smart-account session permission is transport authority only: it may submit 
 | PRD-F-015 | The executor resumes safely after restart and treats duplicate work delivery as an idempotent reconciliation or status read. |
 | PRD-F-016 | Every terminal state exposes a stable machine-readable reason code and human-readable explanation. |
 | PRD-F-017 | Policy activation and revocation support sponsored or batched ERC-4337 UserOperations without granting the paymaster, bundler, or executor root ownership. |
+| PRD-F-018 | On BSC Testnet only, an authenticated wallet can claim a fixed small amount of tBNB for its own smart account from a Perago-funded faucet: at most one claim per wallet per rolling 24 hours, refused when the account already holds enough, under a global daily budget and a per-client rate limit. The faucet key holds only faucet funds and no other authority, and the faucet does not exist on any mainnet deployment. |
 
 ### Security and trust requirements
 
@@ -328,6 +330,7 @@ Do not add ERC-8004 solely for category coverage. It enters scope only if a targ
 | PRD-F-013, PRD-S-004 | Revoke and expiry races have one terminal winner; subsequent execute calls fail without protocol side effects. |
 | PRD-F-014, PRD-S-012 | ERC-8183 completes only from a matching `SUCCEEDED` receipt; failed/revoked/expired/mismatched evidence cannot release payment. |
 | PRD-F-015–016, PRD-O-001–003 | Restart and duplicate-delivery smoke scenarios preserve one onchain attempt and expose traceable terminal reason/evidence. |
+| PRD-F-018 | On BSC Testnet an authenticated wallet receives one faucet claim for its own smart account; a second claim inside 24 hours, a funded account, an exhausted daily budget, an unauthenticated caller, and any non-testnet configuration are refused, and the faucet key holds no role in any Perago contract, account, or session. |
 | PRD-O-004 | All phase gates and repository verification commands pass before merge. |
 
 Task-level mapping is canonical in [`BUILD-PLAN.md`](BUILD-PLAN.md).
