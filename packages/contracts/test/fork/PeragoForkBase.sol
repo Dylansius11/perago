@@ -12,13 +12,9 @@ import {PeragoTypes} from "../../src/types/PeragoTypes.sol";
 /// literals, and every fork test is skipped - not failed - when no RPC is configured,
 /// so the offline suite stays deterministic.
 abstract contract PeragoForkBase is Test {
-    /// A chain-97 block after the manifest's verification block; pinned so quotes,
-    /// pool state, and gas are reproducible across runs.
-    uint256 internal constant FORK_BLOCK = 132_658_000;
     uint48 internal constant EXECUTION_WINDOW = 15 minutes;
     uint48 internal constant MANDATE_LIFETIME = 30 minutes;
     uint48 internal constant PROOF_LIFETIME = 5 minutes;
-    string private constant MANIFEST = "../../deployments/bsc-testnet.protocols.json";
 
     bool internal forkReady;
 
@@ -32,14 +28,28 @@ abstract contract PeragoForkBase is Test {
     MandateExecutor internal executor;
 
     modifier onFork() {
-        if (!forkReady) vm.skip(true, "PERAGO_BSC_TESTNET_RPC is not set");
+        if (!forkReady) vm.skip(true, string.concat(_forkRpcEnv(), " is not set"));
         _;
     }
 
+    /// @dev The network a suite forks. Chain 97 by default: a block after the manifest's
+    /// verification block, pinned so quotes, pool state, and gas are reproducible.
+    function _forkRpcEnv() internal pure virtual returns (string memory) {
+        return "PERAGO_BSC_TESTNET_RPC";
+    }
+
+    function _forkBlock() internal pure virtual returns (uint256) {
+        return 132_658_000;
+    }
+
+    function _manifestPath() internal pure virtual returns (string memory) {
+        return "../../deployments/bsc-testnet.protocols.json";
+    }
+
     function _selectFork() internal {
-        string memory rpc = vm.envOr("PERAGO_BSC_TESTNET_RPC", string(""));
+        string memory rpc = vm.envOr(_forkRpcEnv(), string(""));
         if (bytes(rpc).length == 0) return;
-        vm.createSelectFork(rpc, FORK_BLOCK);
+        vm.createSelectFork(rpc, _forkBlock());
         forkReady = true;
         rootOwner = vm.addr(rootOwnerKey);
         executorSigner = vm.addr(executorKey);
@@ -47,7 +57,15 @@ abstract contract PeragoForkBase is Test {
     }
 
     function _manifestAddress(string memory key) internal view returns (address) {
-        return vm.parseJsonAddress(vm.readFile(MANIFEST), string.concat(".contracts.", key, ".address"));
+        return vm.parseJsonAddress(vm.readFile(_manifestPath()), string.concat(".contracts.", key, ".address"));
+    }
+
+    /// @dev The pinned swap route's fee, read from the same catalog the compiler uses.
+    function _manifestSwapFee() internal view returns (uint24) {
+        string memory fee = vm.parseJsonString(
+            vm.readFile(_manifestPath()), ".plannerCatalog.adapters.pancakeswap-v3.routes[0].poolFee"
+        );
+        return uint24(vm.parseUint(fee));
     }
 
     function _register() internal {

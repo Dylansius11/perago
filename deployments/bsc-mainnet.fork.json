@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "chainId": 56,
+  "label": "mainnet-fork-only",
+  "warning": "BSC Mainnet addresses pinned solely so contract tests can run on a read-only mainnet fork. Chain 56 is not a Perago transaction target until a separate mainnet approval gate.",
+  "verifiedAt": {
+    "blockNumber": "123518579",
+    "blockHash": "0xfd3c03a308253df7803bd39db25a072cd4876e1046929d4b11b45cf3680e64a6",
+    "blockTimestamp": "1790145576"
+  },
+  "sources": {
+    "pancakeV3": "https://developer.pancakeswap.finance/contracts/v3/addresses"
+  },
+  "contracts": {
+    "pancakeV3Factory": {
+      "address": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+      "codeHash": "0x8191d3ab1d55d3da9822199f28865415c99566b6f1aee4a4b16713f57930678c",
+      "role": "Factory read from the router and matched to the official page."
+    },
+    "pancakeV3SwapRouter": {
+      "address": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
+      "codeHash": "0x61002a11263b2c38ff8d5ded90a655987ed98f171a31840ee0014dd7052bccda",
+      "role": "Official V3 SwapRouter; the only swap entry point."
+    },
+    "pancakeV3QuoterV2": {
+      "address": "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
+      "codeHash": "0x2734833b7d2a656d4797f4a7d959314654749a7424ec473267613ff26424138a",
+      "role": "Official QuoterV2 for fork quotes."
+    },
+    "masterChefV3": {
+      "address": "0x556B9306565093C855AEA9AE92A594704c2Cd59e",
+      "codeHash": "0xd012b44e5379e9c66fee7835a39449b24533f92d57a593504bc075c168f617d7",
+      "role": "Official MasterChefV3; read only to resolve CAKE."
+    },
+    "wbnb": {
+      "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+      "codeHash": "0xb7d84205eaaf83ce7b3940c6beaad6d22790255e34a9a2b486aa8cdfff118fe6",
+      "role": "Read from router.WETH9(), never hand-copied."
+    },
+    "cake": {
+      "address": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+      "codeHash": "0x21b2b23f1103cfdca4d9dd3ba0480364852b6cc3c71497a1f3f0bd7d4b56264c",
+      "role": "Read from MasterChefV3.CAKE(), never hand-copied."
+    }
+  },
+  "directPools": [
+    {
+      "fee": 2500,
+      "pool": "0x133B3D95bAD5405d14d53473671200e9342896BF",
+      "liquidity": "246695000591476448295705"
+    },
+    {
+      "fee": 500,
+      "pool": "0xAfB2Da14056725E3BA3a30dD846B6BBbd7886c56",
+      "liquidity": "127958206405660582865221"
+    },
+    {
+      "fee": 100,
+      "pool": "0x1E213600FA9317FEAC4Ef4087acDF5D0e25D7187",
+      "liquidity": "299864724002422145061"
+    },
+    {
+      "fee": 10000,
+      "pool": "0xd710DaC10B7255fCc0eC929a0e742A18F25b6395",
+      "liquidity": "80079625899090830276"
+    }
+  ],
+  "plannerCatalog": {
+    "note": "Same shape as the testnet catalog so fork suites resolve the route identically; the deepest direct WBNB/CAKE pool at the pinned block.",
+    "tokens": ["wbnb", "cake"],
+    "adapters": {
+      "pancakeswap-v3": {
+        "kind": "SWAP",
+        "routes": [
+          {
+            "tokens": ["wbnb", "cake"],
+            "poolFee": "2500"
+          }
+        ]
+      }
+    }
+  }
+}

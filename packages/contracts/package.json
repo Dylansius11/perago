@@ -1,5 +1,9 @@
 {
   "name": "@perago/contracts",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test:fork": "node --env-file-if-exists=../../.env script/forge-env.mjs test --match-path test/fork/*",
+    "deploy:testnet": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployPerago.s.sol --rpc-url bsc_testnet --broadcast --slow"
+  }
 }

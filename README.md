@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1 and 2 are complete; Phase 3 is complete through `P3-003`, and `P3-004` is the next unopened task.** The SDK owns the canonical mandate, policy, planner-candidate, compiled-plan, and policy-decision domains; MandateExecutor has authorization, accepted-attempt, and invariant proof; and the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, deterministic onchain-transition verification, and an untrusted Groq planner feeding a deterministic compiler that reports every Wallet Policy rule.
+**Phases 1 and 2 are complete; Phase 3 is complete through `P3-003`, and `P3-004` (simulation and signing payload) is next.** By user decision `P4-001` and `P5-001` were built first so simulation runs against real adapters: the bounded PancakeSwap V3 swap and the CAKE Pool stake (through per-recipient position holders) are implemented, fork-tested on chain 97 and BSC mainnet, deployed with a production MandateExecutor on chain 97 ([`deployments/bsc-testnet.perago.json`](deployments/bsc-testnet.perago.json)), and proven live ([`docs/evidence/bsc-testnet.adapters-live.json`](docs/evidence/bsc-testnet.adapters-live.json)). The SDK owns the canonical mandate, policy, planner-candidate, compiled-plan, policy-decision, and closed action encodings; the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, onchain-transition verification, and an untrusted Groq planner feeding a deterministic compiler.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 
@@ -47,7 +47,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Current source includes the SDK domain/account layer, MandateExecutor contracts and proofs, executor probes, the approved landing shell, and API persistence, authentication, policy, chain-verification, planner, and compiler infrastructure. Phase 3 stops after completed `P3-003`; `P3-004` starts only on explicit user instruction.
+Current source includes the SDK domain/account/action layer, MandateExecutor with the production swap and stake adapters and verifiers, executor probes, the approved landing shell, and API persistence, authentication, policy, chain-verification, planner, and compiler infrastructure. `P3-004` is next.
 
 ## Documentation
 

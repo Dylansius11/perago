@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-23 - Forge does not load the repository root `.env`; a green fork suite may be reading the machine environment
+
+- Observed: the chain-97 fork suite ran without any env loading, which looked like Forge reading the root `.env`; a newly added `PERAGO_BSC_MAINNET_RPC` then silently skipped the whole mainnet suite.
+- Root cause: `PERAGO_BSC_TESTNET_RPC` was also set in the workstation's own environment, so the first suite passed for a reason that does not hold on another machine; Forge reads process environment variables, not the monorepo root `.env`.
+- Rule: load `.env` explicitly (`pnpm --filter @perago/contracts test:fork` runs Node with `--env-file-if-exists`) and treat an unexpectedly skipped suite as a failed prerequisite, never as a pass.
+
 ### 2026-09-23 - `vm.revertToState` also reverts the test contract's own storage
 
 - Observed: the stake fork `setUp` measured the share delta inside a snapshot, stored it in a state variable, reverted, and then failed with "the pinned pool minted no shares".

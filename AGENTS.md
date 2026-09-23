@@ -13,7 +13,7 @@ Optimize for a judge-verifiable, security-first product. AI may propose and expl
 
 ## Current gate
 
-The repository is in Phase 3 implementation. `P3-004` is open but blocked on production adapters; by explicit user decision on 2026-09-23, `P4-001` (swap adapter) and `P5-001` (stake adapter with a per-account position holder) are built first, then the production MandateExecutor deployment, then `P3-004`. Do not start any other later-phase task. Task definitions live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md).
+The repository is in Phase 3 implementation. By explicit user decision on 2026-09-23, `P4-001` (swap adapter) and `P5-001` (stake adapter with a per-account position holder) were completed ahead of order and the production MandateExecutor is deployed on chain 97; `P3-004` is the current task. Do not start any other later-phase task. Task definitions live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md).
 
 The approved `P7-001` landing shell exists by explicit out-of-order authorization. Do not extend product screens, wallet journeys, CSS, tokens, logos, mockups, or visual specifications until the corresponding build-plan task is opened and the user supplies or approves its direction.
 

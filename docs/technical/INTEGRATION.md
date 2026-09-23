@@ -227,6 +227,8 @@ Perago deliberately rejects PancakeSwap Smart Router, Universal Router, arbitrar
 
 If testnet liquidity is inadequate, use a transparently seeded test pool or a pinned BSC mainnet fork and label the evidence. Do not present mocked quotes or a local pool as public PancakeSwap liquidity.
 
+**Mainnet-fork pin (fork evidence only).** [`../../deployments/bsc-mainnet.fork.json`](../../deployments/bsc-mainnet.fork.json) pins the official BSC mainnet SwapRouter `0x1b81D678ffb9C0263b24A97847620C99d213eB14`, QuoterV2 `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997`, factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, and MasterChefV3 `0x556B9306565093C855AEA9AE92A594704c2Cd59e` from the [official address page](https://developer.pancakeswap.finance/contracts/v3/addresses), with WBNB read from `router.WETH9()` and CAKE from `MasterChefV3.CAKE()` and code hashes at finalized block `123518579`. The deepest direct WBNB/CAKE pool there is fee `2500`. The full swap adapter suite passes on that fork. Chain 56 remains disabled as a transaction target.
+
 ## 9. Selected staking adapter
 
 ### Candidate: PancakeSwap CAKE Pool
