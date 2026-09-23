@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "chainId": 97,
+  "label": "testnet-production",
+  "note": "Production Perago contracts on BNB Smart Chain Testnet, deployed by packages/contracts/script/DeployPerago.s.sol from the pinned protocol manifest. No contract has an owner, admin, or upgrade path; the deployer holds no authority after construction.",
+  "deployer": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+  "protocolManifest": "deployments/bsc-testnet.protocols.json",
+  "verifiedAt": {
+    "blockNumber": "132662641",
+    "blockHash": "0xb916fa8dce6bdd0e30d53567b351567ea404dce4c9e25c9b0bc991c3343f7c36",
+    "blockTimestamp": "1790145113"
+  },
+  "constructor": {
+    "executionWindowSeconds": "600",
+    "executionWindowDecision": "SC-D-005, user decision 2026-09-23",
+    "allowUnboundCommerceJobs": false,
+    "swapRoute": {
+      "tokens": ["wbnb", "cake"],
+      "poolFee": "500"
+    },
+    "stakePoolId": "0xa6902dcdf9185809eb31d8d3711eb92e531124d8e8c028c19962dca62ad2a905"
+  },
+  "contracts": {
+    "swapVerifier": {
+      "address": "0xBeeAeEa965B70117dd2F05E227413d04D5ee53a5",
+      "codeHash": "0x301520a46a6caecb1383965435f9e20a9bc5d11b9d6e67980f315b4028d784e6",
+      "transactionHash": "0x8a5bd8deb727026e83766b847174b517226b3042605dfd2eda4973930f7c9553",
+      "blockNumber": "132662538",
+      "gasUsed": "660422",
+      "source": "packages/contracts/src/verifiers/SwapVerifier.sol"
+    },
+    "swapAdapter": {
+      "address": "0xB9FaeB0Bb29401a1308e0C1287913D94b18EC635",
+      "codeHash": "0x2ff420edbaceee25cbf4f78473aad835b1493fb02b98ed70a801d0a38e198721",
+      "transactionHash": "0xc509cf5cdcc2d8fa016bffb0759004ad3995fe3f5debcf3c4c101886b6d1bbfa",
+      "blockNumber": "132662543",
+      "gasUsed": "855339",
+      "source": "packages/contracts/src/adapters/PancakeV3SwapAdapter.sol"
+    },
+    "stakeVerifier": {
+      "address": "0x66255cAd973A59043eb75e8d4eF71F440de36D8A",
+      "codeHash": "0xde2382330614d043961bb3a6620e1501f93c5fe2ba69f4004b708b80a45c9638",
+      "transactionHash": "0x6576c4c8e3bc837f1da3b408052a2e60a424339475f7e62490cbc4ddb7c9c9aa",
+      "blockNumber": "132662549",
+      "gasUsed": "1372941",
+      "source": "packages/contracts/src/verifiers/StakeVerifier.sol"
+    },
+    "stakeAdapter": {
+      "address": "0xB68d52C76036744C5F7676d530295B3E8DD9d8aE",
+      "codeHash": "0xb35ebc8dd8ee6adca15c43c475a3f2d01ae8a9353a9761eebde316d270ee2f0c",
+      "transactionHash": "0x33251bd6c91ff97a2f2123bacd0f52af5e79c3914e71b953bbff3f404eb19161",
+      "blockNumber": "132662553",
+      "gasUsed": "1336282",
+      "source": "packages/contracts/src/adapters/CakeStakeAdapter.sol"
+    },
+    "mandateExecutor": {
+      "address": "0xc6184Fb3e12F4C79b50f37175f3229d91664EC66",
+      "codeHash": "0x4dc5ef32d96e3969cc76787199ae34466ea8e76f2c831106dacbb80f50e167fe",
+      "transactionHash": "0x05d946bab983f8682fc5d753069ab625bf787c02c060c9582d410fbd756bacfd",
+      "blockNumber": "132662557",
+      "gasUsed": "3168252",
+      "source": "packages/contracts/src/MandateExecutor.sol"
+    }
+  },
+  "observedConstructorReads": {
+    "swapAdapter": "0xB9FaeB0Bb29401a1308e0C1287913D94b18EC635",
+    "stakeAdapter": "0xB68d52C76036744C5F7676d530295B3E8DD9d8aE",
+    "swapVerifier": "0xBeeAeEa965B70117dd2F05E227413d04D5ee53a5",
+    "stakeVerifier": "0x66255cAd973A59043eb75e8d4eF71F440de36D8A",
+    "executionWindowSeconds": "600",
+    "allowUnboundCommerceJobs": false
+  }
+}
