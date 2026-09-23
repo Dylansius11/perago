@@ -13,7 +13,8 @@ export type IntersectionInput = {
   catalogChainId: string;
   /** Input already reserved or spent for `action.inputToken` in the trailing 24 hours. */
   dailySpent: bigint;
-  intent: TaskIntent;
+  /** The goal text never decides a rule, so the intersection never sees it. */
+  intent: Omit<TaskIntent, "goal">;
   policy: WalletPolicy;
 };
 

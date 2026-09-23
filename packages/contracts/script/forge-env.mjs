@@ -4,7 +4,7 @@
 // root `.env`. Set FORGE_BIN when forge is not on PATH.
 import { spawnSync } from "node:child_process";
 
-const result = spawnSync(process.env.FORGE_BIN ?? "forge", process.argv.slice(2), {
+const result = spawnSync(process.env.FORGE_BIN || "forge", process.argv.slice(2), {
   stdio: "inherit",
   shell: false,
 });

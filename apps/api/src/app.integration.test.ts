@@ -5,12 +5,14 @@ import {
   hashTaskIntent,
 } from "@perago/sdk";
 import postgres from "postgres";
+import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createApiApp } from "./app.js";
 import type { WalletAuthConfig } from "./auth/wallet-auth.js";
 import { loadBscTestnetCatalog } from "./compiler/catalog.js";
+import { loadBscTestnetDeployment } from "./deployment.js";
 import { type Planner, PlannerUnavailableError } from "./planner/provider.js";
 import type {
   PolicyChainVerifier,
@@ -30,6 +32,7 @@ const migrations = [
   new URL("../drizzle/0000_constrained_lifecycle.sql", import.meta.url),
   new URL("../drizzle/0001_wallet_auth_policy_lifecycle.sql", import.meta.url),
   new URL("../drizzle/0002_task_compilation.sql", import.meta.url),
+  new URL("../drizzle/0003_mandate_signing.sql", import.meta.url),
 ];
 const owner = privateKeyToAccount(
   "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -85,6 +88,16 @@ const planner: Planner = async () => {
 };
 const app = createApiApp({
   authConfig,
+  // Chain-backed simulation and signing are proven by the Phase 3 fork smoke;
+  // these routes never reach the chain, so the client points nowhere.
+  mandateConfig: {
+    blockTag: "latest",
+    catalog,
+    client: createPublicClient({ transport: http("http://127.0.0.1:9") }),
+    deployment: loadBscTestnetDeployment(catalog),
+    now: () => now,
+    quoteTtlSeconds: 120,
+  },
   planner,
   policyConfig,
   policyVerifier: verifier,
@@ -346,7 +359,7 @@ describe("P3-002 API route smoke", () => {
     const [task] = await sql<{ wallet_id: string; wallet_policy_id: string }[]>`
       select wallet_id, wallet_policy_id from tasks where id = ${passing.taskId}
     `;
-    await sql`
+    const insertMandate = () => sql`
       insert into mandates (
         mandate_hash, task_id, simulation_id, wallet_id, wallet_policy_id,
         adapter_id, chain_id, mandate_executor_address, root_owner_address,
@@ -360,6 +373,21 @@ describe("P3-002 API route smoke", () => {
         ${new Date(now.getTime() - 3_600_000)}
       )
     `;
+    // The database admits a signed mandate only for a task ready to sign on its
+    // latest passing simulation, and a SIGNED task only with that mandate.
+    await expect(insertMandate()).rejects.toThrow(
+      /latest passing simulation while ready to sign/u,
+    );
+    await sql`update tasks set status = 'SIMULATED' where id = ${passing.taskId}`;
+    await sql`update tasks set status = 'READY_TO_SIGN' where id = ${passing.taskId}`;
+    await expect(
+      sql`update tasks set status = 'SIGNED' where id = ${passing.taskId}`,
+    ).rejects.toThrow(/requires its signed mandate/u);
+    await insertMandate();
+    await sql`update tasks set status = 'SIGNED' where id = ${passing.taskId}`;
+    await expect(
+      sql`insert into executions (id, mandate_hash, status) values (${adapterId}, ${bytes(32, 8)}, 'LEASED')`,
+    ).rejects.toThrow(/queued fresh/u);
 
     plannerQueue.push(swapCandidate("0.6"));
     const overCap = await postTask("request-swap-2", "Swap 0.6 WBNB for CAKE");

@@ -6,12 +6,14 @@ import {
   hashCompiledPlan,
   hashPolicyDecision,
   type PolicyDecision,
+  type PolicyRuleResult,
   type ProtocolCatalog,
   planCandidateSchema,
   policyDecisionSchema,
   type TaskIntent,
   type WalletPolicy,
 } from "@perago/sdk";
+import { formatUnits } from "viem";
 
 import { normalizeCandidate } from "./normalize.js";
 import { intersectPolicy } from "./policy-intersection.js";
@@ -127,4 +129,48 @@ export function compileCandidate(input: CompileInput): CompileOutcome {
     plan,
     planHash: hashCompiledPlan(plan),
   };
+}
+
+/**
+ * Re-runs every Wallet Policy rule for an already compiled plan, with the
+ * spend reserved since compilation. Signing calls this so a mandate signed
+ * later cannot overrun the rolling daily cap that other mandates consumed.
+ * Returns the failing rules; empty means the plan still passes.
+ */
+export function recheckCompiledPlan(input: {
+  catalog: ProtocolCatalog;
+  dailySpent: ReadonlyMap<Address, bigint>;
+  intent: Omit<TaskIntent, "goal">;
+  plan: CompiledPlan;
+  policy: WalletPolicy;
+}): PolicyRuleResult[] {
+  const { catalog, plan } = input;
+  const adapter = catalog.adapters.find(
+    (entry) => entry.id === plan.action.adapterId,
+  );
+  const token = catalog.tokens.find(
+    (entry) => entry.address === plan.action.inputToken,
+  );
+  if (!adapter || !token) {
+    throw new Error("compiled plan no longer matches the catalog");
+  }
+  const amount = BigInt(plan.action.inputAmount);
+  const { rules } = intersectPolicy({
+    action: {
+      adapter,
+      inputAmount: amount,
+      inputDecimals: token.decimals,
+      inputToken: plan.action.inputToken,
+      kind: plan.action.kind,
+      maxSlippageBps: Number(plan.action.maxSlippageBps),
+      outputToken: plan.action.kind === "SWAP" ? plan.action.outputToken : null,
+      recipient: plan.action.recipient,
+      requestedAmount: formatUnits(amount, token.decimals),
+    },
+    catalogChainId: catalog.chainId,
+    dailySpent: input.dailySpent.get(plan.action.inputToken) ?? 0n,
+    intent: input.intent,
+    policy: input.policy,
+  });
+  return rules.filter((rule) => rule.outcome === "FAIL");
 }
