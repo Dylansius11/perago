@@ -25,7 +25,8 @@ abstract contract MockPeragoAdapter is IPeragoAdapter {
         STRANDS_OUTPUT,
         INFLATE_RESULT,
         REENTER_EXECUTOR,
-        BURN_ALL_GAS
+        BURN_ALL_GAS,
+        SHORT_OUTPUT
     }
 
     error AdapterProtocolFailure();
@@ -95,8 +96,11 @@ abstract contract MockPeragoAdapter is IPeragoAdapter {
             IERC20(mandate.inputToken).transfer(msg.sender, pull / 2);
         }
 
+        // A protocol that under-delivers: the executor, not the verifier, owns the
+        // signed-minimum guard, so the shortfall has to reach it.
+        uint256 delivered = mode == Mode.SHORT_OUTPUT ? amountOut / 4 : amountOut;
         if (mode != Mode.WITHHOLD_OUTPUT) {
-            IERC20(mandate.outputToken).transfer(mandate.recipient, amountOut);
+            IERC20(mandate.outputToken).transfer(mandate.recipient, delivered);
         }
         if (mode == Mode.STRANDS_OUTPUT) {
             // The postcondition is met, but protocol output is also left in the executor.
@@ -105,7 +109,7 @@ abstract contract MockPeragoAdapter is IPeragoAdapter {
 
         return PeragoTypes.AdapterResult({
             inputSpent: pull,
-            outputOrPositionReceived: mode == Mode.INFLATE_RESULT ? amountOut * 2 : amountOut,
+            outputOrPositionReceived: mode == Mode.INFLATE_RESULT ? amountOut * 2 : delivered,
             protocolEvidenceHash: keccak256(abi.encode("mock.protocol", amountIn, amountOut))
         });
     }

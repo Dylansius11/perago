@@ -3,9 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "vitest run --passWithNoTests --exclude \"**/*.integration.test.ts\"",
+    "test:db": "vitest run --maxWorkers=1 --no-file-parallelism src/db/persistence.integration.test.ts src/auth/wallet-auth.integration.test.ts src/services/policies.integration.test.ts src/app.integration.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@perago/sdk": "workspace:*",
     "drizzle-orm": "0.45.2",
+    "groq-sdk": "1.6.0",
     "hono": "4.13.8",
     "postgres": "3.4.9",
     "viem": "2.56.7",

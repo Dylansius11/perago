@@ -39,6 +39,14 @@ export const uint24StringSchema = uintSchema(UINT_24_MAX);
 export const uint48StringSchema = uintSchema(UINT_48_MAX);
 export const uint64StringSchema = uintSchema(UINT_64_MAX);
 export const uint256StringSchema = uintSchema(UINT_256_MAX);
+export const positiveUint256StringSchema = uint256StringSchema.refine(
+  (value) => value !== "0",
+  "amount must be positive",
+);
+export const bpsStringSchema = uint64StringSchema.refine(
+  (value) => BigInt(value) <= 10_000n,
+  "basis points cannot exceed 10,000",
+);
 export const adapterIdSchema = z
   .string()
   .regex(

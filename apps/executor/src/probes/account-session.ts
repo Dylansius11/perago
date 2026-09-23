@@ -16,6 +16,7 @@ import {
   buildUserOperationNonceKey,
   deriveSemiModularAccountAddress,
   encodeAccountExecute,
+  encodeAccountExecuteBatch,
   encodeInstallMandateSession,
   encodeSemiModularAccountFactoryData,
   encodeUninstallMandateSession,
@@ -261,6 +262,7 @@ async function main() {
 
   const mandateTarget = getAddress(`0x${"11".repeat(20)}`);
   const unrelatedTarget = getAddress(`0x${"22".repeat(20)}`);
+  const policyCallData = concatHex([MANDATE_SELECTOR, `0x${"33".repeat(32)}`]);
   const permission: MandateSessionPermission = {
     account,
     entityId: SESSION_ENTITY_ID,
@@ -561,14 +563,34 @@ async function main() {
 
   const installed = await submit(
     await buildUserOperation({
-      callData: installCallData,
+      callData: encodeAccountExecuteBatch([
+        {
+          data: installCallData,
+          target: account,
+          value: 0n,
+        },
+        {
+          data: policyCallData,
+          target: mandateTarget,
+          value: 0n,
+        },
+      ]),
       entityId: 0,
       isGlobalValidation: true,
       signer: owner,
     }),
   );
   if (!installed.success) {
-    throw new Error("session installation reverted");
+    throw new Error("atomic session installation and policy call reverted");
+  }
+  const policyCallSize = await client.getStorageAt({
+    address: mandateTarget,
+    slot: "0x0",
+  });
+  if (
+    BigInt(policyCallSize ?? "0x0") !== BigInt(policyCallData.length / 2 - 1)
+  ) {
+    throw new Error("atomic policy call did not reach its target");
   }
 
   // 5. Session matrix.
@@ -599,7 +621,7 @@ async function main() {
     throw new Error(`${name} was accepted but must be rejected`);
   }
 
-  const mandateCallData = concatHex([MANDATE_SELECTOR, `0x${"33".repeat(32)}`]);
+  const mandateCallData = policyCallData;
   const allowedCall = wrapExecuteUserOp(
     encodeAccountExecute({
       data: mandateCallData,
@@ -780,14 +802,25 @@ async function main() {
 
   const revoked = await submit(
     await buildUserOperation({
-      callData: encodeUninstallMandateSession(rotated),
+      callData: encodeAccountExecuteBatch([
+        {
+          data: encodeUninstallMandateSession(rotated),
+          target: account,
+          value: 0n,
+        },
+        {
+          data: policyCallData,
+          target: mandateTarget,
+          value: 0n,
+        },
+      ]),
       entityId: 0,
       isGlobalValidation: true,
       signer: owner,
     }),
   );
   if (!revoked.success) {
-    throw new Error("session revocation reverted");
+    throw new Error("atomic session revocation and policy call reverted");
   }
   await expectRejected(
     "revoked session permission",
@@ -830,6 +863,7 @@ async function main() {
           nonceKey: "match",
           signatureEnvelope: "match",
           sessionInstallCallData: "match",
+          atomicPolicyTransition: "accepted",
         },
         cases,
         pendingTestnetEvidence: [

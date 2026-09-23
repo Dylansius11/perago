@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "task": "P3-002",
+  "label": "local",
+  "observedAt": "2026-09-22",
+  "implementationCommits": [
+    "2ad1d5f",
+    "9cd9ab7",
+    "92faadf",
+    "acb4d75",
+    "d7f2778",
+    "d631d18",
+    "cbc9b0a"
+  ],
+  "environment": {
+    "database": "PostgreSQL 16.10",
+    "containerImage": "postgres:16.10-alpine",
+    "chainClient": "synthetic Viem PublicClient fixture",
+    "note": "The database and HTTP paths are real local integrations. The chain verifier fixture exercises decoded EntryPoint transactions, logs, block confirmation, contract state, and bytecode commitments without claiming a live BSC transaction."
+  },
+  "checks": [
+    {
+      "command": "pnpm --filter @perago/api test:db",
+      "result": "9 passed, 0 failed across persistence, signed wallet authentication, policy lifecycle, atomic evidence constraints, owner-epoch race rejection, and real Hono request paths against a clean local PostgreSQL schema"
+    },
+    {
+      "command": "pnpm exec vitest run apps/api/src/services/policy-chain.test.ts",
+      "result": "5 passed, 0 failed; exact confirmed UserOperations, same-operation event/calldata binding, AccountPolicySet state, confirmation depth, exact calldata rejection, and pinned bytecode drift were exercised"
+    },
+    {
+      "command": "pnpm --filter @perago/api typecheck",
+      "result": "passed with no TypeScript diagnostics"
+    },
+    {
+      "command": "pnpm run check",
+      "result": "Biome checked 90 files with no fixes; all four configured workspace typecheck tasks passed; SDK passed 33 tests and API chain verification passed 5 tests"
+    }
+  ],
+  "acceptance": {
+    "authentication": [
+      "the signed message binds domain, URI, root owner, derived smart account, chain 97, random nonce, issue time, and expiry",
+      "a row lock and database trigger permit exactly one challenge consumption",
+      "the API returns an opaque bearer token and stores only its SHA-256 hash",
+      "replay, expiry, account-owner mismatch, and invalid bearer tokens reject"
+    ],
+    "policyLifecycle": [
+      "policy documents are immutable and monotonically versioned",
+      "the session permission is restricted to the derived account, MandateExecutor target, perform selector, zero native spend, non-root session signer, and policy expiry",
+      "activation and revocation require a recovered root EIP-712 signature",
+      "ACTIVE or REVOKED is persisted only after exact confirmed chain evidence",
+      "stale owner, account, epoch, policy, permission, calldata, event, code hash, receipt block, or chain rejects"
+    ]
+  },
+  "scope": {
+    "proved": "local signed authentication, one-use challenge and hashed session persistence, authenticated HTTP policy routes, one-UserOperation policy transition encoding, MetaMask-compatible EIP-712 payloads, and deterministic Viem treatment of EntryPoint calldata, UserOperation events, AccountPolicySet, accountConfig, canonical blocks, and pinned code",
+    "notClaimed": "This local artifact alone does not claim live BSC execution, production adapters/verifiers, production confirmation depth, hosted PostgreSQL compatibility, or sponsored policy transitions."
+  },
+  "relatedEvidence": {
+    "livePolicyTransitions": "docs/evidence/bsc-testnet.p3-policy-live.json",
+    "probeDeployment": "deployments/bsc-testnet.p3-policy-probe.json"
+  },
+  "blockers": []
+}

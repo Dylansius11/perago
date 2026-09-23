@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+/*
+ * Perago design tokens. The canonical definition lives in docs/DESIGN-SYSTEM.md;
+ * this file is the single machine-readable source. Do not introduce a second
+ * palette or spacing convention beside it.
+ */
+
+@theme {
+  /* Type. Display carries scale, mono carries machine truth. */
+  --font-sans: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "Cascadia Mono", monospace;
+
+  /* Surfaces. Exactly three, reused everywhere. */
+  --color-paper: #f4f5f2;
+  --color-ink: #0c120e;
+  --color-panel: #131b16;
+
+  /* Text on paper. */
+  --color-fog: #525a54;
+
+  /* Hairline rules, both directions. */
+  --color-rule: #ccd1c8;
+  --color-ruleinvert: #2b352f;
+
+  /*
+   * The accent, in two roles. `signal` is the brand mark teal and is only
+   * legible on dark surfaces (9.7:1 on ink); on paper it measures 1.78:1,
+   * so paper surfaces use `signal-ink` (a darkened form at 4.6:1) and keep
+   * `signal` for fills, rules, and small graphic marks. Never set body text
+   * in `signal` on paper.
+   */
+  --color-signal: #00d0c0;
+  --color-signal-ink: #077d74;
+
+  /* Terminal green, only inside dark panels. */
+  --color-phos: #34d399;
+
+  /* Semantic terminal states, dark panels only. */
+  --color-statusok: #34d399;
+  --color-statuspending: #fbbf24;
+  --color-statusfail: #f87171;
+
+  /* Radius: zero. The grid is the system; nothing is rounded. */
+
+  /* Motion. Named once, reused everywhere. */
+  --ease-out-vivid: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-inout-vivid: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --animate-blink: blink 1.06s steps(2, start) infinite;
+  --animate-marquee: marquee 36s linear infinite;
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/*
+ * Interactive surfaces share one transition definition. Declaring the
+ * property list once prevents the classic bug where a second
+ * `transition-*` class silently narrows the list and a color change snaps
+ * instead of easing.
+ */
+@utility pressable {
+  transition-property:
+    color, background-color, border-color, transform, opacity;
+  transition-duration: 220ms;
+  transition-timing-function: var(--ease-out-vivid);
+}
+
+.pressable:active {
+  transform: scale(0.98);
+}
+
+/* Arrow that leans into its direction of travel on group hover. */
+@utility arrow {
+  transition-property: transform;
+  transition-duration: 260ms;
+  transition-timing-function: var(--ease-out-vivid);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable,
+  .arrow {
+    transition-duration: 1ms;
+  }
+
+  .pressable:active {
+    transform: none;
+  }
+}
+
+/*
+ * Browser chrome belongs to the design. Selection, focus, and the caret
+ * inherit the world instead of shipping defaults.
+ */
+::selection {
+  background: var(--color-signal);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Dither texture: a sparse 1px checkerboard fading a surface toward its
+ * neighbor. Pure CSS, no image asset, themeable via the two color custom
+ * properties. Used at section seams, never as page-wide noise.
+ */
+.dither {
+  background-image: repeating-conic-gradient(
+    var(--dither-fg) 0% 25%,
+    transparent 0% 50%
+  );
+  background-size: 2px 2px;
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    black 0%,
+    transparent 70%
+  );
+  mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+}
+
+/*
+ * Character-rain backdrop for dark panels, echoing the brand's matrix
+ * texture. Low contrast by design: it sits behind content, never in front.
+ */
+.rain {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 23px,
+      rgba(52, 211, 153, 0.05) 23px 24px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 23px,
+      rgba(52, 211, 153, 0.05) 23px 24px
+    );
+}
+
+/*
+ * Focus ring color flips on dark surfaces where signal teal has low
+ * contrast against panel green.
+ */
+.on-dark :focus-visible {
+  outline-color: var(--color-phos);
+}

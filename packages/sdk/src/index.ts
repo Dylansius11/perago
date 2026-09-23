@@ -1,9 +1,27 @@
 export {
   mandateExecutorAbi,
+  pancakeV3SwapAdapterAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
   peragoVerifierAbi,
+  swapVerifierAbi,
 } from "./abi/perago-contracts.js";
+export {
+  type AccountPolicy,
+  type AccountPolicyDomain,
+  accountPolicySchema,
+  accountPolicyTypeString,
+  accountPolicyTypes,
+  encodeAccountPolicyTransition,
+  encodeSetAccountPolicy,
+  getAccountPolicyTypedData,
+  hashMandateSessionPermission,
+  hashMandateSessionRevocation,
+  hashPolicyRevocation,
+  type MandateSessionPermissionDocument,
+  mandateSessionPermissionSchema,
+  toMandateSessionPermission,
+} from "./account/account-policy.js";
 export {
   ACCOUNT_EXECUTE_SELECTOR,
   type AccountCall,
@@ -27,22 +45,69 @@ export {
   serializeValidationConfig,
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
+export {
+  encodeSwapAction,
+  hashSwapPostcondition,
+  type SwapAction,
+  swapActionSchema,
+} from "./actions.js";
+export {
+  signatureSchema,
+  type WalletChallengeRequest,
+  type WalletChallengeVerification,
+  type WalletSession,
+  walletChallengeRequestSchema,
+  walletChallengeVerificationSchema,
+  walletSessionSchema,
+} from "./api/auth.js";
+export {
+  type ConfirmPolicyActivationRequest,
+  type ConfirmPolicyRevocationRequest,
+  type CreateWalletPolicyRequest,
+  confirmPolicyActivationRequestSchema,
+  confirmPolicyRevocationRequestSchema,
+  createWalletPolicyRequestSchema,
+  type PreparePolicyRevocationRequest,
+  type PreparePolicyTransitionRequest,
+  preparePolicyRevocationRequestSchema,
+  preparePolicyTransitionRequestSchema,
+} from "./api/policies.js";
+export {
+  type CreateTaskRequest,
+  createTaskRequestSchema,
+} from "./api/tasks.js";
 export { canonicalJson } from "./canonical-json.js";
 export {
   type CompiledPlan,
   compiledPlanSchema,
-  type StakeAction,
-  type SwapAction,
+  type StakePlan,
+  type SwapPlan,
 } from "./domain/compiled-plan.js";
 export {
   type ExecutionReceipt,
   executionReceiptSchema,
 } from "./domain/execution-receipt.js";
 export {
+  decimalAmountSchema,
+  type PlanCandidate,
+  planCandidateSchema,
+  type StakeCandidate,
+  type SwapCandidate,
+} from "./domain/plan-candidate.js";
+export {
+  POLICY_RULES,
+  type PolicyDecision,
+  type PolicyRule,
+  type PolicyRuleResult,
+  policyDecisionSchema,
+} from "./domain/policy-decision.js";
+export {
   type Address,
   addressSchema,
+  bpsStringSchema,
   type Hash,
   hashSchema,
+  positiveUint256StringSchema,
   type Selector,
   selectorSchema,
   uint24StringSchema,
@@ -51,6 +116,12 @@ export {
   uint256StringSchema,
   uintStringSchema,
 } from "./domain/primitives.js";
+export {
+  type CatalogAdapter,
+  type CatalogToken,
+  type ProtocolCatalog,
+  protocolCatalogSchema,
+} from "./domain/protocol-catalog.js";
 export {
   type SimulationResult,
   simulationResultSchema,
@@ -73,7 +144,13 @@ export {
 } from "./eip712.js";
 export {
   hashCompiledPlan,
+  hashPolicyDecision,
   hashSimulationResult,
   hashTaskIntent,
   hashWalletPolicy,
 } from "./hashes.js";
+export {
+  REASON_MESSAGES,
+  type ReasonCode,
+  reasonCodeSchema,
+} from "./reason-codes.js";

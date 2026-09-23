@@ -1,6 +1,6 @@
 # Perago Data Model
 
-**Status:** Proposed MVP data contract
+**Status:** Implemented through `P3-002`, including live atomic policy-transition evidence; hosted deployment remains pending
 **System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
@@ -36,6 +36,7 @@ Canonical encodings and hashes are owned by `packages/sdk`. JSON documents are s
 ```mermaid
 erDiagram
   WALLETS ||--o{ WALLET_POLICIES : owns
+  WALLETS ||--o{ WALLET_SESSIONS : authenticates
   WALLETS ||--o{ TASKS : requests
   WALLET_POLICIES ||--o{ TASKS : constrains
   TASKS ||--o{ SIMULATIONS : evaluates
@@ -99,7 +100,24 @@ Only `ACTIVE` adapters may enter a new simulation or mandate.
 
 ## 5. Tables
 
-### 5.1 `wallets`
+### 5.1 `wallet_auth_challenges`
+
+One-use root-wallet authentication messages created before a wallet session exists.
+
+| Column | Type | Constraints / meaning |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `domain` / `uri` | text | not null; deployment origin binding |
+| `chain_id` | bigint | not null |
+| `account_address` / `root_owner_address` | bytea | exactly 20 bytes |
+| `nonce` | text | unique, cryptographically random |
+| `message` | text | immutable exact signed message |
+| `expires_at` / `created_at` | timestamptz | expiry must follow creation |
+| `consumed_at` | timestamptz | nullable; may transition from null exactly once |
+
+The message binds domain, URI, root owner, derived smart account, chain, nonce, issue time, and expiry. A row lock plus the immutability trigger makes verification one-use under concurrency.
+
+### 5.2 `wallets`
 
 One row per smart account on a chain.
 
@@ -126,7 +144,20 @@ Constraints:
 
 No private key, embedded-wallet share, session key, or recovery material is stored.
 
-### 5.2 `wallet_policies`
+### 5.3 `wallet_sessions`
+
+Short-lived API authorization for a verified wallet identity.
+
+| Column | Type | Constraints / meaning |
+| --- | --- | --- |
+| `token_hash` | bytea | PK; 32-byte SHA-256 hash, never the bearer token |
+| `wallet_id` | uuid | FK `wallets.id`, not null |
+| `expires_at` / `created_at` | timestamptz | expiry must follow creation |
+| `revoked_at` | timestamptz | nullable; may transition from null exactly once |
+
+The opaque bearer token is returned once. Authentication hashes the presented token and accepts only an unexpired, unrevoked row.
+
+### 5.4 `wallet_policies`
 
 Immutable, versioned policy documents.
 
@@ -139,8 +170,19 @@ Immutable, versioned policy documents.
 | `status` | `policy_status` | not null |
 | `policy_document` | jsonb | not null; canonical fields described by PRD |
 | `policy_hash` | bytea | 32 bytes, not null |
-| `activation_tx_hash` | bytea | nullable until activation submission |
+| `permission_document` | jsonb | exact narrow session permission, nullable before submission |
+| `permission_hash` | bytea | 32-byte commitment, nullable before submission |
+| `permission_call_data` | bytea | exact bounded session install calldata embedded in the activation batch |
+| `permission_user_operation_hash` | bytea | same 32-byte operation identity as `activation_user_operation_hash` |
+| `permission_tx_hash` | bytea | same EntryPoint transaction identity as `activation_tx_hash` |
+| `activation_call_data` | bytea | exact smart-account batch that installs permission and calls `setAccountPolicy` atomically |
+| `activation_user_operation_hash` | bytea | 32-byte atomic activation operation identity |
+| `activation_tx_hash` | bytea | nullable until atomic activation submission |
 | `activation_block_number` | bigint | nullable until confirmed |
+| `revocation_call_data` | bytea | exact smart-account batch that uninstalls permission and writes the revocation policy atomically |
+| `revocation_user_operation_hash` | bytea | 32-byte atomic revocation operation identity |
+| `revocation_tx_hash` | bytea | nullable until atomic revocation submission |
+| `revocation_block_number` | bigint | nullable until confirmed |
 | `created_at` | timestamptz | not null |
 | `activated_at` | timestamptz | nullable |
 | `terminal_at` | timestamptz | nullable for supersede/revoke |
@@ -150,12 +192,15 @@ Constraints:
 - unique `(wallet_id, version)` and `(wallet_id, policy_hash)`;
 - at most one `ACTIVE` row per wallet via partial unique index;
 - immutable `policy_document`, `policy_hash`, and `version` after insert;
-- `ACTIVE` requires activation transaction/block and onchain active hash equality;
+- `ACTIVE` requires exact permission and activation calldata, one shared UserOperation hash, one shared transaction hash, a confirmation block, and activation time;
+- `REVOKED` requires immutable atomic revocation calldata, UserOperation hash, transaction hash, confirmation block, and terminal time;
+- activation evidence becomes immutable when the draft leaves `DRAFT`, and revocation evidence is immutable once written;
+- only `DRAFT → ACTIVATING → ACTIVE`, `ACTIVE → SUPERSEDED`, and legal revocation transitions are accepted;
 - `SUPERSEDED`/`REVOKED` require `terminal_at`.
 
-Daily cap usage is derived from confirmed `SUCCEEDED` and economically spent `FAILED` receipt evidence for the policy's declared day window. The corresponding smart-account permission uses the same token ceiling and expiry as an onchain backstop. Do not maintain an unbounded or non-rebuildable mutable counter.
+Daily cap usage is derived, never counted: for one wallet and input token it is the sum of the compiled `inputAmount` of every mandate signed in the trailing 24 hours whose status is not `REVOKED` or `EXPIRED` (those never spend). The signed ceiling over-counts an attempt that spent less, never under-counts, and it reserves authority that is signed but not yet executed. The corresponding smart-account permission uses the same token ceiling and expiry as an onchain backstop. Do not maintain an unbounded or non-rebuildable mutable counter.
 
-### 5.3 `tasks`
+### 5.5 `tasks`
 
 User-authored intent plus the deterministic compilation result.
 
@@ -166,14 +211,14 @@ User-authored intent plus the deterministic compilation result.
 | `wallet_policy_id` | uuid | FK, not null |
 | `client_request_id` | text | not null; idempotency key scoped to wallet |
 | `status` | `task_status` | not null |
-| `intent_text_ciphertext` | bytea | encrypted at rest; nullable after retention purge |
-| `intent_hash` | bytea | 32 bytes, not null |
-| `intent_document` | jsonb | normalized non-secret TaskIntent fields |
-| `compiled_plan` | jsonb | nullable until compilation pass |
-| `plan_hash` | bytea | nullable; 32 bytes |
-| `compiler_version` | text | nullable; immutable with plan |
-| `policy_decision` | jsonb | not null after compile; rule-by-rule outcomes |
-| `policy_decision_hash` | bytea | nullable; 32 bytes |
+| `intent_text_ciphertext` | bytea | the raw goal only, AES-256-GCM (`version ‖ iv ‖ tag ‖ ciphertext`) bound to the task id; nullable after retention purge |
+| `intent_hash` | bytea | 32 bytes, not null; `hashTaskIntent` of the document plus the decrypted goal |
+| `intent_document` | jsonb | every non-secret TaskIntent field, including the random 32-byte `salt`; never the goal |
+| `compiled_plan` | jsonb | the pre-quote `CompiledPlan`; set only for a passing decision |
+| `plan_hash` | bytea | nullable; 32 bytes; set with the plan |
+| `compiler_version` | text | nullable; set with the decision and immutable |
+| `policy_decision` | jsonb | the complete ordered `PolicyDecision`; set for passing and rejected compilation |
+| `policy_decision_hash` | bytea | nullable; 32 bytes; set with the decision |
 | `created_at` | timestamptz | not null |
 | `updated_at` | timestamptz | not null |
 | `cancelled_at` | timestamptz | nullable |
@@ -181,11 +226,17 @@ User-authored intent plus the deterministic compilation result.
 Constraints:
 
 - unique `(wallet_id, client_request_id)`;
+- a task is inserted as `DRAFT`; a trigger enforces the transitions in §6;
+- decision, decision hash, and compiler version are set together; plan and plan hash are set together and only with a decision;
+- `DRAFT` and `COMPILING` carry no decision or plan; `REJECTED_POLICY` carries a decision and no plan;
 - a passing plan has a non-null plan, plan hash, compiler version, and decision hash;
+- intent fields are immutable except for the retention purge of the ciphertext, and compilation evidence is immutable once written;
+- `COMPILING` and `READY_TO_SIMULATE` require the task's wallet policy to still be `ACTIVE`;
+- `cancelled_at` is set exactly when the status is `CANCELLED`, and a task whose mandate left `SIGNED` cannot be cancelled;
 - a rejected task cannot have a mandate;
 - unknown JSON fields are rejected before persistence, not silently retained.
 
-### 5.4 `simulations`
+### 5.6 `simulations`
 
 Immutable result for one exact plan at one chain context.
 
@@ -212,7 +263,7 @@ Constraints:
 - immutable after insert except a derived `STALE` marker;
 - signable only when `PASSED`, unexpired, canonical block, active policy unchanged, adapter still `ACTIVE`, and current adapter code hash matches.
 
-### 5.5 `mandates`
+### 5.7 `mandates`
 
 One signed authorization and its chain-derived lifecycle projection.
 
@@ -252,7 +303,7 @@ Constraints:
 - terminal states require terminal transaction, reason, and timestamp;
 - state changes after `SIGNED` are accepted only from confirmed events or a verified direct chain read.
 
-### 5.6 `executions`
+### 5.8 `executions`
 
 Operational record for the single allowed mandate attempt.
 
@@ -282,7 +333,7 @@ Constraints:
 
 Detailed transport attempts may be stored in a bounded JSON audit field or structured logs; a separate table is added only if production diagnosis requires it.
 
-### 5.7 `verification_results`
+### 5.9 `verification_results`
 
 One immutable normalized verifier result per execution.
 
@@ -307,7 +358,7 @@ Constraints:
 - immutable;
 - `PASSED` is valid only when the matching contract receipt event says success.
 
-### 5.8 `execution_receipts`
+### 5.10 `execution_receipts`
 
 Public, immutable receipt projection. Private text is represented only by hashes.
 
@@ -338,7 +389,7 @@ Constraints:
 - non-success cannot have a settlement transaction that completed payment;
 - every field must reconcile to confirmed contract logs.
 
-### 5.9 `chain_events`
+### 5.11 `chain_events`
 
 Append-only raw event ledger.
 
@@ -362,7 +413,7 @@ Append-only raw event ledger.
 
 Rows are never deleted during normal reconciliation. An event may move `OBSERVED → CONFIRMED` or `OBSERVED/CONFIRMED → ORPHANED`; payload fields are immutable.
 
-### 5.10 `indexer_checkpoints`
+### 5.12 `indexer_checkpoints`
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
@@ -375,7 +426,7 @@ Rows are never deleted during normal reconciliation. An event may move `OBSERVED
 
 Checkpoint update and the corresponding event batch commit in one transaction. On hash mismatch, the indexer rewinds to the last canonical ancestor and replays projections.
 
-### 5.11 `protocol_adapters`
+### 5.13 `protocol_adapters`
 
 Small persisted deployment registry, not a protocol marketplace.
 
@@ -410,8 +461,8 @@ Constraints:
 
 | From | To | Required evidence |
 | --- | --- | --- |
-| DRAFT | ACTIVATING | Submitted smart-account UserOperation/transaction for exact policy hash |
-| ACTIVATING | ACTIVE | Confirmed `ActivePolicyHashSet` event and current onchain read |
+| DRAFT | ACTIVATING | Confirmed exact policy and permission evidence is persisted before the terminal transition in the same transaction; pending submissions remain `DRAFT` |
+| ACTIVATING | ACTIVE | Confirmed exact `AccountPolicySet` event, successful permission UserOperation, current `accountConfig`, canonical receipt blocks, and pinned code hashes |
 | ACTIVE | SUPERSEDED | Confirmed activation of a later version |
 | DRAFT/ACTIVE | REVOKED | User cancellation before activation or confirmed zero/new policy hash invalidating it |
 
@@ -420,6 +471,8 @@ Constraints:
 | From | To | Guard |
 | --- | --- | --- |
 | DRAFT | COMPILING | Active canonical policy exists |
+| COMPILING | DRAFT | Planner unavailable, invalid planner output, or clarification needed; nothing compiled and the same request may retry |
+| COMPILING | COMPILING | Reclaim after the compile lease (updated at) expires, so a crashed request cannot strand the task |
 | COMPILING | REJECTED_POLICY | At least one deterministic rule fails |
 | COMPILING | READY_TO_SIMULATE | Strict plan schema and all rules pass |
 | READY_TO_SIMULATE | SIMULATED | Exact simulation passes |
@@ -437,10 +490,12 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 
 | API capability | Reads | Writes |
 | --- | --- | --- |
+| Request authentication challenge | none | immutable `wallet_auth_challenges` row |
+| Verify challenge | locked challenge + derived account | consume challenge once, upsert `wallets`, create hashed `wallet_sessions` row |
 | Create/read policy | `wallets`, `wallet_policies` | new `wallet_policies` draft |
 | Activate policy | `wallets`, `wallet_policies`, `chain_events` | activation projection after user submission |
 | Create intent | `wallets`, active policy | `tasks` |
-| Compile/intersect | `tasks`, `wallet_policies`, `protocol_adapters` | plan/decision fields on same pre-sign task |
+| Compile/intersect | `tasks`, active `wallet_policies`, the manifest-pinned `plannerCatalog`, mandates signed in the trailing 24 hours | plan/decision fields on same pre-sign task; `protocol_adapters` joins at simulation once adapters are deployed |
 | Simulate/refresh | task + adapter + chain reads | append `simulations`, advance task reference/status |
 | Build/sign mandate | task + fresh simulation + wallet | immutable `mandates`, task `SIGNED`, `executions` queue row |
 | Read lifecycle | mandate/execution/receipt projections | none |
@@ -469,7 +524,8 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 | Intent/plan/policy/simulation hashes | Indefinite for receipt verification |
 | Full immutable policy and typed plan | Account lifetime plus 90 days; export/delete subject to onchain hash permanence |
 | Signatures | Until mandate terminal plus 90 days; public by nature but access/audit restricted |
-| Session/private keys, wallet shares, recovery data | Never stored |
+| Wallet authentication challenges and hashed bearer sessions | Delete after expiry plus operational audit window; raw bearer tokens are never stored |
+| Executor/session signing private keys, wallet shares, recovery data | Never stored |
 | Raw chain events and public receipts | Indefinite |
 | Structured application logs | 14 days for hackathon, redacted |
 | Planner request/response | 7 days maximum, no secrets; disable provider training where configurable |
@@ -478,4 +534,4 @@ Public receipt responses never expose raw intent text, private policy detail, IP
 
 ## 10. Deliberately omitted tables
 
-No users/profile table is required for the wallet-first MVP; `wallets` is the principal. No agents, listings, categories, reputation, leaderboard, sessions, token prices, generic transactions, or marketplace jobs table is created. ERC-8183 job state remains onchain and its identity/status is projected through mandate/receipt fields. Add a separate job projection only if query load or multiple jobs per mandate later proves it necessary.
+No users/profile table is required for the wallet-first MVP; `wallets` is the principal. No agents, listings, categories, reputation, leaderboard, token prices, generic transactions, or marketplace jobs table is created. The narrowly scoped `wallet_sessions` table is API authentication state, not a wallet/session signing-key store. ERC-8183 job state remains onchain and its identity/status is projected through mandate/receipt fields. Add a separate job projection only if query load or multiple jobs per mandate later proves it necessary.

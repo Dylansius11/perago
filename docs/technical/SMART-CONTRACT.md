@@ -1,6 +1,6 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** `MandateExecutor` authorization, accepted-attempt, and atomic failure boundaries implemented and tested (`P2-001`, `P2-002`); the stateful invariant suite (`P2-003`), the two adapters, the two verifiers, and `OutcomeEvaluator` remain specified and unimplemented
+**Status:** `MandateExecutor` authorization, accepted-attempt, atomic failure boundaries, and the stateful invariant suite are implemented and locally verified (`P2-001`–`P2-003`); the two production adapters, the two production verifiers, and `OutcomeEvaluator` remain specified and unimplemented
 **Requirements:** [`../PRD.md`](../PRD.md)
 **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
@@ -265,9 +265,16 @@ struct SwapAction {
 
 For MVP, `amountIn == maxInput`; partial fills are excluded. Router/factory are immutable adapter constants. No path bytes, arbitrary multicall, callback target, or native-token unwrap recipient is user/model supplied.
 
-### Stake action
+Implemented in `P4-001` (`src/adapters/PancakeV3SwapAdapter.sol`, `src/verifiers/SwapVerifier.sol`):
 
-The final fields depend on `D-002`, but the schema must remain closed and include at least:
+- **Encoding.** `action = abi.encode(SwapAction)`, exactly seven static words; any other length reverts `InvalidAction`, and the ABI decoder rejects dirty high bits, so one action has one byte string and one `actionHash`. The SDK's `encodeSwapAction` reproduces it and a shared fixture pins the hash on both sides (`test/ActionFixtures.t.sol`, `packages/sdk/test/action-fixture.test.ts`).
+- **Pinned route.** The constructor takes the router, token pair, fee, and verifier, resolves the pool from the router's own `factory().getPool`, and refuses a missing pool, an identical pair, or a verifier or router without code (`InvalidDeploymentPair`). Router, pool, fee, and pair are immutable.
+- **Field binding.** Checked in this order: `mandate.adapter == this` (`UnsupportedAdapter`), `adapterSelector == execute.selector` (`WrongSelector`), length (`InvalidAction`), `tokenIn/tokenOut == mandate.inputToken/outputToken` and the pinned pair and fee (`InvalidTokenPair`), `amountIn == maxInput` and `minAmountOut == minOutput > 0` (`AmountOutOfBounds`), `recipient == mandate.recipient` (`RecipientMismatch`), `0 < deadline <= expiresAt` (`ExpiredMandate`). Equality, not "no weaker", keeps one value per commitment.
+- **Call.** The adapter pulls exactly `amountIn` from its caller, grants the router exactly that, calls `exactInputSingle` with `amountOutMinimum = minAmountOut`, `recipient` and `deadline` from the action and no price limit, resets the allowance to zero and re-reads it (`AllowanceNotCleared`), and requires its own input balance to equal the pre-call balance (`ResidualBalance`), so a pool that stops at a price boundary fails the attempt instead of settling a partial fill. Balances are deltas, so a donation can neither block nor join a swap. `protocolEvidenceHash = keccak256(abi.encode(pool, amountIn, amountOut))`.
+- **Postcondition.** `postconditionHash = keccak256(abi.encode(keccak256("perago.postcondition.swap.v1"), recipient, outputToken, minOutput))`.
+- **Verifier.** `SwapVerifier` accepts only a swap-kind adapter whose `verifier()` is itself (`UnsupportedAdapter`), re-runs `adapter.validate` against `actionHash` (`ActionHashMismatch`), recomputes the postcondition (`PostconditionHashMismatch`), and commits its pre-state as `keccak256(abi.encode(verifier, recipient, outputToken, postconditionHash, balanceBefore))` (`ContextMismatch` otherwise). It measures the recipient's output balance delta itself and requires it to reach `minOutput` (`VerificationFailed`). Because the input is exact, it requires the reported spend to equal `maxInput` (`AmountOutOfBounds`); MandateExecutor measures the real spend independently and commits that figure to the receipt.
+
+### Stake action
 
 ```solidity
 struct StakeAction {
@@ -281,6 +288,14 @@ struct StakeAction {
 ```
 
 The adapter maps `poolId` to one deployment-pinned staking target. It never treats it as an arbitrary address or raw calldata.
+
+**Position ownership (user decision, 2026-09-23).** The chain-97 CAKE Pool exposes only `deposit(uint256,uint256)`, which credits `msg.sender`; it has no deposit-for-recipient entry point and no share transfer (bytecode selector probe on `0x683433ba14e8F26774D43D3E90DA6Dd7a22044Fe`). Under MandateExecutor the caller is the adapter, so a plain adapter would own every user's stake. Perago therefore adds one small contract, `CakeStakePosition`: `CakeStakeAdapter` deploys exactly one per recipient with `CREATE2` (salt = the recipient address), and that holder is the pool account for that recipient alone.
+
+- `CakeStakePosition` pins the pool, the asset, its deploying adapter, and its owner (the recipient) as immutables. `stake(amount)` is callable only by its adapter: it grants the pool exactly `amount`, calls `deposit(amount, 0)` (flexible staking only), resets and re-reads the allowance, and requires its asset balance to return to the pre-call value. `withdraw(shares)` and `withdrawAll()` are callable only by the owner and send every asset unit the holder holds to the owner. There is no other function, no admin, and no sweep to anyone but the owner.
+- Positions are never pooled across accounts, so no pro-rata accounting exists to get wrong, and the recipient keeps a direct exit path that needs no Perago contract to cooperate beyond its own holder.
+- A stake mandate uses `inputToken == outputToken == asset` and `minOutput == minPositionOut`, measured in pool shares.
+- `StakeVerifier` resolves the holder from the adapter's deterministic address for the signed recipient, measures `cakePool.userInfo(holder).shares` before and after, and requires the delta to reach `minPositionOut` and the holder to be owned by the signed recipient.
+- `postconditionHash = keccak256(abi.encode(keccak256("perago.postcondition.stake.v1"), recipient, poolId, minPositionOut))`.
 
 ## 7. ERC-20 and fund handling
 
@@ -450,6 +465,8 @@ Use custom errors, not revert strings, for bounded gas and stable reason mapping
 
 Four further selectors are fund-safety and call-shape guards that the implementation proved necessary and the specification therefore requires: `OnlySelf` (the effects boundary is reachable only through `perform`'s self-call), `AllowanceNotCleared` (the adapter allowance is re-read as zero before success), `ResidualBalance` (no input remains after the refund), and `InsufficientGasBudget` (an attempt is refused when the remaining gas cannot cover both the attempt and its terminal record).
 
+Adapters and verifiers declare the same-named errors, so a selector means the same thing wherever it is raised, and add two of their own: `InvalidAction` (action bytes are not the one canonical encoding) and `ContextMismatch` (a verifier was handed a pre-state it did not produce).
+
 ### Storage limits
 
 Store only data needed to prevent replay, drive lifecycle, verify settlement, and expose compact receipt commitments. Do not store full action bytes, intent text, policy documents, simulation documents, or explanations. Storage layout is frozen because contracts are non-upgradeable.
@@ -557,7 +574,9 @@ The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or misma
 
 ### Stateful invariant handler
 
-Actors: root owner, smart account, executor, attacker, adapter, verifier, evaluator. Actions: configure policy, authorize, begin, perform, revoke, expire, settle, duplicate/reorder calls, advance time, mutate protocol outcome. Assert all 12 invariants after every sequence.
+The implemented `P2-003` handler models the root owner, smart account, executor, attacker, pinned adapters, and pinned verifiers. Its 17 explicit actions configure policy, authorize, begin, perform, revoke, expire, duplicate/reorder calls, advance time, and mutate protocol outcomes. `MandateExecutorInvariant.t.sol` asserts the 12 safety properties plus the named-caller boundary after every sequence; it passed 1,000 runs × 100 calls locally on 2026-09-20.
+
+The commerce property proves that one ERC-8183 job can bind one mandate and that one mandate can emit one terminal receipt. `P6-002`/`P6-003` will extend the handler with `OutcomeEvaluator` and settlement actions; actual evaluator-driven ERC-8183 settlement is not claimed by `P2-003`.
 
 ### Fork/testnet tests
 

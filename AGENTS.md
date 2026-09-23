@@ -13,9 +13,9 @@ Optimize for a judge-verifiable, security-first product. AI may propose and expl
 
 ## Current gate
 
-The repository is in Phase 1 implementation: typed domain, account-abstraction encoding, and decision probes. Implement only the current task in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md); do not start a later phase, and do not implement UI, visual assets, or a design system.
+The repository is in Phase 3 implementation. `P3-004` is open but blocked on production adapters; by explicit user decision on 2026-09-23, `P4-001` (swap adapter) and `P5-001` (stake adapter with a per-account position holder) are built first, then the production MandateExecutor deployment, then `P3-004`. Do not start any other later-phase task. Task definitions live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md).
 
-The user will supply Perago's UI and design direction later. Do not invent screens, component systems, CSS, tokens, logos, mockups, or visual specifications before that direction arrives.
+The approved `P7-001` landing shell exists by explicit out-of-order authorization. Do not extend product screens, wallet journeys, CSS, tokens, logos, mockups, or visual specifications until the corresponding build-plan task is opened and the user supplies or approves its direction.
 
 ## Sources of truth
 
@@ -82,7 +82,7 @@ Upstream directories were copied unmodified; MIT license texts are retained in [
 
 ### Deliberately absent
 
-- **Interface skills** (`emil-design-eng`, `motion`, `impeccable`, `design-taste-frontend`, `vercel-react-best-practices`) are not installed while the UI hold is in force, which is why `perago-frontend-polish` names them as a dependency rather than assuming them. Install them in the same change that opens the web surface, never earlier.
+- **Interface skills** (`emil-design-eng`, `motion`, `impeccable`, `design-taste-frontend`, `vercel-react-best-practices`) are not installed during the current backend gate. The approved `P7-001` landing shell is complete; install the relevant skills only in the same change that explicitly opens another web task.
 - **Reference-repository skills** (`bsc-foundry`, `bnb-agent-stack`, `altana-*`, `swap-*`/`liquidity-*`/`farming-*`/`hub-*` planners) are excluded on purpose. They encode another product's contracts, its vendor session wallet, and its address tables, all of which would either contradict `docs/technical/INTEGRATION.md` or reintroduce the vendor dependency the core is forbidden to have. Do not re-import them; extract a specific technique into a canonical document instead.
 - **Harness tooling** (`graphify`, `orca-cli`, `orchestration`, `computer-use`) stays at the workstation level and is not vendored.
 

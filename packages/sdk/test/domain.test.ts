@@ -7,6 +7,9 @@ import {
   getTaskMandateTypedData,
   hashTaskIntent,
   hashWalletPolicy,
+  POLICY_RULES,
+  planCandidateSchema,
+  policyDecisionSchema,
   taskMandateTypeString,
   taskMandateTypes,
   walletPolicySchema,
@@ -66,6 +69,35 @@ const taskMandate = {
   commerceJobId: "0",
 };
 
+const compiledPlan = {
+  schemaVersion: "1",
+  chainId: "97",
+  account,
+  policyHash: hash,
+  intentHash: hash,
+  lifetimeSeconds: "3600",
+  action: {
+    kind: "SWAP",
+    adapterId: "pancakeswap-v3",
+    inputToken: tokenIn,
+    inputAmount: "1",
+    outputToken: tokenOut,
+    poolFee: "500",
+    maxSlippageBps: "100",
+    recipient: account,
+  },
+};
+
+const swapCandidate = {
+  kind: "SWAP",
+  adapterId: "pancakeswap-v3",
+  inputSymbol: "WBNB",
+  inputAmount: "0.05",
+  outputSymbol: "Cake",
+  maxSlippageBps: null,
+  recipient: null,
+};
+
 describe("canonical mandate domain", () => {
   it("rejects unknown fields and numeric token amounts", () => {
     expect(() =>
@@ -85,50 +117,87 @@ describe("canonical mandate domain", () => {
     ).toThrow();
     expect(() =>
       compiledPlanSchema.parse({
-        schemaVersion: "1",
-        chainId: "97",
-        policyHash: hash,
+        ...compiledPlan,
         action: { kind: "TRANSFER" },
+      }),
+    ).toThrow();
+    expect(() =>
+      planCandidateSchema.parse({
+        action: { kind: "TRANSFER", inputSymbol: "WBNB", inputAmount: "1" },
+      }),
+    ).toThrow();
+    expect(() =>
+      planCandidateSchema.parse({
+        action: { ...swapCandidate, calldata: "0x12345678" },
       }),
     ).toThrow();
   });
 
-  it("accepts only closed swap and stake actions", () => {
+  it("accepts only closed swap and stake plans with a real spend", () => {
+    expect(compiledPlanSchema.parse(compiledPlan).action.kind).toBe("SWAP");
     expect(
       compiledPlanSchema.parse({
-        schemaVersion: "1",
-        chainId: "97",
-        policyHash: hash,
-        action: {
-          kind: "SWAP",
-          adapterId: "pancakeswap-v3",
-          tokenIn,
-          tokenOut,
-          poolFee: "500",
-          amountIn: "1",
-          minAmountOut: "1",
-          recipient: account,
-          deadline: "2000000000",
-        },
-      }).action.kind,
-    ).toBe("SWAP");
-    expect(
-      compiledPlanSchema.parse({
-        schemaVersion: "1",
-        chainId: "97",
-        policyHash: hash,
+        ...compiledPlan,
         action: {
           kind: "STAKE",
           adapterId: "cake-pool",
-          asset: tokenIn,
-          amount: "1",
-          minPositionOut: "1",
+          inputToken: tokenIn,
+          inputAmount: "1",
+          maxSlippageBps: "50",
           recipient: account,
-          deadline: "2000000000",
-          poolId: hash,
         },
       }).action.kind,
     ).toBe("STAKE");
+    for (const action of [
+      { ...compiledPlan.action, inputAmount: "0" },
+      { ...compiledPlan.action, outputToken: tokenIn },
+      { ...compiledPlan.action, maxSlippageBps: "10001" },
+    ]) {
+      expect(() =>
+        compiledPlanSchema.parse({ ...compiledPlan, action }),
+      ).toThrow();
+    }
+  });
+
+  it("accepts a policy decision only when it is complete and consistent", () => {
+    const rules = POLICY_RULES.map((rule) => ({
+      rule,
+      outcome: "PASS" as const,
+      reasonCode: null,
+      limit: "x",
+      observed: "x",
+    }));
+    const decision = {
+      schemaVersion: "1",
+      compilerVersion: "perago-compiler/1",
+      policyHash: hash,
+      intentHash: hash,
+      outcome: "PASS",
+      rules,
+    };
+    expect(policyDecisionSchema.parse(decision).outcome).toBe("PASS");
+    expect(() =>
+      policyDecisionSchema.parse({ ...decision, rules: rules.slice(1) }),
+    ).toThrow();
+    const failing = rules.map((result) =>
+      result.rule === "DAILY_CAP"
+        ? {
+            ...result,
+            outcome: "FAIL" as const,
+            reasonCode: "DAILY_CAP_EXCEEDED",
+          }
+        : result,
+    );
+    expect(() =>
+      policyDecisionSchema.parse({ ...decision, rules: failing }),
+    ).toThrow();
+    expect(
+      policyDecisionSchema.parse({
+        ...decision,
+        outcome: "FAIL",
+        rules: failing,
+      }).outcome,
+    ).toBe("FAIL");
   });
 
   it("produces stable canonical JSON and hashes", () => {
@@ -142,25 +211,19 @@ describe("canonical mandate domain", () => {
         account: `${account.slice(0, 2)}${account.slice(2).toUpperCase()}`,
       }),
     );
-    expect(
-      hashTaskIntent({
-        schemaVersion: "1",
-        account,
-        chainId: "97",
-        recipient: account,
-        goal: "Swap",
-        requestedExpirySeconds: "3600",
-      }),
-    ).toBe(
-      hashTaskIntent({
-        schemaVersion: "1",
-        account,
-        chainId: "97",
-        recipient: account,
-        goal: "Swap",
-        requestedExpirySeconds: "3600",
-      }),
+    const intent = {
+      schemaVersion: "1",
+      account,
+      chainId: "97",
+      recipient: account,
+      goal: "Swap",
+      requestedExpirySeconds: "3600",
+      salt: hash,
+    };
+    expect(hashTaskIntent(intent)).not.toBe(
+      hashTaskIntent({ ...intent, salt: `0x${"b".repeat(64)}` }),
     );
+    expect(() => hashTaskIntent({ ...intent, salt: undefined })).toThrow();
   });
 
   it("matches the frozen TaskMandate EIP-712 field order and widths", () => {

@@ -4,6 +4,30 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-23 - Keep quote-derived values out of anything hashed before the quote
+
+- Observed: the P1-002 `CompiledPlan` carried `minAmountOut`, `minPositionOut`, and `deadline`, but the compiler that produces the plan runs before any quote or block is pinned, and a stale quote must re-simulate without mutating the plan.
+- Root cause: the plan and the onchain action struct were modelled as one shape, so values owned by simulation were forced into a document hashed at compile time.
+- Rule: a hashed document contains only values known when it is produced; the plan holds the exact spend, pinned route, slippage ceiling, recipient, and lifetime, and simulation derives the minimum output and chain-time deadline into `actionHash`.
+
+### 2026-09-23 - Show the planner the vocabulary, never the limits
+
+- Observed: in the live Groq matrix the model transcribed "0.5 WBNB" and "2% slippage" verbatim, and deterministic intersection rejected both with the exact rule.
+- Root cause: a model shown the policy caps would be invited to fit the request under them, which is a silent clamp the owner never asked for.
+- Rule: give the planner the goal, the account, and the closed catalog vocabulary only; keep every limit in deterministic code so a broader request fails loudly with its own value as evidence.
+
+### 2026-09-23 - `git checkout` cannot restore an untracked file
+
+- Observed: a mutation check ran `sed` on the new, never-committed `apps/api/src/services/tasks.ts` and then `git checkout --` to revert; the checkout silently did nothing and the mutation stayed in the working tree until a grep caught it.
+- Root cause: `git checkout -- <path>` restores from the index, and an untracked file has no index entry.
+- Rule: mutate only committed files, or capture the pristine text first and restore it explicitly, then grep the restored file before trusting the next run.
+
+### 2026-09-20 - Use deterministic witnesses for mutation audit, not random stateful scheduling
+
+- Observed: the stateful invariant suite passed 256 runs, but repeated source mutations were caught intermittently even though their adversarial actions appeared hundreds of times in the call distribution.
+- Root cause: a stateful fuzz campaign proves properties over sampled sequences; it does not guarantee the exact prerequisite state and action ordering that makes every injected fault observable in every run.
+- Rule: keep stateful campaigns for sequence exploration, add deterministic reachability/regression witnesses for each load-bearing guard, and run mutation audit against the combined deterministic, fuzz, and invariant suite.
+
 ### 2026-09-19 - A guard is unproven until a mutation of it fails a test
 
 - Observed: the full `P2-002` suite passed on the first run, yet deleting the subcall gas bound (`gas: available - FAILURE_RECORD_GAS` to `gas: available`) still passed all 49 tests, because at the 2,000,000 gas the test supplied, the EIP-150 1/64 remainder was itself enough to write the terminal `FAILED` record.
@@ -125,6 +149,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+
+### 2026-09-20 - Verification and repository intelligence must be proportional
+
+- Asked to avoid rerunning checks that already passed when the affected surface has not changed, use one final verification at the commit boundary, and skip Graphify when code-relationship analysis does not materially help.
+- Application: during implementation run only the smallest failing/passing check for the changed behavior; run the full affected gate once before completion; treat Graphify as an optional code-navigation tool, never a ritual or completion gate.
 
 ### 2026-09-19 - The user executes the UI; agents prepare only the toolchain seam
 

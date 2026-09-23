@@ -8,6 +8,10 @@ library PeragoTypes {
     bytes32 internal constant SWAP_ADAPTER_KIND = keccak256("perago.adapter.swap.v1");
     bytes32 internal constant STAKE_ADAPTER_KIND = keccak256("perago.adapter.stake.v1");
 
+    /// Domain tag of a swap postcondition commitment: the signed recipient receives at
+    /// least the signed minimum of the signed output token.
+    bytes32 internal constant SWAP_POSTCONDITION_KIND = keccak256("perago.postcondition.swap.v1");
+
     /// Legal transitions: NONE -> AUTHORIZED -> (EXECUTING -> SUCCEEDED | FAILED) | REVOKED | EXPIRED.
     enum MandateStatus {
         NONE,
@@ -54,6 +58,18 @@ library PeragoTypes {
         uint256 inputSpent;
         uint256 observedOutputOrPositionDelta;
         bytes32 evidenceHash;
+    }
+
+    /// The closed exact-input swap action. Its canonical ABI encoding is exactly seven
+    /// words; `keccak256` of those bytes is the signed `actionHash`.
+    struct SwapAction {
+        address tokenIn;
+        address tokenOut;
+        uint24 poolFee;
+        uint256 amountIn;
+        uint256 minAmountOut;
+        address recipient;
+        uint48 deadline;
     }
 
     /// Root-signed registration that binds an account to its owner, epoch, policy, and session permission.

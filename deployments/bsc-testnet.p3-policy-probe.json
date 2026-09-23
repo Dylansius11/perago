@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "chainId": 97,
+  "label": "testnet-policy-probe-only",
+  "warning": "This deployment proves P3-002 policy activation and revocation only. Its MockSwapAdapter, MockStakeAdapter, and mock verifiers are not production integrations and must never execute a user mandate or satisfy P4/P5 evidence.",
+  "rootOwner": "0x712683F374Cd524F6336E87D577Fc39d1102930A",
+  "smartAccount": "0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944",
+  "verifiedAt": {
+    "blockNumber": "132477133",
+    "blockHash": "0x6a8bc7deedb1911b8aec625c0d3aa277a3b8d1bb05d7d563ffbebaaa9dac3fac",
+    "blockTimestamp": "1790061632"
+  },
+  "constructor": {
+    "executionWindowSeconds": "3600",
+    "executionWindowStatus": "probe-only; SC-D-005 remains unresolved for production",
+    "allowUnboundCommerceJobs": false
+  },
+  "contracts": {
+    "swapVerifier": {
+      "address": "0xad8a3272c6e68cf819fe1e3b2aefd0f8fd5b2c75",
+      "codeHash": "0xce5cc9057e15f39673847dca953b463ee2d87d7d161437ad5526b085a818cb5e",
+      "transactionHash": "0xb845541ec5383a70db76b93ac6c9d13de711de0e9d8b5a9c1cb971240cdc52a1",
+      "blockNumber": "132476560",
+      "kind": "test-only MockPeragoVerifier"
+    },
+    "stakeVerifier": {
+      "address": "0xae5dfbd43fe7da1bacbdc30d3378916c98e826d6",
+      "codeHash": "0xbea1d376af5823272f17f38fb3cf16668ab04b86900894fbfef6f3a49119c751",
+      "transactionHash": "0x38a8cef493fe99f6d71299a967dece77088d221fcdd2c309faab54f7040b17cb",
+      "blockNumber": "132476768",
+      "kind": "test-only MockPeragoVerifier"
+    },
+    "swapAdapter": {
+      "address": "0x1c647c1245b6f8a0e6b084bc65056ee216c887f8",
+      "codeHash": "0x0d50a540cca16e049a1909009c0b338c6eeca84476a18962d3c5c359bea5c916",
+      "transactionHash": "0xaa0b96af312d5a897fda13807e0148dae6c007e12e39f4f1a492c4d0f7d1027f",
+      "blockNumber": "132476881",
+      "kind": "test-only MockSwapAdapter"
+    },
+    "stakeAdapter": {
+      "address": "0x047868db008d1108e3dd7d96f07fa846ff0dde19",
+      "codeHash": "0x2c27528b98dacc0ab077ba68b8644a83065492d73c1744c33b92c49e63262a1a",
+      "transactionHash": "0x39edb2d50c0c34da0f630b31923d59a011b02afa51e74027a9072e85c49b5356",
+      "blockNumber": "132476929",
+      "kind": "test-only MockStakeAdapter"
+    },
+    "mandateExecutor": {
+      "address": "0x680419ec2dd33eb40e865d6ba09a66c65f9e3bfd",
+      "codeHash": "0x6e194ecba40731c4dbba83e09a507e2d5c20da921148f949dde6052b0f10c22b",
+      "transactionHash": "0x5fc5f41a110d43b5bccdd11a0370e3174f9eb0d275a4e9210cbcef73cc6dd068",
+      "blockNumber": "132477038",
+      "gasUsed": "3168307",
+      "kind": "real non-upgradeable MandateExecutor; policy probe only"
+    }
+  },
+  "observedConstructorReads": {
+    "swapAdapter": "0x1c647c1245b6f8a0e6b084bc65056ee216c887f8",
+    "stakeAdapter": "0x047868db008d1108e3dd7d96f07fa846ff0dde19",
+    "swapVerifier": "0xad8a3272c6e68cf819fe1e3b2aefd0f8fd5b2c75",
+    "stakeVerifier": "0xae5dfbd43fe7da1bacbdc30d3378916c98e826d6",
+    "executionWindowSeconds": "3600",
+    "allowUnboundCommerceJobs": false
+  }
+}
