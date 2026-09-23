@@ -105,5 +105,19 @@
       "symbol": "U",
       "decimals": 18
     }
+  },
+  "plannerCatalog": {
+    "note": "Closed planner vocabulary and pinned routes. Keys refer to contracts/tokens above; the fee-500 CAKE/WBNB pool is the deepest direct pool recorded in docs/technical/INTEGRATION.md section 8.",
+    "tokens": ["wbnb", "cake"],
+    "adapters": {
+      "pancakeswap-v3": {
+        "kind": "SWAP",
+        "routes": [{ "tokens": ["wbnb", "cake"], "poolFee": "500" }]
+      },
+      "cake-pool": {
+        "kind": "STAKE",
+        "asset": "cake"
+      }
+    }
   }
 }
