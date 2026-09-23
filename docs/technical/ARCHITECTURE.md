@@ -320,7 +320,7 @@ Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitt
 ### Reorg handling
 
 - Raw events are stored with block hash and confirmation status.
-- Before configured confirmation depth, API status is `PENDING_CONFIRMATION`, not terminal.
+- A transaction is confirmed only when its block is at or below the chain's `finalized` tag (`SC-D-005`; on chain 97 that trails `latest` by 1-2 blocks). Before that, API status is `PENDING_CONFIRMATION`, not terminal. The P3-002 policy verifier still counts a fixed depth; moving it to the `finalized` rule belongs to the next API task that touches confirmation.
 - If a block hash changes, indexer marks affected events orphaned, rewinds projections to the last canonical checkpoint, and replays.
 - The worker checks canonical transaction receipts before progressing to the next transition.
 
@@ -408,7 +408,7 @@ Only externally dependent choices remain open:
 
 1. `D-004`: whether ERC-20 spend for a swap is authorized inside one account-executed call or bounded by the AllowlistModule ERC-20 spend limit; a session key never receives a bare `approve` selector.
 2. Fallback public bundler capability, if Alchemy is unavailable.
-3. Exact BSC confirmation depth and independent RPC pair after testnet measurement.
+3. Independent RPC pair for critical reads. (Confirmation depth is closed by `SC-D-005`: the `finalized` tag.)
 
 Closed since the last revision, with evidence in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and [`../evidence/`](../evidence/):
 

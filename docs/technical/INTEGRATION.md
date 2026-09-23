@@ -25,7 +25,7 @@ No entry is marked “integrated” in this phase.
 | External self-custodial wallet | Root owner | `verified` | User-controlled MetaMask signatures activated and revoked the P3-002 policy on chain 97; the product wallet-connector journey remains implementation work. |
 | Alchemy Modular Account V2 | ERC-4337 smart account | `verified` | Selected; deployment, ownership, bounded session, and forbidden-shape rejection are proven on chain 97. |
 | Alchemy Bundler + Gas Manager | UserOperation transport/sponsorship | `verified` | Selected initial provider; sponsored and owner-paid paths both proven, and the owner-paid fallback is automatic. |
-| MandateExecutor | One-use semantic authority | `proposed` | A real non-upgradeable instance is verified for the P3-002 policy probe only; production adapters/verifiers and `SC-D-005` remain unresolved. |
+| MandateExecutor | One-use semantic authority | `proposed` | Production instance `0xc6184Fb3e12F4C79b50f37175f3229d91664EC66` on chain 97 pins the production swap and stake pairs with the `SC-D-005` 600-second window and unbound commerce jobs disabled ([manifest](../../deployments/bsc-testnet.perago.json)). Its adapters and verifiers are proven live ([evidence](../evidence/bsc-testnet.adapters-live.json)); the full mandate lifecycle through a smart account remains `P4-003`/`P5-002` work. The P3-002 instance is policy-probe-only. |
 | BNB Agent SDK | ERC-8183 helpers/BNB ecosystem utilities | `needs re-verification` | Evaluate narrowly; do not adopt its key provider or SDK wholesale. |
 | Altana EIP-7702 sessions | Alternate session path | `verified in reference repo` | Not selected; historical experiment and current official SDK mention are insufficient for Perago's exact guarantees. |
 | Trust Wallet Agent Kit | Alternate wallet/agent runtime | `proposed` | Not selected for MVP; no need beside the chosen ERC-4337 path. |
@@ -59,7 +59,7 @@ The official [BSC faucet guide](https://docs.bnbchain.org/bnb-smart-chain/develo
 - API and contracts compare numeric chain ID; display names are never authoritative.
 - Use at least two independently operated RPC endpoints for critical comparisons and indexer recovery.
 - Record block number and block hash for every quote/simulation.
-- Determine confirmation depth by testnet measurement; do not assume finality from one receipt.
+- Confirmation rule (`SC-D-005`, measured 2026-09-23): chain 97 exposes BSC fast finality, with `finalized` trailing `latest` by 1-2 blocks (about 1 s at a 450 ms average block). A transaction counts as confirmed only when its block is at or below `finalized`; one receipt alone is never finality.
 - Reject endpoints returning the wrong genesis/chain ID or lagging beyond the configured threshold.
 
 ### Failure behavior
@@ -252,8 +252,8 @@ This is selected over LP farming because one input token and one position-share 
 5. `MIN_DEPOSIT_AMOUNT` is `1e13` wei, and a smaller deposit reverts with `Deposit amount must be greater than MIN_DEPOSIT_AMOUNT`;
 6. `performanceFee` is `200` bp on yield; locked staking stays out of the MVP.
 
+**Position ownership.** The pool keys positions by `msg.sender` and exposes no deposit-for-recipient or share transfer (bytecode selector probe on 2026-09-23 found only `deposit(uint256,uint256)`). Perago therefore stakes through one `CakeStakePosition` holder per recipient, deployed by `CakeStakeAdapter` with `CREATE2`; the holder is the pool account and only the recipient can withdraw ([`SMART-CONTRACT.md`](SMART-CONTRACT.md) §6). A pinned-fork run at block `132658000` and the live chain-97 probe ([evidence](../evidence/bsc-testnet.adapters-live.json)) prove deposit through the deployed adapter into holder `0x53239B4Df8a62E0E8836A4924Efc63E91635824d` (tx `0xcf02b385fba9f63ac9a0d0e5e8aa918c5bdbd07bf22b0053b95fc8d200b4a5f0`), share minting above the signed minimum, a non-owner exit rejected with `WrongAccountCaller`, and the owner's full exit (tx `0xd25b41e6315c56355a6a4446a1a0efa30cce2bc0552bc7d94e675693a23e66e3`) returning the stake minus the documented 0.1% fee with zero shares left.
 
-**Position ownership.** The pool keys positions by `msg.sender` and exposes no deposit-for-recipient or share transfer (bytecode selector probe on 2026-09-23 found only `deposit(uint256,uint256)`). Perago therefore stakes through one `CakeStakePosition` holder per recipient, deployed by `CakeStakeAdapter` with `CREATE2`; the holder is the pool account and only the recipient can withdraw. A pinned-fork run at block `132658000` proves deposit, share minting, owner-only exit with the 0.1% fee, and isolation between recipients ([`SMART-CONTRACT.md`](SMART-CONTRACT.md) §6). Fork evidence only until the live probe runs.
 Testnet pricing in these pools is not economically meaningful, so amounts prove mechanics, not value. If the deployment later regresses, the contingency order is: a current official PancakeSwap/BNB staking testnet deployment; a pinned BSC mainnet fork labeled as fork evidence; or, with user approval, a minimal Perago test vault labeled as Perago test infrastructure — never a silent switch to lending, LP management, or an invented address.
 
 ## 10. Payment asset

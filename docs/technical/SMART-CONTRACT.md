@@ -230,7 +230,7 @@ No external protocol or token call occurs during authorization. Reading `kind()`
 
 The smart account then submits `perform(mandate, action, executorProof)`. Pre-call validation failure in `perform` does not widen authority; the mandate remains `EXECUTING` and can only be completed by a valid performance or terminally failed after the execution timeout. It cannot return to `AUTHORIZED`.
 
-`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + executionWindow` and records `FAILED` if no terminal receipt exists. `executionWindow` is an immutable constructor argument, not a source literal, because its safe value is a measured chain property (`SC-D-005`); the contract rejects zero and anything above the `MAX_EXECUTION_WINDOW` ceiling of one hour, which keeps a stalled execution from outliving the mandate expiry horizon.
+`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + executionWindow` and records `FAILED` if no terminal receipt exists. `executionWindow` is an immutable constructor argument, not a source literal, because its safe value is a measured chain property (`SC-D-005`, resolved at 600 seconds for the chain-97 production deployment); the contract rejects zero and anything above the `MAX_EXECUTION_WINDOW` ceiling of one hour, which keeps a stalled execution from outliving the mandate expiry horizon.
 
 ### 5.5 Why not a single transaction
 
@@ -619,6 +619,6 @@ Not part of the initial public execution gate. Before any mainnet deployment: re
 | SC-D-002 | PancakeSwap CAKE Pool viability or replacement staking adapter | Contract/integration owner | Official source, chain-97 bytecode, asset/position reads, deposit/verification/withdraw smoke. |
 | SC-D-003 | ERC-8183 kernel/router/evaluator interface and deployment | Contract/integration owner | Pin upstream commit/ABI/address/code hash; execute complete/reject/refund test lifecycle. |
 | SC-D-004 | Live demo payment token | Product/contract owner | Verify chain/address/decimals/funding path and ERC-8183 compatibility; otherwise deploy and label a test token. |
-| SC-D-005 | Immutable `EXECUTION_WINDOW` and BSC confirmation depth | Executor/contract owner | Measure testnet inclusion/finality and choose the smallest safe bounds before deployment. |
+| SC-D-005 | Immutable `EXECUTION_WINDOW` and BSC confirmation depth | Executor/contract owner | **Resolved 2026-09-23 by user decision** from chain-97 measurement (450 ms average block over 1,000 blocks; the `finalized` tag trailing `latest` by 1-2 blocks, about 1 s, across six samples): `executionWindow = 600` seconds in the production deployment [`../../deployments/bsc-testnet.perago.json`](../../deployments/bsc-testnet.perago.json), and a transaction counts as confirmed only once its block is at or below the chain's `finalized` tag. |
 
 No open item may be filled with an assumed address, capability, or silent fallback.

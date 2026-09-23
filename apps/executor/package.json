@@ -13,7 +13,8 @@
     "probe:policy-live": "node --env-file-if-exists=../../.env src/probes/policy-live.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "probe:account-live": "node --env-file-if-exists=../../.env src/probes/account-live.ts",
-    "probe:protocol-live": "node --env-file-if-exists=../../.env src/probes/protocol-live.ts"
+    "probe:protocol-live": "node --env-file-if-exists=../../.env src/probes/protocol-live.ts",
+    "probe:adapters-live": "node --env-file-if-exists=../../.env src/probes/adapters-live.ts"
   },
   "dependencies": {
     "@aa-sdk/core": "4.88.5",

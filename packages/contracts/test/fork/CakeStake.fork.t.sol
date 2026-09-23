@@ -364,6 +364,21 @@ contract CakeStakeForkTest is PeragoForkBase {
         _assertExecutorHoldsNothing();
     }
 
+    function testFuzz_validateAcceptsOnlyTheSignedAmounts(uint256 amount, uint256 minPositionOut) public onFork {
+        vm.assume(amount != AMOUNT || minPositionOut != expectedShares);
+        (PeragoTypes.TaskMandate memory mandate, PeragoTypes.StakeAction memory stake) = _boundParts(expectedShares);
+        stake.amount = amount;
+        stake.minPositionOut = minPositionOut;
+        _expectRejected(mandate, stake, CakeStakeAdapter.AmountOutOfBounds.selector);
+    }
+
+    function testFuzz_validateRejectsEveryOtherPoolId(bytes32 poolId) public onFork {
+        vm.assume(poolId != stakeAdapter.poolId());
+        (PeragoTypes.TaskMandate memory mandate, PeragoTypes.StakeAction memory stake) = _boundParts(expectedShares);
+        stake.poolId = poolId;
+        _expectRejected(mandate, stake, CakeStakeAdapter.InvalidTokenPair.selector);
+    }
+
     // --- helpers ------------------------------------------------------------------
 
     function _boundParts(uint256 minShares)
