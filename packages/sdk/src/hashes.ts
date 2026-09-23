@@ -5,6 +5,10 @@ import {
   type CompiledPlan,
   compiledPlanSchema,
 } from "./domain/compiled-plan.js";
+import {
+  type PolicyDecision,
+  policyDecisionSchema,
+} from "./domain/policy-decision.js";
 import type { Hash } from "./domain/primitives.js";
 import {
   type SimulationResult,
@@ -32,8 +36,18 @@ export function hashCompiledPlan(input: unknown): Hash {
   return hashDocument(compiledPlanSchema.parse(input));
 }
 
+export function hashPolicyDecision(input: unknown): Hash {
+  return hashDocument(policyDecisionSchema.parse(input));
+}
+
 export function hashSimulationResult(input: unknown): Hash {
   return hashDocument(simulationResultSchema.parse(input));
 }
 
-export type { CompiledPlan, SimulationResult, TaskIntent, WalletPolicy };
+export type {
+  CompiledPlan,
+  PolicyDecision,
+  SimulationResult,
+  TaskIntent,
+  WalletPolicy,
+};

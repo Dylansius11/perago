@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   adapterIdSchema,
   addressSchema,
+  bpsStringSchema,
   hasDuplicates,
   serviceSchema,
   uint48StringSchema,
@@ -63,10 +64,7 @@ export const walletPolicySchema = z
           });
         }
       }),
-    maxSlippageBps: uint64StringSchema.refine(
-      (value) => BigInt(value) <= 10_000n,
-      "slippage cannot exceed 10,000 bps",
-    ),
+    maxSlippageBps: bpsStringSchema,
     allowedRecipients: z.literal("SELF"),
     maxTaskLifetimeSeconds: uint48StringSchema,
   })
