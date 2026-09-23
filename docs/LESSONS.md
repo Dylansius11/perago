@@ -4,6 +4,18 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-23 - `vm.revertToState` also reverts the test contract's own storage
+
+- Observed: the stake fork `setUp` measured the share delta inside a snapshot, stored it in a state variable, reverted, and then failed with "the pinned pool minted no shares".
+- Root cause: a Foundry snapshot covers every account, including the test contract, so a value written to its storage before the revert is rolled back with everything else.
+- Rule: carry a value measured inside a snapshot across the revert in a local variable, and assign it to storage only after `revertToState`.
+
+### 2026-09-23 - A guard that only a misbehaving protocol can reach needs a stand-in that misbehaves
+
+- Observed: the mutation audit showed that deleting the adapter's allowance reset or residual-input check survived every fork test, because the real PancakeSwap router and CAKE Pool always consume exactly what they are offered.
+- Root cause: against an honest counterparty those guards are unreachable, so a real-protocol fork cannot distinguish a guarded adapter from an unguarded one.
+- Rule: for each guard that defends against a counterparty's failure, add a minimal stand-in that produces exactly that failure (`PartialFillRouter`, `ShortDepositPool`) and pin the exact revert selector, so removing either the guard or the cleanup before it changes the observed reason.
+
 ### 2026-09-23 - Keep quote-derived values out of anything hashed before the quote
 
 - Observed: the P1-002 `CompiledPlan` carried `minAmountOut`, `minPositionOut`, and `deadline`, but the compiler that produces the plan runs before any quote or block is pinned, and a stale quote must re-simulate without mutating the plan.

@@ -1,9 +1,12 @@
 export {
+  cakeStakeAdapterAbi,
+  cakeStakePositionAbi,
   mandateExecutorAbi,
   pancakeV3SwapAdapterAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
   peragoVerifierAbi,
+  stakeVerifierAbi,
   swapVerifierAbi,
 } from "./abi/perago-contracts.js";
 export {
@@ -46,9 +49,14 @@ export {
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
 export {
+  CAKE_POOL_ID,
+  encodeStakeAction,
   encodeSwapAction,
+  hashStakePostcondition,
   hashSwapPostcondition,
+  type StakeAction,
   type SwapAction,
+  stakeActionSchema,
   swapActionSchema,
 } from "./actions.js";
 export {

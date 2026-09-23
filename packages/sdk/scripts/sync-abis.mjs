@@ -45,6 +45,22 @@ const EXPORTS = [
     exportName: "swapVerifierAbi",
     summary: "Measures swap output at the signed recipient.",
   },
+  {
+    artifact: "CakeStakeAdapter.sol/CakeStakeAdapter.json",
+    exportName: "cakeStakeAdapterAbi",
+    summary:
+      "Pinned CAKE Pool flexible-stake adapter; positionOf names each recipient's holder.",
+  },
+  {
+    artifact: "CakeStakePosition.sol/CakeStakePosition.json",
+    exportName: "cakeStakePositionAbi",
+    summary: "A recipient's own CAKE Pool account; only its owner withdraws.",
+  },
+  {
+    artifact: "StakeVerifier.sol/StakeVerifier.json",
+    exportName: "stakeVerifierAbi",
+    summary: "Measures pool shares of the signed recipient's holder.",
+  },
 ];
 
 const artifactUrl = (artifact) =>

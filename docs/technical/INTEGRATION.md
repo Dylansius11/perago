@@ -252,6 +252,8 @@ This is selected over LP farming because one input token and one position-share 
 5. `MIN_DEPOSIT_AMOUNT` is `1e13` wei, and a smaller deposit reverts with `Deposit amount must be greater than MIN_DEPOSIT_AMOUNT`;
 6. `performanceFee` is `200` bp on yield; locked staking stays out of the MVP.
 
+
+**Position ownership.** The pool keys positions by `msg.sender` and exposes no deposit-for-recipient or share transfer (bytecode selector probe on 2026-09-23 found only `deposit(uint256,uint256)`). Perago therefore stakes through one `CakeStakePosition` holder per recipient, deployed by `CakeStakeAdapter` with `CREATE2`; the holder is the pool account and only the recipient can withdraw. A pinned-fork run at block `132658000` proves deposit, share minting, owner-only exit with the 0.1% fee, and isolation between recipients ([`SMART-CONTRACT.md`](SMART-CONTRACT.md) §6). Fork evidence only until the live probe runs.
 Testnet pricing in these pools is not economically meaningful, so amounts prove mechanics, not value. If the deployment later regresses, the contingency order is: a current official PancakeSwap/BNB staking testnet deployment; a pinned BSC mainnet fork labeled as fork evidence; or, with user approval, a minimal Perago test vault labeled as Perago test infrastructure — never a silent switch to lending, LP management, or an invented address.
 
 ## 10. Payment asset

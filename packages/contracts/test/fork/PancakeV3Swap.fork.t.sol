@@ -143,6 +143,13 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
         _expectRejected(mandate, swap, PancakeV3SwapAdapter.InvalidTokenPair.selector);
     }
 
+    function test_rejectsAZeroMinimumEvenWhenSigned() public onFork {
+        (PeragoTypes.TaskMandate memory mandate, PeragoTypes.SwapAction memory swap) = _boundParts(quoted);
+        mandate.minOutput = 0;
+        swap.minAmountOut = 0;
+        _expectRejected(mandate, swap, PancakeV3SwapAdapter.AmountOutOfBounds.selector);
+    }
+
     function test_rejectsNonCanonicalActionBytes() public onFork {
         (PeragoTypes.TaskMandate memory mandate, bytes memory action) = _bound(quoted);
 
