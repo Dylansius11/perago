@@ -34,6 +34,17 @@ const EXPORTS = [
     summary:
       "Authority boundary: account registration, mandate authorization, and terminal state.",
   },
+  {
+    artifact: "PancakeV3SwapAdapter.sol/PancakeV3SwapAdapter.json",
+    exportName: "pancakeV3SwapAdapterAbi",
+    summary:
+      "Pinned-pool exact-input swap adapter; its errors are mapped reason codes.",
+  },
+  {
+    artifact: "SwapVerifier.sol/SwapVerifier.json",
+    exportName: "swapVerifierAbi",
+    summary: "Measures swap output at the signed recipient.",
+  },
 ];
 
 const artifactUrl = (artifact) =>

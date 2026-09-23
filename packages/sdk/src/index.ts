@@ -1,8 +1,10 @@
 export {
   mandateExecutorAbi,
+  pancakeV3SwapAdapterAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
   peragoVerifierAbi,
+  swapVerifierAbi,
 } from "./abi/perago-contracts.js";
 export {
   type AccountPolicy,
@@ -43,6 +45,12 @@ export {
   serializeValidationConfig,
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
+export {
+  encodeSwapAction,
+  hashSwapPostcondition,
+  type SwapAction,
+  swapActionSchema,
+} from "./actions.js";
 export {
   signatureSchema,
   type WalletChallengeRequest,
