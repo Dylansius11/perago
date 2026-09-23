@@ -2,6 +2,8 @@ export {
   cakeStakeAdapterAbi,
   cakeStakePositionAbi,
   mandateExecutorAbi,
+  mandateSimulationHarnessAbi,
+  mandateSimulationHarnessRuntime,
   pancakeV3SwapAdapterAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
@@ -68,6 +70,10 @@ export {
   walletChallengeVerificationSchema,
   walletSessionSchema,
 } from "./api/auth.js";
+export {
+  type SubmitMandateSignatureRequest,
+  submitMandateSignatureRequestSchema,
+} from "./api/mandates.js";
 export {
   type ConfirmPolicyActivationRequest,
   type ConfirmPolicyRevocationRequest,
@@ -145,6 +151,11 @@ export {
   walletPolicySchema,
 } from "./domain/wallet-policy.js";
 export {
+  type ExecutionProof,
+  executionProofSchema,
+  executionProofTypeString,
+  executionProofTypes,
+  getExecutionProofTypedData,
   getTaskMandateTypedData,
   type TaskMandateDomain,
   taskMandateTypeString,
@@ -157,6 +168,11 @@ export {
   hashTaskIntent,
   hashWalletPolicy,
 } from "./hashes.js";
+export {
+  ADAPTER_EXECUTE_SELECTOR,
+  encodeSimulatedAction,
+  taskMandateFromSimulation,
+} from "./mandate.js";
 export {
   REASON_MESSAGES,
   type ReasonCode,
