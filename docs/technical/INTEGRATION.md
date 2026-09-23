@@ -36,6 +36,7 @@ No entry is marked “integrated” in this phase.
 | USD1 | Mainnet payment-token candidate | `needs re-verification` | Official BSC mainnet address exists; not a testnet token. |
 | APEX payment token (United Stables `U`) | ERC-8183 demo payment token | `verified` | Selected; upstream labels it USDC, onchain it is `U`. No faucet: funded through one V2 pair. |
 | Quote + pinned `eth_call` + UserOp simulation | Pre-sign simulation | `proposed` | Initial simulation source; add no third-party simulator until evidence requires it. |
+| Groq `openai/gpt-oss-120b` | Untrusted intent planner | `verified` | Selected in `P3-003`; strict `json_schema` constrained decoding returned only the closed candidate across a ten-intent matrix on 2026-09-23 ([evidence](../evidence/p3-003-planner-live.json)). It never authorizes; the deterministic compiler owns every value. Sources: [structured outputs](https://console.groq.com/docs/structured-outputs), [data retention](https://console.groq.com/docs/your-data). |
 
 ## 3. BNB Smart Chain
 

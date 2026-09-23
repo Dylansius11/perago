@@ -152,9 +152,9 @@ Use Hono middleware only for transport concerns. Domain functions accept typed v
 
 ### AI provider
 
-No provider is selected in the foundation phase because model availability, structured-output behavior, and hackathon credits can change. Phase 3 chooses one provider after a fixed-schema evaluation. The adapter surface is one function that returns untrusted JSON; Zod plus deterministic policy owns correctness.
+Selected in `P3-003`: **Groq**, model `openai/gpt-oss-120b`, through the official `groq-sdk` `1.6.0` (exact pin in `apps/api`). It is one of the models Groq serves with `strict: true` constrained decoding for `json_schema` output, so every response matches the closed candidate schema; Zod and deterministic policy still own correctness. Requests use `temperature: 0`, `reasoning_effort: "medium"`, `include_reasoning: false`, a 30-second timeout, and one SDK retry. Groq does not retain inference inputs or outputs by default and offers Zero Data Retention in its Data Controls; enable ZDR on the project key. The key is `PERAGO_GROQ_API_KEY` in the local `.env`. The fixed-intent evaluation that selected it is [`../evidence/p3-003-planner-live.json`](../evidence/p3-003-planner-live.json). Sources: [structured outputs](https://console.groq.com/docs/structured-outputs), [data retention](https://console.groq.com/docs/your-data).
 
-Do not install a multi-provider AI framework unless the selected provider's official SDK cannot meet structured output, timeout, cancellation, and no-training requirements. One direct official SDK is preferred over speculative portability.
+The adapter surface is one function that returns untrusted JSON (`apps/api/src/planner/provider.ts`). A provider or model change requires re-running that evaluation matrix; no multi-provider AI framework is installed.
 
 ## 6. Executor and indexer
 

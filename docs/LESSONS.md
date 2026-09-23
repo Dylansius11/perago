@@ -4,6 +4,24 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-23 - Keep quote-derived values out of anything hashed before the quote
+
+- Observed: the P1-002 `CompiledPlan` carried `minAmountOut`, `minPositionOut`, and `deadline`, but the compiler that produces the plan runs before any quote or block is pinned, and a stale quote must re-simulate without mutating the plan.
+- Root cause: the plan and the onchain action struct were modelled as one shape, so values owned by simulation were forced into a document hashed at compile time.
+- Rule: a hashed document contains only values known when it is produced; the plan holds the exact spend, pinned route, slippage ceiling, recipient, and lifetime, and simulation derives the minimum output and chain-time deadline into `actionHash`.
+
+### 2026-09-23 - Show the planner the vocabulary, never the limits
+
+- Observed: in the live Groq matrix the model transcribed "0.5 WBNB" and "2% slippage" verbatim, and deterministic intersection rejected both with the exact rule.
+- Root cause: a model shown the policy caps would be invited to fit the request under them, which is a silent clamp the owner never asked for.
+- Rule: give the planner the goal, the account, and the closed catalog vocabulary only; keep every limit in deterministic code so a broader request fails loudly with its own value as evidence.
+
+### 2026-09-23 - `git checkout` cannot restore an untracked file
+
+- Observed: a mutation check ran `sed` on the new, never-committed `apps/api/src/services/tasks.ts` and then `git checkout --` to revert; the checkout silently did nothing and the mutation stayed in the working tree until a grep caught it.
+- Root cause: `git checkout -- <path>` restores from the index, and an untracked file has no index entry.
+- Rule: mutate only committed files, or capture the pristine text first and restore it explicitly, then grep the restored file before trusting the next run.
+
 ### 2026-09-20 - Use deterministic witnesses for mutation audit, not random stateful scheduling
 
 - Observed: the stateful invariant suite passed 256 runs, but repeated source mutations were caught intermittently even though their adversarial actions appeared hundreds of times in the call distribution.

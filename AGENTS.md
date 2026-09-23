@@ -13,7 +13,7 @@ Optimize for a judge-verifiable, security-first product. AI may propose and expl
 
 ## Current gate
 
-The repository is in Phase 3 implementation. `P3-002` is complete; stop before `P3-003` until the user explicitly opens it. Implement only the current task in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md); do not start a later phase.
+The repository is in Phase 3 implementation. `P3-003` is complete; stop before `P3-004` until the user explicitly opens it. Implement only the current task in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md); do not start a later phase.
 
 The approved `P7-001` landing shell exists by explicit out-of-order authorization. Do not extend product screens, wallet journeys, CSS, tokens, logos, mockups, or visual specifications until the corresponding build-plan task is opened and the user supplies or approves its direction.
 

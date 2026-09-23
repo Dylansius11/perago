@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1 and 2 are complete; Phase 3 is complete through `P3-002`, and `P3-003` is the next unopened task.** The SDK owns the canonical mandate and policy domains; MandateExecutor has authorization, accepted-attempt, and invariant proof; and the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, and deterministic onchain-transition verification.
+**Phases 1 and 2 are complete; Phase 3 is complete through `P3-003`, and `P3-004` is the next unopened task.** The SDK owns the canonical mandate, policy, planner-candidate, compiled-plan, and policy-decision domains; MandateExecutor has authorization, accepted-attempt, and invariant proof; and the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, deterministic onchain-transition verification, and an untrusted Groq planner feeding a deterministic compiler that reports every Wallet Policy rule.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 
@@ -47,7 +47,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Current source includes the SDK domain/account layer, MandateExecutor contracts and proofs, executor probes, the approved landing shell, and API persistence, authentication, policy, and chain-verification infrastructure. Phase 3 stops after completed `P3-002`; `P3-003` starts only on explicit user instruction.
+Current source includes the SDK domain/account layer, MandateExecutor contracts and proofs, executor probes, the approved landing shell, and API persistence, authentication, policy, chain-verification, planner, and compiler infrastructure. Phase 3 stops after completed `P3-003`; `P3-004` starts only on explicit user instruction.
 
 ## Documentation
 

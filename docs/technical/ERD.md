@@ -198,7 +198,7 @@ Constraints:
 - only `DRAFT → ACTIVATING → ACTIVE`, `ACTIVE → SUPERSEDED`, and legal revocation transitions are accepted;
 - `SUPERSEDED`/`REVOKED` require `terminal_at`.
 
-Daily cap usage is derived from confirmed `SUCCEEDED` and economically spent `FAILED` receipt evidence for the policy's declared day window. The corresponding smart-account permission uses the same token ceiling and expiry as an onchain backstop. Do not maintain an unbounded or non-rebuildable mutable counter.
+Daily cap usage is derived, never counted: for one wallet and input token it is the sum of the compiled `inputAmount` of every mandate signed in the trailing 24 hours whose status is not `REVOKED` or `EXPIRED` (those never spend). The signed ceiling over-counts an attempt that spent less, never under-counts, and it reserves authority that is signed but not yet executed. The corresponding smart-account permission uses the same token ceiling and expiry as an onchain backstop. Do not maintain an unbounded or non-rebuildable mutable counter.
 
 ### 5.5 `tasks`
 
@@ -211,14 +211,14 @@ User-authored intent plus the deterministic compilation result.
 | `wallet_policy_id` | uuid | FK, not null |
 | `client_request_id` | text | not null; idempotency key scoped to wallet |
 | `status` | `task_status` | not null |
-| `intent_text_ciphertext` | bytea | encrypted at rest; nullable after retention purge |
-| `intent_hash` | bytea | 32 bytes, not null |
-| `intent_document` | jsonb | normalized non-secret TaskIntent fields |
-| `compiled_plan` | jsonb | nullable until compilation pass |
-| `plan_hash` | bytea | nullable; 32 bytes |
-| `compiler_version` | text | nullable; immutable with plan |
-| `policy_decision` | jsonb | not null after compile; rule-by-rule outcomes |
-| `policy_decision_hash` | bytea | nullable; 32 bytes |
+| `intent_text_ciphertext` | bytea | the raw goal only, AES-256-GCM (`version ‖ iv ‖ tag ‖ ciphertext`) bound to the task id; nullable after retention purge |
+| `intent_hash` | bytea | 32 bytes, not null; `hashTaskIntent` of the document plus the decrypted goal |
+| `intent_document` | jsonb | every non-secret TaskIntent field, including the random 32-byte `salt`; never the goal |
+| `compiled_plan` | jsonb | the pre-quote `CompiledPlan`; set only for a passing decision |
+| `plan_hash` | bytea | nullable; 32 bytes; set with the plan |
+| `compiler_version` | text | nullable; set with the decision and immutable |
+| `policy_decision` | jsonb | the complete ordered `PolicyDecision`; set for passing and rejected compilation |
+| `policy_decision_hash` | bytea | nullable; 32 bytes; set with the decision |
 | `created_at` | timestamptz | not null |
 | `updated_at` | timestamptz | not null |
 | `cancelled_at` | timestamptz | nullable |
@@ -226,7 +226,13 @@ User-authored intent plus the deterministic compilation result.
 Constraints:
 
 - unique `(wallet_id, client_request_id)`;
+- a task is inserted as `DRAFT`; a trigger enforces the transitions in §6;
+- decision, decision hash, and compiler version are set together; plan and plan hash are set together and only with a decision;
+- `DRAFT` and `COMPILING` carry no decision or plan; `REJECTED_POLICY` carries a decision and no plan;
 - a passing plan has a non-null plan, plan hash, compiler version, and decision hash;
+- intent fields are immutable except for the retention purge of the ciphertext, and compilation evidence is immutable once written;
+- `COMPILING` and `READY_TO_SIMULATE` require the task's wallet policy to still be `ACTIVE`;
+- `cancelled_at` is set exactly when the status is `CANCELLED`, and a task whose mandate left `SIGNED` cannot be cancelled;
 - a rejected task cannot have a mandate;
 - unknown JSON fields are rejected before persistence, not silently retained.
 
@@ -465,6 +471,8 @@ Constraints:
 | From | To | Guard |
 | --- | --- | --- |
 | DRAFT | COMPILING | Active canonical policy exists |
+| COMPILING | DRAFT | Planner unavailable, invalid planner output, or clarification needed; nothing compiled and the same request may retry |
+| COMPILING | COMPILING | Reclaim after the compile lease (updated at) expires, so a crashed request cannot strand the task |
 | COMPILING | REJECTED_POLICY | At least one deterministic rule fails |
 | COMPILING | READY_TO_SIMULATE | Strict plan schema and all rules pass |
 | READY_TO_SIMULATE | SIMULATED | Exact simulation passes |
@@ -487,7 +495,7 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 | Create/read policy | `wallets`, `wallet_policies` | new `wallet_policies` draft |
 | Activate policy | `wallets`, `wallet_policies`, `chain_events` | activation projection after user submission |
 | Create intent | `wallets`, active policy | `tasks` |
-| Compile/intersect | `tasks`, `wallet_policies`, `protocol_adapters` | plan/decision fields on same pre-sign task |
+| Compile/intersect | `tasks`, active `wallet_policies`, the manifest-pinned `plannerCatalog`, mandates signed in the trailing 24 hours | plan/decision fields on same pre-sign task; `protocol_adapters` joins at simulation once adapters are deployed |
 | Simulate/refresh | task + adapter + chain reads | append `simulations`, advance task reference/status |
 | Build/sign mandate | task + fresh simulation + wallet | immutable `mandates`, task `SIGNED`, `executions` queue row |
 | Read lifecycle | mandate/execution/receipt projections | none |

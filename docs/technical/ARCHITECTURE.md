@@ -26,7 +26,7 @@ flowchart LR
   W -->|ERC-4337 UserOperations| SA[Alchemy Modular Account V2]
   W -->|intent and signed mandate| A[Perago API]
   A -->|typed prompt input| M[AI planner]
-  M -->|untrusted CompiledPlan candidate| A
+  M -->|untrusted PlanCandidate| A
   A -->|quote and eth_call| R[BSC RPC]
   A -->|authorized work item| X[Executor]
   X -->|scoped UserOperation| SA
@@ -193,8 +193,8 @@ sequenceDiagram
 
   User->>Web: Natural-language TaskIntent
   Web->>API: Intent + active policy version + account
-  API->>AI: Intent + closed action schema + allowed vocabulary
-  AI-->>API: CompiledPlan candidate
+  API->>AI: Goal + smart account + closed candidate schema + catalog vocabulary (no policy limits)
+  AI-->>API: Untrusted PlanCandidate (SWAP, STAKE, or CLARIFY)
   API->>API: Strict parse and normalize
   API->>API: Intersect every plan field with WalletPolicy
   alt conflict
@@ -213,7 +213,7 @@ sequenceDiagram
   end
 ```
 
-The API persists the raw user intent and the normalized plan separately. It never treats model prose as an action. A simulation is valid only for the exact policy, plan, adapter implementation, nonce, block context, and expiry window recorded in its hash.
+The API persists the raw user intent and the normalized plan separately. It never treats model prose as an action. The planner names only a kind, catalog adapter and token symbols, a decimal amount, and optional slippage or recipient values; it is not shown policy limits, so it transcribes the request instead of clamping it. The deterministic compiler resolves addresses and the pinned pool fee from the manifest catalog, converts amounts without rounding, reports every Wallet Policy rule in a fixed-order `PolicyDecision`, and builds a pre-quote `CompiledPlan`. Quote-derived minimum output and the chain-time deadline are not plan fields: simulation derives them and commits them into `actionHash`, so a re-quote never changes the plan or its hash. A simulation is valid only for the exact policy, plan, adapter implementation, nonce, block context, and expiry window recorded in its hash.
 
 ### 5.3 Authorize and execute
 
@@ -328,7 +328,8 @@ Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitt
 
 | Failure | Behavior | User-visible result |
 | --- | --- | --- |
-| Planner unavailable/invalid output | Do not compile or infer a fallback action. | Retryable planning failure; no mandate. |
+| Planner unavailable/invalid output | Do not compile or infer a fallback action; return the task to `DRAFT`. | Retryable planning failure (`PLANNER_UNAVAILABLE`, `PLANNER_OUTPUT_INVALID`); no mandate. |
+| Ambiguous or unsupported goal | Planner returns `CLARIFY`; nothing is compiled. | `INTENT_NEEDS_CLARIFICATION` with one question; restate as a new request. |
 | Policy conflict | Persist structured decision; do not simulate. | Exact rule/value conflict. |
 | Quote unavailable/stale | Do not sign; refresh from a new pinned block. | Simulation unavailable/stale. |
 | RPC disagreement | Stop critical transition and compare another endpoint or wait. | Chain data temporarily uncertain. |
