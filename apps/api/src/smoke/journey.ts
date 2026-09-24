@@ -18,6 +18,7 @@ import {
   encodeSemiModularAccountFactoryData,
   encodeSimulatedAction,
   executionProofSchema,
+  executionReceiptSchema,
   getAccountPolicyTypedData,
   getExecutionProofTypedData,
   getTaskMandateTypedData,
@@ -1463,6 +1464,45 @@ export function createJourney(input: JourneyInput) {
     expect(asHex(receipt?.execution_tx_hash ?? null)).toBe(
       transactions.perform,
     );
+    if (!live) {
+      // The public route must restore a lost projection after the worker exits.
+      await sql`delete from execution_receipts where mandate_hash = ${asBuffer(mandateHash)}`;
+    }
+    const publicResponse = await fetch(
+      new URL(`/receipts/${mandateHash}`, apiUrl),
+    );
+    expect(publicResponse.status).toBe(200);
+    const publicReceipt = executionReceiptSchema.parse(
+      await publicResponse.json(),
+    );
+    expect(publicReceipt).toMatchObject({
+      status: "SUCCEEDED",
+      mandateHash,
+      account,
+      authorityConsumed: true,
+      verification: {
+        status: "PASSED",
+        hash: record.verificationHash.toLowerCase(),
+      },
+      transactions: {
+        authorize: transactions.authorize,
+        begin: transactions.begin,
+        userOperation: userOperation?.args.userOpHash,
+        execution: transactions.perform,
+      },
+      settlement: { status: "NOT_BOUND" },
+    });
+    const publicBlock = await client.getBlock({
+      blockNumber: BigInt(publicReceipt.terminal.blockNumber),
+    });
+    expect(publicReceipt.terminal.blockHash).toBe(publicBlock.hash);
+    if (!live) {
+      const repeated = await fetch(new URL(`/receipts/${mandateHash}`, apiUrl));
+      expect(repeated.status).toBe(200);
+      expect(executionReceiptSchema.parse(await repeated.json())).toEqual(
+        publicReceipt,
+      );
+    }
 
     evidence.perform = {
       transactionHash: transactions.perform,
@@ -1481,6 +1521,7 @@ export function createJourney(input: JourneyInput) {
         mandateStatus: row.mandate_status,
         submissionAttempts: row.submission_attempts,
       },
+      public: publicReceipt,
     };
   }
 

@@ -107,6 +107,8 @@ function validateBatch(batch: ChainEventBatch): void {
 }
 
 type ProjectionEvent = {
+  chain_id: string;
+  contract_address: Buffer;
   transaction_hash: Buffer;
   block_number: string;
   decoded_name: string | null;
@@ -173,6 +175,9 @@ async function writeReceipt(
         "decodedArgs.verificationHash",
       )
     : null;
+  if (status === "SUCCEEDED" && verificationHash?.equals(Buffer.alloc(32))) {
+    throw new Error("successful receipt needs a nonzero verification hash");
+  }
   const executionTxHash = recordsExecution ? event.transaction_hash : null;
 
   await tx`
@@ -191,12 +196,15 @@ async function writeReceipt(
   `;
 }
 
-async function rebuildMandateProjection(
+export async function rebuildMandateProjection(
   tx: TransactionSql,
   mandateHash: Buffer,
 ): Promise<void> {
-  const [mandate] = await tx<{ exists: boolean }[]>`
-    select true as exists from mandates where mandate_hash = ${mandateHash}
+  const [mandate] = await tx<
+    { chain_id: string; mandate_executor_address: Buffer }[]
+  >`
+    select chain_id::text, mandate_executor_address
+    from mandates where mandate_hash = ${mandateHash}
   `;
   if (!mandate) {
     throw new Error(
@@ -213,13 +221,28 @@ async function rebuildMandateProjection(
   `;
 
   const events = await tx<ProjectionEvent[]>`
-    select transaction_hash, block_number::text, decoded_name, decoded_args, observed_at
+    select transaction_hash, block_number::text, decoded_name, decoded_args,
+      observed_at, chain_id::text, contract_address
     from chain_events
     where status = 'CONFIRMED'
       and decoded_args->>'mandateHash' = ${`0x${mandateHash.toString("hex")}`}
     order by block_number, log_index
   `;
 
+  for (const event of events) {
+    if (event.chain_id !== mandate.chain_id) {
+      throw new Error("event chain differs from the signed mandate");
+    }
+    if (
+      event.decoded_name !== null &&
+      (event.decoded_name === "MandateAuthorized" ||
+        event.decoded_name === "ExecutionBegun" ||
+        event.decoded_name in terminalEventNames) &&
+      !event.contract_address.equals(mandate.mandate_executor_address)
+    ) {
+      throw new Error("event contract differs from the signed mandate");
+    }
+  }
   for (const event of events) {
     if (event.decoded_name === "MandateAuthorized") {
       await tx`
@@ -272,9 +295,41 @@ async function insertConfirmedEvents(
         ${event.decodedArgs === null ? null : tx.json(event.decodedArgs)},
         'CONFIRMED', ${event.observedAt}, ${event.observedAt}
       )
-      on conflict (chain_id, transaction_hash, log_index) do nothing
+      on conflict (chain_id, transaction_hash, log_index, block_hash) do update
+        set status = 'CONFIRMED', confirmed_at = excluded.confirmed_at
+        where chain_events.status = 'ORPHANED'
+          and chain_events.block_number = excluded.block_number
+          and chain_events.contract_address = excluded.contract_address
+          and chain_events.topic0 = excluded.topic0
+          and chain_events.topics = excluded.topics
+          and chain_events.data = excluded.data
+          and chain_events.decoded_name is not distinct from excluded.decoded_name
+          and chain_events.decoded_args is not distinct from excluded.decoded_args
       returning transaction_hash
     `;
+    if (rows.count === 0) {
+      const [existing] = await tx<{ status: string; matches: boolean }[]>`
+        select status, (
+          block_number = ${event.blockNumber.toString()}
+          and contract_address = ${event.contractAddress}
+          and topic0 = ${event.topic0}
+          and topics = ${tx.json([...event.topics])}
+          and data = ${event.data}
+          and decoded_name is not distinct from ${event.decodedName}
+          and decoded_args is not distinct from ${event.decodedArgs === null ? null : tx.json(event.decodedArgs)}
+        ) as matches
+        from chain_events
+        where chain_id = ${chainId.toString()}
+          and transaction_hash = ${event.transactionHash}
+          and log_index = ${event.logIndex}
+          and block_hash = ${event.blockHash}
+      `;
+      if (!existing?.matches || existing.status !== "CONFIRMED") {
+        throw new Error(
+          "re-included chain event conflicts with immutable payload",
+        );
+      }
+    }
     inserted += rows.count;
     const mandateHash = mandateHashFromArgs(event.decodedArgs);
     if (mandateHash)
@@ -317,8 +372,16 @@ async function batchAlreadyCanonical(
 ): Promise<boolean> {
   if (batch.events.length === 0) return false;
   for (const event of batch.events) {
-    const [existing] = await tx<{ block_hash: Buffer }[]>`
-      select block_hash
+    const [existing] = await tx<{ block_hash: Buffer; matches: boolean }[]>`
+      select block_hash, (
+        block_number = ${event.blockNumber.toString()}
+        and contract_address = ${event.contractAddress}
+        and topic0 = ${event.topic0}
+        and topics = ${tx.json([...event.topics])}
+        and data = ${event.data}
+        and decoded_name is not distinct from ${event.decodedName}
+        and decoded_args is not distinct from ${event.decodedArgs === null ? null : tx.json(event.decodedArgs)}
+      ) as matches
       from chain_events
       where chain_id = ${batch.chainId.toString()}
         and transaction_hash = ${event.transactionHash}
@@ -327,6 +390,9 @@ async function batchAlreadyCanonical(
     `;
     if (!existing || !equalBytes(existing.block_hash, event.blockHash))
       return false;
+    if (!existing.matches) {
+      throw new Error("canonical event payload differs from the retained log");
+    }
   }
   return true;
 }

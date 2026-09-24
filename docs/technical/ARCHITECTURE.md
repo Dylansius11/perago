@@ -246,7 +246,7 @@ A pre-authorization validation revert is not an execution attempt and does not c
 4. MandateExecutor emits one terminal `ExecutionReceiptRecorded` event with the verification commitment and evidence hashes.
 5. If an ERC-8183 job is bound, `OutcomeEvaluator.settle(jobId, mandateHash)` checks the job binding, mandate `SUCCEEDED` state, verifier ID, and unused settlement flag.
 6. OutcomeEvaluator calls the configured ERC-8183 completion path. Failed, expired, revoked, mismatched, or already-settled receipts revert.
-7. Indexer projects the receipt and settlement transaction; the public API exposes explorer links and raw commitments.
+7. Indexer projects the receipt from confirmed terminal events. `GET /receipts/:mandateHash` needs no wallet session: it scans that mandate from its persisted finalized cursor in ranges of at most 10 blocks, checks the finalized MandateExecutor record against the projection, repairs a missing receipt from canonical retained logs, and returns only public commitments, transaction/block evidence, and explorer links derived from the chain definition. The API does not decide settlement eligibility. A chain outage fails the read instead of returning a stale success.
 
 The executor cannot provide a boolean that causes payment. The evaluator derives eligibility from contract state.
 
@@ -314,6 +314,8 @@ Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitt
 | Store chain event | Chain ID + transaction hash + log index |
 | Settle job | Commerce contract + job ID + mandate digest |
 
+The canonical confirmed-event idempotency key stays `(chain ID, transaction hash, log index)`. Raw history includes block hash so a transaction re-included at the same log index in another block retains both immutable versions; only one is `CONFIRMED` at a time.
+
 ### Replay controls
 
 - EIP-712 domain binds chain ID and MandateExecutor address.
@@ -329,6 +331,7 @@ Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitt
 - Raw events are stored with block hash and confirmation status.
 - A transaction is confirmed only when its block is at or below the chain's `finalized` tag (`SC-D-005`; on chain 97 that trails `latest` by 1-2 blocks). Before that, API status is `PENDING_CONFIRMATION`, not terminal. The P3-002 policy verifier still counts a fixed depth; moving it to the `finalized` rule belongs to the next API task that touches confirmation.
 - If a block hash changes, indexer marks affected events orphaned, rewinds projections to the last canonical checkpoint, and replays.
+- Public receipt reads reconcile independently of the executor, including after it stops. The read and worker share a per-mandate finalized cursor; a public read whose checkpoint advanced concurrently aborts rather than overwriting newer evidence. A terminal response joins only `CONFIRMED` events, so orphaned terminal logs are not served; a mismatch with MandateExecutor's finalized status blocks the response.
 - The worker checks canonical transaction receipts before progressing to the next transition.
 
 ## 8. Failure and degradation behavior

@@ -9,6 +9,7 @@ import { ReasonError } from "./errors.js";
 import type { Planner } from "./planner/provider.js";
 import { createExecutionRoutes } from "./routes/executions.js";
 import { createPolicyRoutes } from "./routes/policies.js";
+import { createReceiptRoutes } from "./routes/receipts.js";
 import { createTaskRoutes } from "./routes/tasks.js";
 import type { ExecutionServiceConfig } from "./services/executions.js";
 import type { MandateServiceConfig } from "./services/mandates.js";
@@ -54,6 +55,7 @@ export function createApiApp(input: {
     "/internal/executions",
     createExecutionRoutes({ config: input.executionConfig, sql: input.sql }),
   );
+  app.route("/receipts", createReceiptRoutes(input.sql, input.executionConfig));
 
   app.onError((error, context) => {
     if (error instanceof ReasonError) {

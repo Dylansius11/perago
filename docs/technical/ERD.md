@@ -352,7 +352,7 @@ Detailed transport attempts may be stored in a bounded JSON audit field or struc
 
 ### 5.9 `verification_results`
 
-One immutable normalized verifier result per execution.
+Reserved normalized verifier-detail row per execution when those measurements are independently observable. `ExecutionReceiptRecorded` emits the terminal status, `verificationHash`, and `failureReasonHash`, **not** its measured spend, delta, or `evidenceHash`; the P6-001 indexer must not manufacture a `verification_results` row from simulation estimates or worker assertions. The public receipt derives `PASSED` only from a canonical `SUCCEEDED` event with a nonzero commitment; `FAILED` is exposed as `NOT_VERIFIED` with the onchain failure commitment, and revoke/expiry as `NOT_APPLICABLE`. Rich observed documents require separately verifiable evidence in a later task.
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
@@ -377,7 +377,7 @@ Constraints:
 
 ### 5.10 `execution_receipts`
 
-Public, immutable receipt projection. Private text is represented only by hashes.
+Public, rebuildable receipt projection. Private text is represented only by hashes. Rows may be deleted and reinserted when rebuilding from retained canonical events; the immutability trigger forbids arbitrary in-place changes except the first confirmed settlement write.
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
@@ -401,10 +401,10 @@ Public, immutable receipt projection. Private text is represented only by hashes
 
 Constraints:
 
-- immutable except settlement fields, which transition once from null to a confirmed matching settlement;
-- `SUCCEEDED` requires a `PASSED` verification result;
-- non-success cannot have a settlement transaction that completed payment;
-- every field must reconcile to confirmed contract logs.
+- immutable in-place except settlement fields, which transition once from null to a confirmed matching settlement; deleting and rebuilding from canonical events is allowed;
+- `SUCCEEDED` requires a nonzero onchain `verificationHash` from the terminal event. A separately populated `PASSED` verification-result row is not required unless measured evidence can be independently reconstructed;
+- non-success cannot have a settlement transaction that completed payment; a bound non-success job is public `INELIGIBLE`, not `PENDING`;
+- every public field reconciles to confirmed contract logs or immutable signed commitments.
 
 ### 5.11 `chain_events`
 
@@ -412,11 +412,11 @@ Append-only raw event ledger.
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
-| `chain_id` | bigint | composite PK |
+| `chain_id` | bigint | composite PK; canonical identity is chain + transaction + log index |
 | `transaction_hash` | bytea | composite PK |
 | `log_index` | integer | composite PK |
 | `block_number` | bigint | not null |
-| `block_hash` | bytea | 32 bytes, not null |
+| `block_hash` | bytea | composite PK, 32 bytes; distinguishes immutable versions when a transaction is re-included after a reorg |
 | `contract_address` | bytea | not null |
 | `topic0` | bytea | 32 bytes, not null |
 | `topics` | jsonb | not null |
@@ -428,7 +428,7 @@ Append-only raw event ledger.
 | `confirmed_at` | timestamptz | nullable |
 | `orphaned_at` | timestamptz | nullable |
 
-Rows are never deleted during normal reconciliation. An event may move `OBSERVED → CONFIRMED` or `OBSERVED/CONFIRMED → ORPHANED`; payload fields are immutable.
+Rows are never deleted during normal reconciliation. A raw event version is keyed by `(chain_id, transaction_hash, log_index, block_hash)`; a partial unique index permits at most one `CONFIRMED` version per canonical `(chain_id, transaction_hash, log_index)`. Payload fields are immutable. A re-included transaction in a new block or with a new log position creates a new version after the old one is orphaned; if the identical block version becomes canonical again, its status may return to `CONFIRMED` without changing its payload. Duplicate payload disagreement is an error, not a silent overwrite.
 
 ### 5.12 `indexer_checkpoints`
 
@@ -517,7 +517,7 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 | Build/sign mandate | task + fresh simulation + wallet | immutable `mandates`, task `SIGNED`, `executions` queue row |
 | Read lifecycle | mandate/execution/receipt projections | none |
 | Revoke | mandate + chain | pending projection only; confirmed event finalizes |
-| Public receipt | `execution_receipts`, `verification_results`, confirmed events | none |
+| Public receipt | `execution_receipts`, signed commitment columns, confirmed `chain_events`, execution transaction hashes | on-demand finalized cursor and a replay-safe receipt projection; no private document returned |
 | Executor lease | queued executions + mandate | lease/retry operational fields only |
 | Index events | checkpoint + RPC | append events, update projections/checkpoint transactionally |
 

@@ -689,8 +689,16 @@ export const chainEvents = pgTable(
   },
   (table) => [
     primaryKey({
-      columns: [table.chainId, table.transactionHash, table.logIndex],
+      columns: [
+        table.chainId,
+        table.transactionHash,
+        table.logIndex,
+        table.blockHash,
+      ],
     }),
+    uniqueIndex("chain_event_confirmed_identity_unique")
+      .on(table.chainId, table.transactionHash, table.logIndex)
+      .where(sql`${table.status} = 'CONFIRMED'`),
     index("chain_event_replay_index").on(
       table.chainId,
       table.blockNumber,

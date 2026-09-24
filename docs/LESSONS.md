@@ -4,6 +4,18 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-24 - Serialize destructive database suites and fork journeys
+
+- Observed: a combined fork smoke passed swap 9/9, then stake failed 6/12 after a concurrently launched database integration test executed `drop schema public cascade; create schema public` against the same `TEST_DATABASE_URL`. The stake worker stopped progressing at BEGIN, and its authenticated API session returned `AUTH_INVALID`.
+- Root cause: the integration suite and the fork journey share one disposable PostgreSQL database; a schema reset invalidated the active worker's execution rows and wallet session while the journey was running.
+- Rule: never run `test:db`, focused DB integration files, or migration resets concurrently with a fork/testnet journey using the same `TEST_DATABASE_URL`; serialize these suites and rerun a disrupted journey without changing product code.
+
+### 2026-09-24 - Publish only verification facts the chain actually exposes
+
+- Observed: `ExecutionReceiptRecorded` has a terminal status, `verificationHash`, and `failureReasonHash`; it does not emit measured spend, position/output delta, or a plain-language revert cause. The P6-001 public route can prove a successful verifier commitment and expose a failure commitment, but cannot reconstruct those omitted measurements from the receipt log.
+- Root cause: the verified outcome is committed onchain as a hash, while detailed measurement is local to the atomic execution subcall and never persisted as independent event data.
+- Rule: public receipts distinguish `PASSED`, `NOT_VERIFIED`, and `NOT_APPLICABLE`; never fill verifier-detail columns or explain a failure from simulation data, worker reports, or an undecodable hash.
+
 ### 2026-09-24 - A fork that mines while it fetches cold accounts can deadlock
 
 - Observed: the P4-003 and P5-002 fork journeys hung in `beforeAll` until the 600 s hook timeout in four of eight runs, always inside `registerDeploymentAdapters`. A throwaway repro replayed the same setup reads on fresh forks. With `--block-time 1`, or with `evm_mine` sent every second, it stalled within one to eleven rounds on both anvil `1.8.0-nightly` and the pinned `1.8.3`. Each time, the four parallel `eth_getCode` reads of the cold stake contracts never returned, and even `eth_blockNumber` timed out. A 5 s upstream `--timeout` did not help. With automine it passed 12 of 12 rounds. Fetching every manifest account one at a time before `evm_setIntervalMining` also passed 12 of 12 rounds on the nightly build.

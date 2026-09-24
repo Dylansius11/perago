@@ -31,6 +31,7 @@ const migrations = [
   new URL("../../drizzle/0002_task_compilation.sql", import.meta.url),
   new URL("../../drizzle/0003_mandate_signing.sql", import.meta.url),
   new URL("../../drizzle/0004_execution_worker.sql", import.meta.url),
+  new URL("../../drizzle/0005_chain_event_reorg_versions.sql", import.meta.url),
 ];
 const owner = privateKeyToAccount(
   "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

@@ -80,6 +80,13 @@ export const REASON_MESSAGES = {
     "The smart account holds less than this task's signed input.",
   TRANSACTION_REVERTED:
     "An execution transaction was included but reverted; the chain state decides the next step.",
+  ONCHAIN_SUCCEEDED:
+    "The mandate succeeded onchain and its verifier commitment was recorded.",
+  ONCHAIN_FAILED:
+    "The mandate ended unsuccessfully onchain; its failure hash is a commitment, not a decoded cause.",
+  ONCHAIN_REVOKED:
+    "The mandate was revoked onchain before a successful execution.",
+  ONCHAIN_EXPIRED: "The mandate expired onchain before a successful execution.",
 } as const;
 
 export type ReasonCode = keyof typeof REASON_MESSAGES;

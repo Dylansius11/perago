@@ -3,8 +3,10 @@ import postgres, { type Sql } from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   applyChainEventBatch,
+  applyFinalizedEvents,
   type ChainEventInput,
 } from "../indexer/project-chain-events.js";
+import { getPublicReceipt } from "../services/receipts.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -17,6 +19,7 @@ const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
 const migrations = [
   new URL("../../drizzle/0000_constrained_lifecycle.sql", import.meta.url),
   new URL("../../drizzle/0004_execution_worker.sql", import.meta.url),
+  new URL("../../drizzle/0005_chain_event_reorg_versions.sql", import.meta.url),
 ];
 
 const id = (value: number) =>
@@ -148,8 +151,10 @@ async function seedMandate(
           recipient: hex(accountAddress),
           actionHash: hex(actionHash),
           postconditionHash: hex(postconditionHash),
-          commerceContract: "0x0000000000000000000000000000000000000000",
-          commerceJobId: "0",
+          commerceContract: options.commerceContract
+            ? hex(options.commerceContract)
+            : "0x0000000000000000000000000000000000000000",
+          commerceJobId: options.commerceJobId?.toString() ?? "0",
         },
       })},
       ${bytes(seed + 14, 65)}, ${options.status ?? "SIGNED"},
@@ -174,7 +179,7 @@ function chainEvent(input: {
     logIndex: 0,
     blockNumber: input.blockNumber,
     blockHash: input.blockHash,
-    contractAddress: bytes(90, 20),
+    contractAddress: bytes((input.mandateHash[0] ?? 0) + 12, 20),
     topic0: bytes(input.seed + 1, 32),
     topics: [],
     data: Buffer.alloc(0),
@@ -406,5 +411,337 @@ describe("P3-001 constrained persistence", () => {
       next_block_number: "12",
       last_canonical_block_hash: fork11,
     });
+  });
+  it("refuses a successful receipt without a nonzero onchain verification commitment", async () => {
+    const { mandateHash } = await seedMandate(sql, 40);
+    const blockHash = bytes(41, 32);
+    const authorized = chainEvent({
+      seed: 42,
+      blockNumber: 40n,
+      blockHash,
+      name: "MandateAuthorized",
+      mandateHash,
+    });
+    const terminal = chainEvent({
+      seed: 43,
+      blockNumber: 40n,
+      blockHash,
+      name: "ExecutionReceiptRecorded",
+      mandateHash,
+    });
+    terminal.decodedArgs = {
+      mandateHash: hex(mandateHash),
+      status: "SUCCEEDED",
+      verificationHash: hex(Buffer.alloc(32)),
+      failureReasonHash: hex(Buffer.alloc(32)),
+    };
+    await expect(
+      applyChainEventBatch(sql, {
+        chainId: 97n,
+        streamName: "receipt-v1",
+        fromBlockNumber: 40n,
+        nextBlockNumber: 41n,
+        parentBlockHash: bytes(39, 32),
+        lastCanonicalBlockHash: blockHash,
+        confirmationDepth: 1,
+        events: [authorized, terminal],
+      }),
+    ).rejects.toThrow("successful receipt needs a nonzero verification hash");
+    const [receipt] = await sql`
+      select mandate_hash from execution_receipts where mandate_hash = ${mandateHash}
+    `;
+    expect(receipt).toBeUndefined();
+  });
+  it("rebuilds a public receipt from canonical events and removes an orphaned terminal result", async () => {
+    const { mandateHash } = await seedMandate(sql, 50, {
+      commerceContract: bytes(75, 20),
+      commerceJobId: 7n,
+    });
+    const block50 = bytes(50, 32);
+    const block51 = bytes(51, 32);
+    const fork51 = bytes(61, 32);
+    const authorized = chainEvent({
+      seed: 52,
+      blockNumber: 50n,
+      blockHash: block50,
+      name: "MandateAuthorized",
+      mandateHash,
+    });
+    const begun = chainEvent({
+      seed: 59,
+      blockNumber: 51n,
+      blockHash: block51,
+      name: "ExecutionBegun",
+      mandateHash,
+    });
+    const success = chainEvent({
+      seed: 53,
+      blockNumber: 51n,
+      blockHash: block51,
+      name: "ExecutionReceiptRecorded",
+      mandateHash,
+    });
+    success.logIndex = 1;
+    success.decodedArgs = {
+      mandateHash: hex(mandateHash),
+      status: "SUCCEEDED",
+      verificationHash: hex(bytes(54, 32)),
+      failureReasonHash: hex(Buffer.alloc(32)),
+    };
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "receipt-rebuild-v1",
+      fromBlockNumber: 50n,
+      nextBlockNumber: 51n,
+      parentBlockHash: bytes(49, 32),
+      lastCanonicalBlockHash: block50,
+      confirmationDepth: 1,
+      events: [authorized],
+    });
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "receipt-rebuild-v1",
+      fromBlockNumber: 51n,
+      nextBlockNumber: 52n,
+      parentBlockHash: block50,
+      lastCanonicalBlockHash: block51,
+      confirmationDepth: 1,
+      events: [begun, success],
+    });
+    const before = await getPublicReceipt(sql, hex(mandateHash));
+    expect(before).toMatchObject({
+      status: "SUCCEEDED",
+      terminalMessage: expect.stringMatching(/succeeded.*onchain/i),
+      verification: { status: "PASSED", hash: hex(bytes(54, 32)) },
+      explorer: {
+        terminal: `https://testnet.bscscan.com/tx/${hex(bytes(53, 32))}`,
+        authorization: `https://testnet.bscscan.com/tx/${hex(bytes(52, 32))}`,
+      },
+      authorization: { blockNumber: "50", blockHash: hex(block50) },
+      begin: { blockNumber: "51", blockHash: hex(block51) },
+      transactions: { begin: hex(begun.transactionHash) },
+      terminal: {
+        transactionHash: hex(bytes(53, 32)),
+        blockHash: hex(block51),
+        logIndex: 1,
+      },
+      settlement: {
+        status: "PENDING",
+        commerceContract: hex(bytes(75, 20)),
+        jobId: "7",
+      },
+    });
+    expect(JSON.stringify(before)).not.toContain("intent_document");
+    await sql`
+      update execution_receipts set settlement_tx_hash = ${bytes(57, 32)}
+      where mandate_hash = ${mandateHash}
+    `;
+    expect(
+      (await getPublicReceipt(sql, hex(mandateHash)))?.settlement.status,
+    ).toBe("PENDING");
+    await sql`
+      insert into chain_events (
+        chain_id, transaction_hash, log_index, block_number, block_hash,
+        contract_address, topic0, topics, data, decoded_name, decoded_args,
+        status, observed_at, confirmed_at
+      ) values (
+        97, ${bytes(57, 32)}, 0, 49, ${bytes(49, 32)},
+        ${bytes(99, 20)}, ${bytes(98, 32)}, ${sql.json([])}, ${Buffer.alloc(0)},
+        'CommerceJobSettled',
+        ${sql.json({ mandateHash: hex(mandateHash), commerceContract: hex(bytes(75, 20)), jobId: "7" })},
+        'CONFIRMED', now(), now()
+      )
+    `;
+    expect(
+      (await getPublicReceipt(sql, hex(mandateHash)))?.settlement.status,
+    ).toBe("PENDING");
+    await sql`delete from execution_receipts where mandate_hash = ${mandateHash}`;
+    await sql.begin((tx) =>
+      applyFinalizedEvents(tx, 97n, [authorized, begun, success]),
+    );
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toEqual(before);
+
+    const failure = chainEvent({
+      seed: 55,
+      blockNumber: 51n,
+      blockHash: fork51,
+      name: "ExecutionReceiptRecorded",
+      mandateHash,
+    });
+    failure.decodedArgs = {
+      mandateHash: hex(mandateHash),
+      status: "FAILED",
+      verificationHash: hex(Buffer.alloc(32)),
+      failureReasonHash: hex(bytes(56, 32)),
+    };
+    expect(
+      await applyChainEventBatch(sql, {
+        chainId: 97n,
+        streamName: "receipt-rebuild-v1",
+        fromBlockNumber: 51n,
+        nextBlockNumber: 52n,
+        parentBlockHash: block50,
+        lastCanonicalBlockHash: fork51,
+        confirmationDepth: 1,
+        events: [failure],
+      }),
+    ).toMatchObject({ orphaned: 2 });
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toMatchObject({
+      status: "FAILED",
+      verification: {
+        status: "NOT_VERIFIED",
+        failureReasonHash: hex(bytes(56, 32)),
+      },
+      terminal: { transactionHash: hex(bytes(55, 32)), blockHash: hex(fork51) },
+      settlement: {
+        status: "INELIGIBLE",
+        commerceContract: hex(bytes(75, 20)),
+        jobId: "7",
+      },
+    });
+  });
+  it("refuses a lifecycle event from another chain instead of authorizing the mandate", async () => {
+    const { mandateHash } = await seedMandate(sql, 70);
+    const foreign = chainEvent({
+      seed: 58,
+      blockNumber: 70n,
+      blockHash: bytes(72, 32),
+      name: "MandateAuthorized",
+      mandateHash,
+    });
+    await expect(
+      applyChainEventBatch(sql, {
+        chainId: 56n,
+        streamName: "foreign-mandate-v1",
+        fromBlockNumber: 70n,
+        nextBlockNumber: 71n,
+        parentBlockHash: bytes(69, 32),
+        lastCanonicalBlockHash: bytes(72, 32),
+        confirmationDepth: 1,
+        events: [foreign],
+      }),
+    ).rejects.toThrow("event chain differs from the signed mandate");
+    const [row] = await sql<{ status: string }[]>`
+      select status from mandates where mandate_hash = ${mandateHash}
+    `;
+    expect(row?.status).toBe("SIGNED");
+    foreign.contractAddress = bytes(99, 20);
+    await expect(
+      applyChainEventBatch(sql, {
+        chainId: 97n,
+        streamName: "wrong-executor-v1",
+        fromBlockNumber: 70n,
+        nextBlockNumber: 71n,
+        parentBlockHash: bytes(69, 32),
+        lastCanonicalBlockHash: bytes(72, 32),
+        confirmationDepth: 1,
+        events: [foreign],
+      }),
+    ).rejects.toThrow("event contract differs from the signed mandate");
+  });
+  it("rebuilds the canonical receipt when the same transaction is re-included in a different block", async () => {
+    const { mandateHash } = await seedMandate(sql, 80);
+    const block80 = bytes(80, 32);
+    const block81 = bytes(81, 32);
+    const replacement = bytes(91, 32);
+    const authorized = chainEvent({
+      seed: 36,
+      blockNumber: 80n,
+      blockHash: block80,
+      name: "MandateAuthorized",
+      mandateHash,
+    });
+    const terminal = chainEvent({
+      seed: 37,
+      blockNumber: 81n,
+      blockHash: block81,
+      name: "ExecutionReceiptRecorded",
+      mandateHash,
+    });
+    terminal.decodedArgs = {
+      mandateHash: hex(mandateHash),
+      status: "SUCCEEDED",
+      verificationHash: hex(bytes(38, 32)),
+      failureReasonHash: hex(Buffer.alloc(32)),
+    };
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "re-included-tx",
+      fromBlockNumber: 80n,
+      nextBlockNumber: 81n,
+      parentBlockHash: bytes(79, 32),
+      lastCanonicalBlockHash: block80,
+      confirmationDepth: 1,
+      events: [authorized],
+    });
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "re-included-tx",
+      fromBlockNumber: 81n,
+      nextBlockNumber: 82n,
+      parentBlockHash: block80,
+      lastCanonicalBlockHash: block81,
+      confirmationDepth: 1,
+      events: [terminal],
+    });
+    const reIncluded = { ...terminal, blockHash: replacement };
+    expect(
+      await applyChainEventBatch(sql, {
+        chainId: 97n,
+        streamName: "re-included-tx",
+        fromBlockNumber: 81n,
+        nextBlockNumber: 82n,
+        parentBlockHash: block80,
+        lastCanonicalBlockHash: replacement,
+        confirmationDepth: 1,
+        events: [reIncluded],
+      }),
+    ).toEqual({ inserted: 1, duplicates: 0, orphaned: 1 });
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toMatchObject({
+      status: "SUCCEEDED",
+      terminal: {
+        transactionHash: hex(terminal.transactionHash),
+        blockHash: hex(replacement),
+      },
+    });
+    const versions = await sql<{ block_hash: Buffer; status: string }[]>`
+      select block_hash, status from chain_events
+      where transaction_hash = ${terminal.transactionHash} order by block_hash
+    `;
+    expect(versions).toEqual([
+      { block_hash: block81, status: "ORPHANED" },
+      { block_hash: replacement, status: "CONFIRMED" },
+    ]);
+    expect(
+      await applyChainEventBatch(sql, {
+        chainId: 97n,
+        streamName: "re-included-tx",
+        fromBlockNumber: 81n,
+        nextBlockNumber: 82n,
+        parentBlockHash: block80,
+        lastCanonicalBlockHash: block81,
+        confirmationDepth: 1,
+        events: [terminal],
+      }),
+    ).toEqual({ inserted: 1, duplicates: 0, orphaned: 1 });
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toMatchObject({
+      status: "SUCCEEDED",
+      terminal: {
+        transactionHash: hex(terminal.transactionHash),
+        blockHash: hex(block81),
+      },
+    });
+    await expect(
+      applyChainEventBatch(sql, {
+        chainId: 97n,
+        streamName: "re-included-tx",
+        fromBlockNumber: 81n,
+        nextBlockNumber: 82n,
+        parentBlockHash: block80,
+        lastCanonicalBlockHash: block81,
+        confirmationDepth: 1,
+        events: [{ ...terminal, data: Buffer.from("ab", "hex") }],
+      }),
+    ).rejects.toThrow("canonical event payload differs from the retained log");
   });
 });
