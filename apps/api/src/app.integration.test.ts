@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApiApp } from "./app.js";
 import type { WalletAuthConfig } from "./auth/wallet-auth.js";
 import { loadBscTestnetCatalog } from "./compiler/catalog.js";
-import { loadBscTestnetDeployment } from "./deployment.js";
+import { loadDeployment } from "./deployment.js";
 import { type Planner, PlannerUnavailableError } from "./planner/provider.js";
 import type {
   PolicyChainVerifier,
@@ -95,13 +95,13 @@ const app = createApiApp({
     blockTag: "latest",
     catalog,
     client: createPublicClient({ transport: http("http://127.0.0.1:9") }),
-    deployment: loadBscTestnetDeployment(catalog),
+    deployment: loadDeployment(catalog, "deployments/bsc-testnet.perago.json"),
     now: () => now,
     quoteTtlSeconds: 120,
   },
   executionConfig: {
     client: createPublicClient({ transport: http("http://127.0.0.1:9") }),
-    deployment: loadBscTestnetDeployment(catalog),
+    deployment: loadDeployment(catalog, "deployments/bsc-testnet.perago.json"),
     leaseSeconds: 60,
     workerTokenHash: Buffer.alloc(32, 1),
   },

@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
@@ -53,13 +53,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
-import {
-  loadBscTestnetDeployment,
-  type PeragoDeployment,
-} from "../deployment.js";
+import { loadDeployment, type PeragoDeployment } from "../deployment.js";
 import { createGroqPlanner } from "../planner/provider.js";
 import { registerDeploymentAdapters } from "../services/mandates.js";
 import type { PolicyChainVerifier } from "../services/policies.js";
+import {
+  createExecutorProcesses,
+  events,
+  submitted,
+  type WorkerRun,
+} from "./executor-process.js";
 import {
   deployUnboundExecutor,
   forkTransport,
@@ -97,13 +100,13 @@ const EVIDENCE_PATH = fileURLToPath(
     import.meta.url,
   ),
 );
-const EXECUTOR_DIR = fileURLToPath(
-  new URL("../../../executor/", import.meta.url),
-);
 const ENTRY_POINT = MODULAR_ACCOUNT_V2_ADDRESSES.entryPoint;
 
 const catalog = loadBscTestnetCatalog();
-const production = loadBscTestnetDeployment(catalog);
+const production = loadDeployment(
+  catalog,
+  "deployments/bsc-testnet.perago.json",
+);
 const token = (symbol: string) => {
   const found = catalog.tokens.find((entry) => entry.symbol === symbol);
   if (!found) throw new Error(`catalog has no ${symbol}`);
@@ -252,81 +255,7 @@ async function signedMandate(
   };
 }
 
-type WorkerRun = { code: number | null; lines: string[] };
-
-/** The inherited environment minus every Perago, database, and planner secret. */
-function publicEnvironment(): NodeJS.ProcessEnv {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([name]) => !name.startsWith("PERAGO_") && !name.includes("DATABASE"),
-    ),
-  );
-}
-
-/** Starts the real executor process; its only secrets are its deployment secrets. */
-function startExecutor(name: string, mode: "once" | "loop", deferSeconds = 2) {
-  const child = spawn(
-    process.execPath,
-    ["src/main.ts", ...(mode === "once" ? ["--once"] : [])],
-    {
-      cwd: EXECUTOR_DIR,
-      env: {
-        ...publicEnvironment(),
-        PERAGO_API_URL: apiUrl,
-        PERAGO_DEPLOYMENT_MANIFEST: manifestPath,
-        PERAGO_EXECUTOR_DEFER_SECONDS: String(deferSeconds),
-        PERAGO_EXECUTOR_KEY: sessionKey,
-        PERAGO_EXECUTOR_POLL_MS: "400",
-        PERAGO_EXECUTOR_RPC: FORK_URL,
-        PERAGO_WORKER_ID: name,
-        PERAGO_WORKER_TOKEN: workerToken,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
-  const lines: string[] = [];
-  const collect = (chunk: Buffer) => {
-    for (const line of chunk.toString("utf8").split(/\r?\n/u)) {
-      if (line.trim() === "") continue;
-      lines.push(line);
-      executorLog.push(line);
-    }
-  };
-  child.stdout?.on("data", collect);
-  child.stderr?.on("data", collect);
-  const exited = new Promise<WorkerRun>((resolve) => {
-    child.once("exit", (code) => resolve({ code, lines }));
-  });
-  return { child, exited, lines };
-}
-
-/** One crash-like executor run: it performs a single chain-changing step and exits holding its lease. */
-async function executorStep(
-  name: string,
-  deferSeconds = 2,
-): Promise<WorkerRun> {
-  const run = startExecutor(name, "once", deferSeconds);
-  const timer = new AbortController();
-  const timeout = delay(180_000, undefined, { signal: timer.signal }).then(
-    () => {
-      run.child.kill("SIGKILL");
-      throw new Error(
-        `${name} did not finish:\n${run.lines.slice(-10).join("\n")}`,
-      );
-    },
-  );
-  const result = await Promise.race([run.exited, timeout]);
-  timer.abort();
-  timeout.catch(() => {}); // The aborted timer rejects by design once the run has exited.
-  expect(result.code, result.lines.slice(-10).join("\n")).toBe(0);
-  return result;
-}
-
-/** The events a line carries, parsed as the JSON the worker must emit. */
-const events = (run: WorkerRun) =>
-  run.lines.map((line) => JSON.parse(line) as ApiBody);
-const submitted = (run: WorkerRun) =>
-  events(run).filter((line) => line.event === "transaction.submitted");
+let executor: ReturnType<typeof createExecutorProcesses>;
 
 type Submission = {
   kind: string;
@@ -336,7 +265,7 @@ type Submission = {
 
 /** Runs one step that must submit exactly one transaction of `kind`. */
 async function submits(name: string, kind: string): Promise<Submission> {
-  const lines = submitted(await executorStep(name));
+  const lines = submitted(await executor.step(name));
   expect(
     lines.map((line) => line.kind),
     name,
@@ -493,6 +422,7 @@ beforeAll(async () => {
       schemaVersion: 1,
       chainId: 97,
       label: deployment.label,
+      protocolManifest: "deployments/bsc-testnet.protocols.json",
       constructor: {
         executionWindowSeconds: EXECUTION_WINDOW.toString(),
         allowUnboundCommerceJobs: true,
@@ -625,6 +555,15 @@ beforeAll(async () => {
     started.resolve(info),
   );
   apiUrl = `http://127.0.0.1:${(await started.promise).port}/`;
+  executor = createExecutorProcesses({
+    apiUrl,
+    executorKey: sessionKey,
+    log: executorLog,
+    manifestPath,
+    pollMs: 400,
+    rpcUrl: FORK_URL,
+    workerToken,
+  });
 
   evidence.label =
     "fork: every write below is on a local anvil fork of BSC Testnet (chain 97) mining one block per second with finalized = latest - 2; nothing was broadcast to chain 97";
@@ -883,8 +822,8 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     const steps: Record<string, unknown>[] = [];
     // Two workers start together; only the lease holder acts, the other waits out the lease.
     const [first, second] = await Promise.all([
-      executorStep("p4-race-a"),
-      executorStep("p4-race-b"),
+      executor.step("p4-race-a"),
+      executor.step("p4-race-b"),
     ]);
     const record = async (name: string, run: WorkerRun) => {
       const row = await execution(swap.mandateHash);
@@ -907,10 +846,10 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
         .sort(),
     ).toEqual(["AUTHORIZE", "BEGIN"]);
 
-    const perform = await executorStep("p4-step-perform");
+    const perform = await executor.step("p4-step-perform");
     await record("p4-step-perform", perform);
     expect(submitted(perform).map((line) => line.kind)).toEqual(["PERFORM"]);
-    const finish = await executorStep("p4-step-finish");
+    const finish = await executor.step("p4-step-finish");
     await record("p4-step-finish", finish);
     expect(submitted(finish)).toEqual([]);
 
@@ -965,7 +904,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
       update executions set status = 'QUEUED' where mandate_hash = ${asBuffer(swap.mandateHash)}
     `.catch((error: Error) => error.message);
     expect(reopen).toMatch(/immutable/u);
-    const idle = startExecutor("p4-redelivery", "loop");
+    const idle = executor.start("p4-redelivery", "loop");
     await delay(6_000); // Gives a live worker several lease polls against a finished queue.
     idle.child.kill("SIGTERM");
     await idle.exited;
@@ -1019,7 +958,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     ).toBe(authorize.transactionHash);
     await testClient.dropTransaction({ hash: authorize.transactionHash });
     await resumeMining();
-    const rebroadcast = await executorStep("p4-rebroadcast-authorize");
+    const rebroadcast = await executor.step("p4-rebroadcast-authorize");
     expect(
       events(rebroadcast).some(
         (line) => line.event === "transaction.rebroadcast",
@@ -1051,7 +990,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     });
     await resumeMining();
     expect((await awaitFinality(replacement)).status).toBe("success");
-    const retired = await executorStep("p4-retire-begin");
+    const retired = await executor.step("p4-retire-begin");
     expect(
       events(retired).some((line) => line.event === "transaction.retired"),
     ).toBe(true);
@@ -1079,7 +1018,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     ).toBe(perform.userOperationHash);
     await testClient.dropTransaction({ hash: perform.transactionHash });
     await resumeMining();
-    const rebroadcastPerform = await executorStep("p4-rebroadcast-perform");
+    const rebroadcastPerform = await executor.step("p4-rebroadcast-perform");
     expect(submitted(rebroadcastPerform)).toEqual([]);
     const included = await awaitFinality(perform.transactionHash);
     const [event] = parseEventLogs({
@@ -1089,7 +1028,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     });
     expect(event?.args.userOpHash).toBe(perform.userOperationHash);
     expect(event?.args.success).toBe(true);
-    expect(submitted(await executorStep("p4-stake-finish"))).toEqual([]);
+    expect(submitted(await executor.step("p4-stake-finish"))).toEqual([]);
     trail.push({
       step: "perform handleOps dropped, then rebroadcast unchanged",
       transactionHash: perform.transactionHash,
@@ -1142,7 +1081,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
         functionName: "revoke",
       }),
     );
-    const finish = await executorStep("p4-revoke-finish");
+    const finish = await executor.step("p4-revoke-finish");
     expect(submitted(finish)).toEqual([]);
     const row = await execution(revoked.mandateHash);
     expect(row.status).toBe("TERMINAL");
@@ -1171,7 +1110,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     // The precondition under test: MandateExecutor holds no allowance on the input.
     await approveExecutor(pending.mandate, 0n);
     const nonceBefore = await executorNonce();
-    const deferred = await executorStep("p4-approval-missing");
+    const deferred = await executor.step("p4-approval-missing");
     expect(submitted(deferred)).toEqual([]);
     expect(
       events(deferred).some(
@@ -1190,7 +1129,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
       }),
     );
     await awaitFinality(invalidation.transactionHash);
-    const rejected = await executorStep("p4-rejected");
+    const rejected = await executor.step("p4-rejected");
     expect(submitted(rejected)).toEqual([]);
     const row = await execution(pending.mandateHash);
     expect(row.status).toBe("REJECTED");
@@ -1221,7 +1160,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     await awaitFinality(
       (await approveExecutor(expiring.mandate, 0n)).transactionHash,
     );
-    const withheld = await executorStep("p4-expiring-deferred", 3_600);
+    const withheld = await executor.step("p4-expiring-deferred", 3_600);
     expect(
       events(withheld).some(
         (line) =>
@@ -1253,7 +1192,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
       asBuffer(stalled.mandateHash),
       asBuffer(expiring.mandateHash),
     ];
-    const first = startExecutor("p4-loop-killed", "loop");
+    const first = executor.start("p4-loop-killed", "loop");
     let inflight = "";
     for (let attempt = 0; attempt < 480 && inflight === ""; attempt += 1) {
       // The stalled mandate's BEGIN is still pending until its first reconcile; only a finalize counts.
@@ -1268,7 +1207,7 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     first.child.kill("SIGKILL");
     await first.exited;
 
-    const restarted = startExecutor("p4-loop-restarted", "loop");
+    const restarted = executor.start("p4-loop-restarted", "loop");
     for (let attempt = 0; attempt < 480; attempt += 1) {
       const rows = await sql<{ status: string }[]>`
         select status from executions where mandate_hash in ${sql(parked)}

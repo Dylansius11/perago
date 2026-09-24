@@ -48,10 +48,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
-import {
-  loadBscTestnetDeployment,
-  type PeragoDeployment,
-} from "../deployment.js";
+import { loadDeployment, type PeragoDeployment } from "../deployment.js";
 import { createGroqPlanner } from "../planner/provider.js";
 import {
   type MandateServiceConfig,
@@ -101,7 +98,10 @@ const EVIDENCE_PATH = fileURLToPath(
 );
 
 const catalog = loadBscTestnetCatalog();
-const production = loadBscTestnetDeployment(catalog);
+const production = loadDeployment(
+  catalog,
+  "deployments/bsc-testnet.perago.json",
+);
 const token = (symbol: string) => {
   const found = catalog.tokens.find((entry) => entry.symbol === symbol);
   if (!found) throw new Error(`catalog has no ${symbol}`);

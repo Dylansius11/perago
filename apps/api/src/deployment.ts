@@ -44,13 +44,11 @@ type ProtocolManifest = {
   contracts: Record<string, ManifestContract>;
 };
 
-function readManifest<T>(file: string): T {
+/** Reads a repository-relative manifest such as `deployments/bsc-testnet.perago.json`. */
+function readManifest(path: string): unknown {
   return JSON.parse(
-    readFileSync(
-      new URL(`../../../deployments/${file}`, import.meta.url),
-      "utf8",
-    ),
-  ) as T;
+    readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8"),
+  );
 }
 
 function contract(
@@ -75,19 +73,19 @@ function catalogId(catalog: ProtocolCatalog, kind: "SWAP" | "STAKE"): string {
 }
 
 /**
- * The reviewed production deployment on BSC Testnet: the executor and
- * adapter/verifier pairs from `bsc-testnet.perago.json`, the protocol targets
- * from the manifest they were deployed against.
+ * One reviewed deployment: the executor and adapter/verifier pairs from a
+ * `deployments/*.perago.json` manifest, the protocol targets from the protocol
+ * manifest it names. `bsc-testnet.perago.json` is production;
+ * `bsc-testnet.demo.perago.json` is the labelled `testnet-demo` (SC-D-006).
  */
-export function loadBscTestnetDeployment(
+export function loadDeployment(
   catalog: ProtocolCatalog,
+  manifestPath: string,
 ): PeragoDeployment {
   const perago = peragoDeploymentManifestSchema.parse(
-    readManifest("bsc-testnet.perago.json"),
+    readManifest(manifestPath),
   );
-  const protocols = readManifest<ProtocolManifest>(
-    "bsc-testnet.protocols.json",
-  );
+  const protocols = readManifest(perago.protocolManifest) as ProtocolManifest;
   if (
     String(perago.chainId) !== catalog.chainId ||
     String(protocols.chainId) !== catalog.chainId
