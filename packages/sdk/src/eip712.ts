@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { addressSchema, uint256StringSchema } from "./domain/primitives.js";
+import {
+  addressSchema,
+  hashSchema,
+  uint48StringSchema,
+  uint256StringSchema,
+} from "./domain/primitives.js";
 import { type TaskMandate, taskMandateSchema } from "./domain/task-mandate.js";
 
 export const taskMandateTypeString =
@@ -32,12 +37,31 @@ export const taskMandateTypes = {
   ],
 } as const;
 
-const mandateDomainSchema = z.strictObject({
+export const mandateDomainSchema = z.strictObject({
   chainId: uint256StringSchema,
   verifyingContract: addressSchema,
 });
 
 export type TaskMandateDomain = z.infer<typeof mandateDomainSchema>;
+
+/**
+ * The stored form of a signed Task Mandate: the exact EIP-712 domain and
+ * message the root owner signed, as canonical strings. `getTaskMandateTypedData`
+ * rebuilds the signable payload from it, so a stored document can always be
+ * re-verified against its signature and digest.
+ */
+export const signedMandateDocumentSchema = z
+  .strictObject({
+    primaryType: z.literal("TaskMandate"),
+    domain: mandateDomainSchema,
+    message: taskMandateSchema,
+  })
+  .refine(
+    (document) => document.message.chainId === document.domain.chainId,
+    "mandate chainId must match the EIP-712 domain",
+  );
+
+export type SignedMandateDocument = z.infer<typeof signedMandateDocumentSchema>;
 
 function asMessage(mandate: TaskMandate) {
   return {
@@ -73,5 +97,49 @@ export function getTaskMandateTypedData(
     message: asMessage(mandate),
     primaryType: "TaskMandate",
     types: taskMandateTypes,
+  } as const;
+}
+
+export const executionProofTypeString =
+  "ExecutionProof(bytes32 mandateHash,address account,address executor,uint48 validUntil)";
+
+export const executionProofTypes = {
+  ExecutionProof: [
+    { name: "mandateHash", type: "bytes32" },
+    { name: "account", type: "address" },
+    { name: "executor", type: "address" },
+    { name: "validUntil", type: "uint48" },
+  ],
+} as const;
+
+export const executionProofSchema = z.strictObject({
+  mandateHash: hashSchema,
+  account: addressSchema,
+  executor: addressSchema,
+  validUntil: uint48StringSchema,
+});
+
+export type ExecutionProof = z.infer<typeof executionProofSchema>;
+
+/**
+ * The scoped executor's short-lived proof that it drove one execution; `perform`
+ * recovers it against the executor the mandate's record names.
+ */
+export function getExecutionProofTypedData(
+  proofInput: unknown,
+  domainInput: unknown,
+) {
+  const proof = executionProofSchema.parse(proofInput);
+  const domain = mandateDomainSchema.parse(domainInput);
+  return {
+    domain: {
+      name: "Perago",
+      version: "1",
+      chainId: BigInt(domain.chainId),
+      verifyingContract: domain.verifyingContract,
+    },
+    message: { ...proof, validUntil: Number(proof.validUntil) },
+    primaryType: "ExecutionProof",
+    types: executionProofTypes,
   } as const;
 }

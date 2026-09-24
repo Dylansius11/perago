@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "chainId": 97,
+  "label": "testnet-demo",
+  "note": "SC-D-006 labelled demo MandateExecutor on BNB Smart Chain Testnet, deployed by packages/contracts/script/DeployDemoExecutor.s.sol. Same source, production adapters and verifiers, and SC-D-005 window as bsc-testnet.perago.json; it differs only in accepting mandates with no ERC-8183 job, which cannot exist before Phase 6. Evidence from it is labelled testnet-demo and never stands in for the production executor. No owner, admin, or upgrade path.",
+  "deployer": "0x2E42E0FB693765715014934282b9A7d3cF0c3818",
+  "protocolManifest": "deployments/bsc-testnet.protocols.json",
+  "verifiedAt": {
+    "blockNumber": "132859782",
+    "blockHash": "0xacc0a494043e5de28efe4f96f97f1263839ccb6f1d52b9924921104a9e6d05f2",
+    "blockTimestamp": "1790233828"
+  },
+  "constructor": {
+    "executionWindowSeconds": "600",
+    "executionWindowDecision": "SC-D-005, user decision 2026-09-23",
+    "allowUnboundCommerceJobs": true,
+    "allowUnboundCommerceJobsDecision": "SC-D-006, user decision 2026-09-24"
+  },
+  "contracts": {
+    "swapVerifier": {
+      "address": "0xBeeAeEa965B70117dd2F05E227413d04D5ee53a5",
+      "codeHash": "0x301520a46a6caecb1383965435f9e20a9bc5d11b9d6e67980f315b4028d784e6",
+      "deployment": "deployments/bsc-testnet.perago.json"
+    },
+    "swapAdapter": {
+      "address": "0xB9FaeB0Bb29401a1308e0C1287913D94b18EC635",
+      "codeHash": "0x2ff420edbaceee25cbf4f78473aad835b1493fb02b98ed70a801d0a38e198721",
+      "deployment": "deployments/bsc-testnet.perago.json"
+    },
+    "stakeVerifier": {
+      "address": "0x66255cAd973A59043eb75e8d4eF71F440de36D8A",
+      "codeHash": "0xde2382330614d043961bb3a6620e1501f93c5fe2ba69f4004b708b80a45c9638",
+      "deployment": "deployments/bsc-testnet.perago.json"
+    },
+    "stakeAdapter": {
+      "address": "0xB68d52C76036744C5F7676d530295B3E8DD9d8aE",
+      "codeHash": "0xb35ebc8dd8ee6adca15c43c475a3f2d01ae8a9353a9761eebde316d270ee2f0c",
+      "deployment": "deployments/bsc-testnet.perago.json"
+    },
+    "mandateExecutor": {
+      "address": "0x5587896753AD6f65ad40ee812f4e1160f6691b7C",
+      "codeHash": "0xc1c989fd4895f58aa05f65b3e780cbcf0be2ed96ed890c932d3effe8984e52d2",
+      "transactionHash": "0xa546d06ff7a482a8b5ed3aaa8eb4ab1ea51ac53f846994336621cd55b3d91600",
+      "blockNumber": "132858957",
+      "gasUsed": "3168264",
+      "source": "packages/contracts/src/MandateExecutor.sol"
+    }
+  },
+  "observedConstructorReads": {
+    "swapAdapter": "0xB9FaeB0Bb29401a1308e0C1287913D94b18EC635",
+    "stakeAdapter": "0xB68d52C76036744C5F7676d530295B3E8DD9d8aE",
+    "swapVerifier": "0xBeeAeEa965B70117dd2F05E227413d04D5ee53a5",
+    "stakeVerifier": "0x66255cAd973A59043eb75e8d4eF71F440de36D8A",
+    "executionWindowSeconds": "600",
+    "allowUnboundCommerceJobs": true
+  }
+}

@@ -3185,3 +3185,1293 @@ export const swapVerifierAbi = [
     inputs: [],
   },
 ] as const;
+
+/** Pinned CAKE Pool flexible-stake adapter; positionOf names each recipient's holder. */
+export const cakeStakeAdapterAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "pool_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "asset_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "verifier_",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "asset",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "execute",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "result",
+        type: "tuple",
+        internalType: "struct PeragoTypes.AdapterResult",
+        components: [
+          {
+            name: "inputSpent",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputOrPositionReceived",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "protocolEvidenceHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+        ],
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "kind",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "pure",
+  },
+  {
+    type: "function",
+    name: "pool",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract ICakePool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "poolId",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "positionOf",
+    inputs: [
+      {
+        name: "recipient",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "validate",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "normalizedActionHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "verifier",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "error",
+    name: "AmountOutOfBounds",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ExpiredMandate",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidAction",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidDeploymentPair",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidTokenPair",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RecipientMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "SafeERC20FailedOperation",
+    inputs: [
+      {
+        name: "token",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "UnsupportedAdapter",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "WrongSelector",
+    inputs: [],
+  },
+] as const;
+
+/** A recipient's own CAKE Pool account; only its owner withdraws. */
+export const cakeStakePositionAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "owner_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "pool_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "asset_",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "adapter",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "asset",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IERC20",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "pool",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract ICakePool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "stake",
+    inputs: [
+      {
+        name: "amount",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    inputs: [
+      {
+        name: "shares",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "withdrawAll",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "error",
+    name: "AllowanceNotCleared",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ResidualBalance",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "SafeERC20FailedOperation",
+    inputs: [
+      {
+        name: "token",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+  {
+    type: "error",
+    name: "UnsupportedAdapter",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "WrongAccountCaller",
+    inputs: [],
+  },
+] as const;
+
+/** Measures pool shares of the signed recipient's holder. */
+export const stakeVerifierAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "pool_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "asset_",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "VERIFIER_ID",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "asset",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "measure",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "value",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "contextHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "pool",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract ICakePool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "postconditionHash",
+    inputs: [
+      {
+        name: "recipient",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "poolId",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+      {
+        name: "minPositionOut",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "pure",
+  },
+  {
+    type: "function",
+    name: "verifierId",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    stateMutability: "pure",
+  },
+  {
+    type: "function",
+    name: "verify",
+    inputs: [
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+      {
+        name: "beforeValue",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "beforeContext",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+      {
+        name: "result",
+        type: "tuple",
+        internalType: "struct PeragoTypes.AdapterResult",
+        components: [
+          {
+            name: "inputSpent",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputOrPositionReceived",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "protocolEvidenceHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "evidence",
+        type: "tuple",
+        internalType: "struct PeragoTypes.VerificationEvidence",
+        components: [
+          {
+            name: "inputSpent",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "observedOutputOrPositionDelta",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "evidenceHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "error",
+    name: "ActionHashMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "AmountOutOfBounds",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ContextMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidDeploymentPair",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "PostconditionHashMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "UnsupportedAdapter",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "VerificationFailed",
+    inputs: [],
+  },
+] as const;
+
+/** Never deployed: installed at the account by an eth_call state override to run the exact UserOperation calls. */
+export const mandateSimulationHarnessAbi = [
+  {
+    type: "function",
+    name: "simulate",
+    inputs: [
+      {
+        name: "executor",
+        type: "address",
+        internalType: "contract MandateExecutor",
+      },
+      {
+        name: "mandate",
+        type: "tuple",
+        internalType: "struct PeragoTypes.TaskMandate",
+        components: [
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "rootOwner",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "ownerEpoch",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "chainId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "nonce",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "expiresAt",
+            type: "uint48",
+            internalType: "uint48",
+          },
+          {
+            name: "policyHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "intentHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "planHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "simulationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "adapter",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "adapterSelector",
+            type: "bytes4",
+            internalType: "bytes4",
+          },
+          {
+            name: "inputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "maxInput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outputToken",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "minOutput",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "recipient",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "actionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "postconditionHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "commerceContract",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "commerceJobId",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+      {
+        name: "action",
+        type: "bytes",
+        internalType: "bytes",
+      },
+      {
+        name: "proof",
+        type: "tuple",
+        internalType: "struct PeragoTypes.ExecutionProof",
+        components: [
+          {
+            name: "mandateHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "account",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "executor",
+            type: "address",
+            internalType: "address",
+          },
+          {
+            name: "validUntil",
+            type: "uint48",
+            internalType: "uint48",
+          },
+        ],
+      },
+      {
+        name: "proofSignature",
+        type: "bytes",
+        internalType: "bytes",
+      },
+    ],
+    outputs: [
+      {
+        name: "observation",
+        type: "tuple",
+        internalType: "struct MandateSimulationHarness.Observation",
+        components: [
+          {
+            name: "status",
+            type: "uint8",
+            internalType: "enum PeragoTypes.MandateStatus",
+          },
+          {
+            name: "inputBalanceBefore",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "inputBalanceAfter",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outcomeBefore",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "outcomeAfter",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "allowanceAfter",
+            type: "uint256",
+            internalType: "uint256",
+          },
+          {
+            name: "verificationHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "failureReasonHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "gasUsed",
+            type: "uint256",
+            internalType: "uint256",
+          },
+        ],
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "error",
+    name: "ApprovalFailed",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RecordOverrideMismatch",
+    inputs: [],
+  },
+] as const;
+
+/** Runtime code of the contract above, for state overrides only. */
+export const mandateSimulationHarnessRuntime =
+  "0x608060405234801561000f575f5ffd5b5060043610610029575f3560e01c8063c6f86ad81461002d575b5f5ffd5b61004061003b3660046106c7565b610056565b60405161004d9190610797565b60405180910390f35b61009d604080516101208101909152805f81526020015f81526020015f81526020015f81526020015f81526020015f81526020015f81526020015f81526020015f81525090565b60405163e1f90b1960e01b81525f906001600160a01b038a169063e1f90b19906100cb908b90600401610a15565b602060405180830381865afa1580156100e6573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061010a9190610a2a565b60405163298a6c5f60e11b8152600481018290529091505f906001600160a01b038b1690635314d8be9060240161016060405180830381865afa158015610153573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906101779190610a9b565b905060028160400151600681111561019157610191610783565b1415806101a8575080516001600160a01b03163014155b806101c85750306101bc60208b018b610b62565b6001600160a01b031614155b806101fa57506101e06101808a016101608b01610b62565b6001600160a01b03168160a001516001600160a01b031614155b8061022a57506102106060870160408801610b62565b6001600160a01b031681606001516001600160a01b031614155b15610248576040516388efc85160e01b815260040160405180910390fd5b5f61025b6101c08b016101a08c01610b62565b60c08301516040516370a0823160e01b8152306004820152919250906001600160a01b038316906370a0823190602401602060405180830381865afa1580156102a6573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906102ca9190610a2a565b60208601526040516344d1d67f60e11b81526001600160a01b038216906389a3acfe906102ff908e908e908e90600401610bac565b6040805180830381865afa158015610319573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061033d9190610bd8565b50606086015260405163095ea7b360e01b81526001600160a01b038d811660048301526101c08d0135602483015283169063095ea7b3906044016020604051808303815f875af1158015610393573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906103b79190610bfa565b6103d4576040516340b27c2160e11b815260040160405180910390fd5b5f5a60405163e756397f60e01b81529091506001600160a01b038e169063e756397f9061040f908f908f908f908f908f908f90600401610c19565b6020604051808303815f875af115801561042b573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061044f9190610cbb565b8690600681111561046257610462610783565b9081600681111561047557610475610783565b9052505a6104839082610cd4565b6101008701526040516370a0823160e01b81523060048201526001600160a01b038416906370a0823190602401602060405180830381865afa1580156104cb573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906104ef9190610a2a565b604080880191909152516344d1d67f60e11b81526001600160a01b038316906389a3acfe90610526908f908f908f90600401610bac565b6040805180830381865afa158015610540573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906105649190610bd8565b506080870152604051636eb1769f60e11b81523060048201526001600160a01b038e8116602483015284169063dd62ed3e90604401602060405180830381865afa1580156105b4573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906105d89190610a2a565b60a087015260405163298a6c5f60e11b8152600481018690526001600160a01b038e1690635314d8be9060240161016060405180830381865afa158015610621573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906106459190610a9b565b61012081015160c0880152610140015160e087015250939b9a5050505050505050505050565b6001600160a01b038116811461067f575f5ffd5b50565b5f5f83601f840112610692575f5ffd5b50813567ffffffffffffffff8111156106a9575f5ffd5b6020830191508360208285010111156106c0575f5ffd5b9250929050565b5f5f5f5f5f5f5f8789036103a08112156106df575f5ffd5b88356106ea8161066b565b97506102c0601f19820112156106fe575f5ffd5b6020890196506102e089013567ffffffffffffffff81111561071e575f5ffd5b61072a8b828c01610682565b90975095505060806102ff1982011215610742575f5ffd5b506103008801925061038088013567ffffffffffffffff811115610764575f5ffd5b6107708a828b01610682565b989b979a50959850939692959293505050565b634e487b7160e01b5f52602160045260245ffd5b8151610120820190600781106107bb57634e487b7160e01b5f52602160045260245ffd5b808352506020830151602083015260408301516040830152606083015160608301526080830151608083015260a083015160a083015260c083015160c083015260e083015160e083015261010083015161010083015292915050565b80356108228161066b565b919050565b803567ffffffffffffffff81168114610822575f5ffd5b65ffffffffffff8116811461067f575f5ffd5b80356108228161083e565b80356001600160e01b031981168114610822575f5ffd5b61088d8261088083610817565b6001600160a01b03169052565b61089960208201610817565b6001600160a01b031660208301526108b360408201610827565b67ffffffffffffffff1660408301526108ce60608201610817565b6001600160a01b031660608301526080818101359083015260a080820135908301526108fc60c08201610851565b65ffffffffffff1660c083015260e081810135908301526101008082013590830152610120808201359083015261014080820135908301526109416101608201610817565b6001600160a01b031661016083015261095d610180820161085c565b6001600160e01b03191661018083015261097a6101a08201610817565b6001600160a01b03166101a08301526101c081810135908301526109a16101e08201610817565b6001600160a01b03166101e083015261020081810135908301526109c86102208201610817565b6001600160a01b0316610220830152610240818101359083015261026080820135908301526109fa6102808201610817565b6001600160a01b03166102808301526102a090810135910152565b6102c08101610a248284610873565b92915050565b5f60208284031215610a3a575f5ffd5b5051919050565b604051610160810167ffffffffffffffff81118282101715610a7157634e487b7160e01b5f52604160045260245ffd5b60405290565b80516108228161066b565b80516108228161083e565b805160078110610822575f5ffd5b5f610160828403128015610aad575f5ffd5b50610ab6610a41565b610abf83610a77565b8152610acd60208401610a82565b6020820152610ade60408401610a8d565b6040820152610aef60608401610a77565b6060820152610b0060808401610a82565b6080820152610b1160a08401610a77565b60a0820152610b2260c08401610a77565b60c0820152610b3360e08401610a77565b60e082015261010083810151908201526101208084015190820152610140928301519281019290925250919050565b5f60208284031215610b72575f5ffd5b8135610b7d8161066b565b9392505050565b81835281816020850137505f828201602090810191909152601f909101601f19169091010190565b610bb68185610873565b6102e06102c08201525f610bcf6102e083018486610b84565b95945050505050565b5f5f60408385031215610be9575f5ffd5b505080516020909101519092909150565b5f60208284031215610c0a575f5ffd5b81518015158114610b7d575f5ffd5b610c238188610873565b6103806102c08201525f610c3c61038083018789610b84565b85356102e08401526020860135610c528161066b565b6001600160a01b03166103008401526040860135610c6f8161066b565b6001600160a01b03166103208401526060860135610c8c8161083e565b65ffffffffffff16610340840152828103610360840152610cae818587610b84565b9998505050505050505050565b5f60208284031215610ccb575f5ffd5b610b7d82610a8d565b81810381811115610a2457634e487b7160e01b5f52601160045260245ffdfea164736f6c6343000825000a" as const;

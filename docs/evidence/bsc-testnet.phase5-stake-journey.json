@@ -1,0 +1,554 @@
+{
+  "label": "testnet-demo: every transaction below is on BNB Smart Chain Testnet (chain 97) against the SC-D-006 testnet-demo MandateExecutor; it is not the production executor, and no ERC-8183 payment is involved (Phase 6)",
+  "venue": {
+    "chainId": 97,
+    "startedAtFinalizedBlock": "132882059",
+    "blockHash": "0x8407dd7a429151c1427108bf3cf5928bc767512585301c29f4c670190cae4ab4",
+    "mandateExecutor": {
+      "address": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
+      "codeHash": "0xc1c989fd4895f58aa05f65b3e780cbcf0be2ed96ed890c932d3effe8984e52d2",
+      "label": "testnet-demo",
+      "manifest": "deployments/bsc-testnet.demo.perago.json",
+      "codeHashMatchedAtStart": true
+    },
+    "adapter": {
+      "address": "0xb68d52c76036744c5f7676d530295b3e8dd9d8ae",
+      "codeHash": "0xb35ebc8dd8ee6adca15c43c475a3f2d01ae8a9353a9761eebde316d270ee2f0c"
+    },
+    "verifier": {
+      "address": "0x66255cad973a59043eb75e8d4ef71f440de36d8a",
+      "codeHash": "0xde2382330614d043961bb3a6620e1501f93c5fe2ba69f4004b708b80a45c9638"
+    },
+    "protocolTarget": {
+      "address": "0x683433ba14e8f26774d43d3e90da6dd7a22044fe",
+      "codeHash": "0x05e4b2dafbea502af223316e347c2dffb5971e1dfc99ab2199787a8e222b4f8e"
+    },
+    "executionWindowSeconds": "600",
+    "owner": "0x2e42e0fb693765715014934282b9a7d3cf0c3818",
+    "account": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+    "executor": "0x5ad812b956a0cbfb6805b1f4102292b823415a18",
+    "relayer": "0x2e42e0fb693765715014934282b9a7d3cf0c3818",
+    "keys": "owner and executor keys come from the operator's untracked .env; the worker token was generated for this run; no key is written anywhere",
+    "executorProcess": "apps/executor/src/main.ts, spawned with only public variables and its PERAGO_* deployment variables",
+    "policyVerifier": "createViemPolicyChainVerifier: exact UserOperation calldata, AccountPolicySet event, pinned EntryPoint/account/MandateExecutor code, three-block depth",
+    "funding": {}
+  },
+  "policy": {
+    "policyId": "7e5c756e-e403-429a-8d48-3f69cd087748",
+    "policyHash": "0xbd76c473d91ba000e723773b52479783f9ad9cc22210617d8faf09f67b945406",
+    "accountPolicy": {
+      "account": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+      "chainId": "97",
+      "ownerEpoch": "1",
+      "permissionHash": "0x257034afddd3962493f8e0e784bd442b2aab573e91fd3ebe2be74659b660c17e",
+      "policyHash": "0xbd76c473d91ba000e723773b52479783f9ad9cc22210617d8faf09f67b945406",
+      "rootOwner": "0x2e42e0fb693765715014934282b9a7d3cf0c3818",
+      "validUntil": "1790265457"
+    },
+    "session": {
+      "account": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+      "entityId": 1499547031,
+      "nativeSpendLimit": "0",
+      "selectors": ["0xe756397f"],
+      "sessionSigner": "0x5ad812b956A0CbFB6805B1F4102292B823415A18",
+      "target": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
+      "validAfter": "1790243797",
+      "validUntil": "1790265457"
+    },
+    "activation": {
+      "transactionHash": "0xb1c0cb8bf5f0612d72e5fcb29d0a4e38357ced34af4a9479d37ba5843742174d",
+      "userOperationHash": "0x527b03b04b6bde391b511073e1e5d82fe6164648724f980417f8e51352696518",
+      "explorer": "https://testnet.bscscan.com/tx/0xb1c0cb8bf5f0612d72e5fcb29d0a4e38357ced34af4a9479d37ba5843742174d",
+      "note": "one root UserOperation installed the perform-only session and called MandateExecutor.setAccountPolicy; the API confirmed it through the real policy-chain verifier"
+    },
+    "confirmed": {
+      "status": "ACTIVE"
+    }
+  },
+  "policyRefusals": {
+    "excessSpend": {
+      "goal": "Stake 10 CAKE",
+      "policyLimit": "CAKE 5 per task",
+      "failingRules": ["PER_TASK_CAP:PER_TASK_CAP_EXCEEDED"],
+      "simulation": {
+        "status": 409,
+        "error": {
+          "code": "REQUEST_CONFLICT",
+          "message": "only a compiled, unsigned task can be simulated"
+        }
+      }
+    },
+    "foreignRecipient": {
+      "recipient": "0x00000000000000000000000000000000000000a1",
+      "failingRules": ["RECIPIENT:RECIPIENT_NOT_ALLOWED"],
+      "simulation": {
+        "status": 409,
+        "error": {
+          "code": "REQUEST_CONFLICT",
+          "message": "only a compiled, unsigned task can be simulated"
+        }
+      }
+    }
+  },
+  "task": {
+    "goal": "Stake 1 CAKE",
+    "taskId": "4b6ff37d-6feb-4412-a058-c77378636d44",
+    "planHash": "0x5203c8fcf02caddb9670d5563749c0b099185cf015c9d274d774edf3605c9fe9",
+    "decision": {
+      "schemaVersion": "1",
+      "compilerVersion": "perago-compiler/1",
+      "policyHash": "0xbd76c473d91ba000e723773b52479783f9ad9cc22210617d8faf09f67b945406",
+      "intentHash": "0xd1f15729c4b28f8572850b1f2a69e537cd1dfc75422706d799374a20f56dd352",
+      "outcome": "PASS",
+      "rules": [
+        {
+          "rule": "CHAIN",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "97",
+          "observed": "intent 97; catalog 97"
+        },
+        {
+          "rule": "ACCOUNT",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+          "observed": "0x2863167c8653b9369ef51de203742a3429ac57e2"
+        },
+        {
+          "rule": "SERVICE",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "SWAP,STAKE",
+          "observed": "STAKE"
+        },
+        {
+          "rule": "PROTOCOL",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "pancakeswap-v3,cake-pool",
+          "observed": "cake-pool"
+        },
+        {
+          "rule": "ROUTE",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+          "observed": "0xfa60d973f7642b748046464e165a65b7323b0dee"
+        },
+        {
+          "rule": "PROTECTED_ASSET",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "",
+          "observed": "0xfa60d973f7642b748046464e165a65b7323b0dee"
+        },
+        {
+          "rule": "ACTIVE_ASSET",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "0xae13d989dac2f0debff460ac112a837c89baa7cd,0xfa60d973f7642b748046464e165a65b7323b0dee",
+          "observed": "0xfa60d973f7642b748046464e165a65b7323b0dee"
+        },
+        {
+          "rule": "INPUT_AMOUNT",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "> 0 with at most 18 decimals",
+          "observed": "1 (1000000000000000000 base units)"
+        },
+        {
+          "rule": "PER_TASK_CAP",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "5000000000000000000",
+          "observed": "1000000000000000000"
+        },
+        {
+          "rule": "DAILY_CAP",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "20000000000000000000",
+          "observed": "0 reserved in 24h + 1000000000000000000"
+        },
+        {
+          "rule": "SLIPPAGE",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "100",
+          "observed": "100 (policy default)"
+        },
+        {
+          "rule": "RECIPIENT",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "SELF (0x2863167c8653b9369ef51de203742a3429ac57e2)",
+          "observed": "0x2863167c8653b9369ef51de203742a3429ac57e2"
+        },
+        {
+          "rule": "LIFETIME",
+          "outcome": "PASS",
+          "reasonCode": null,
+          "limit": "3600",
+          "observed": "1800"
+        }
+      ]
+    }
+  },
+  "simulation": {
+    "simulationHash": "0x9b503b9966c06725ba68c5431dcdeacaec5fc8c717e8dcce9afd2f94bec52669",
+    "block": {
+      "number": "132882090",
+      "hash": "0xe05c4ef7d5a9a6ec6807e3122340799a389bd2db0514e3edcb545868727626e0",
+      "timestamp": "1790243867"
+    },
+    "minOutput": "24028703891",
+    "expectedOutput": "24271418072",
+    "action": {
+      "asset": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+      "amount": "1000000000000000000",
+      "minPositionOut": "24028703891",
+      "recipient": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+      "deadline": "1790245667",
+      "poolId": "0xa6902dcdf9185809eb31d8d3711eb92e531124d8e8c028c19962dca62ad2a905",
+      "kind": "STAKE"
+    }
+  },
+  "digest": {
+    "api": "0x03f3333aed1be7855d17664463686592398f1f315446be7103c1550908b10f3d",
+    "sdk": "0x03f3333aed1be7855d17664463686592398f1f315446be7103c1550908b10f3d",
+    "mandateExecutorHashMandate": "0x03f3333aed1be7855d17664463686592398f1f315446be7103c1550908b10f3d",
+    "mandate": {
+      "account": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+      "rootOwner": "0x2e42e0fb693765715014934282b9a7d3cf0c3818",
+      "ownerEpoch": "1",
+      "executor": "0x5ad812b956a0cbfb6805b1f4102292b823415a18",
+      "chainId": "97",
+      "nonce": "305289850249160034765085615779348609973",
+      "expiresAt": "1790245667",
+      "policyHash": "0xbd76c473d91ba000e723773b52479783f9ad9cc22210617d8faf09f67b945406",
+      "intentHash": "0xd1f15729c4b28f8572850b1f2a69e537cd1dfc75422706d799374a20f56dd352",
+      "planHash": "0x5203c8fcf02caddb9670d5563749c0b099185cf015c9d274d774edf3605c9fe9",
+      "simulationHash": "0x9b503b9966c06725ba68c5431dcdeacaec5fc8c717e8dcce9afd2f94bec52669",
+      "adapter": "0xb68d52c76036744c5f7676d530295b3e8dd9d8ae",
+      "adapterSelector": "0x78cab83a",
+      "inputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+      "maxInput": "1000000000000000000",
+      "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+      "minOutput": "24028703891",
+      "recipient": "0x2863167c8653b9369ef51de203742a3429ac57e2",
+      "actionHash": "0x36026872d5b0d67dfb6836793092026ec273e37cf07debfe468e54714b9e86c3",
+      "postconditionHash": "0x500c78a0b59238d03b07d16d42411e26965c37cdb0cc3efec88ac9d48cc37c83",
+      "commerceContract": "0x0000000000000000000000000000000000000000",
+      "commerceJobId": "0"
+    }
+  },
+  "position": {
+    "committed": {
+      "holder": "0x688806b5401e946d78486fdcdaa803ef0c8ee1d6",
+      "holderDeployed": false,
+      "sharesBefore": "0",
+      "withdrawFeeBps": "10",
+      "withdrawFeePeriodSeconds": "259200",
+      "performanceFeeBps": "200"
+    },
+    "minPositionOut": "24028703891",
+    "estimatedShares": "24271418072",
+    "maxSlippageBps": "100",
+    "policyHash": "0xbd76c473d91ba000e723773b52479783f9ad9cc22210617d8faf09f67b945406",
+    "risks": [
+      "Authority is one-use and ends at chain time 1790245667; an unexecuted mandate expires without effect.",
+      "The position is held for the recipient by 0x688806b5401e946d78486fdcdaa803ef0c8ee1d6; only the recipient can withdraw it.",
+      "The CAKE Pool charges a 10 bp withdrawal fee within 259200 seconds of a deposit and a 200 bp performance fee on yield.",
+      "Pool shares are estimated from the exact path at block 132882090; the stake reverts below 24028703891 shares.",
+      "MandateExecutor 0x5587896753ad6f65ad40ee812f4e1160f6691b7c accepts mandates without an ERC-8183 job (testnet-demo); no agent payment is bound to this outcome."
+    ],
+    "check": "holder, deployment, shares, and the three pool fees re-read at block 132882090 equal the committed position"
+  },
+  "signing": {
+    "tamperedSignatureRefusals": [
+      {
+        "field": "maxInput raised (excess spend)",
+        "api": "SIGNATURE_INVALID"
+      },
+      {
+        "field": "minOutput lowered",
+        "api": "SIGNATURE_INVALID"
+      },
+      {
+        "field": "recipient changed",
+        "api": "SIGNATURE_INVALID"
+      },
+      {
+        "field": "adapter changed to the pinned swap adapter",
+        "api": "SIGNATURE_INVALID"
+      },
+      {
+        "field": "adapterSelector changed to validate",
+        "api": "SIGNATURE_INVALID"
+      },
+      {
+        "field": "actionHash changed",
+        "api": "SIGNATURE_INVALID"
+      }
+    ],
+    "accepted": {
+      "mandateHash": "0x03f3333aed1be7855d17664463686592398f1f315446be7103c1550908b10f3d",
+      "status": "SIGNED",
+      "executionStatus": "QUEUED"
+    },
+    "note": "each tampered mandate was signed by the real root owner; the API refuses any signature that does not recover over the exact prepared digest"
+  },
+  "authorizeRefusals": {
+    "control": "the exact mandate returns 0x03f3333aed1be7855d17664463686592398f1f315446be7103c1550908b10f3d from eth_call",
+    "refusals": [
+      {
+        "field": "maxInput raised (excess spend)",
+        "refusal": "InvalidRootSignature"
+      },
+      {
+        "field": "minOutput lowered",
+        "refusal": "InvalidRootSignature"
+      },
+      {
+        "field": "recipient changed",
+        "refusal": "InvalidRootSignature"
+      },
+      {
+        "field": "adapter changed to the pinned swap adapter",
+        "refusal": "InvalidTokenPair"
+      },
+      {
+        "field": "adapter changed to the CAKE Pool",
+        "refusal": "UnsupportedAdapter"
+      },
+      {
+        "field": "adapterSelector changed to validate",
+        "refusal": "WrongSelector"
+      },
+      {
+        "field": "actionHash changed",
+        "refusal": "InvalidRootSignature"
+      },
+      {
+        "field": "submitted by a non-executor",
+        "refusal": "WrongExecutor"
+      }
+    ],
+    "note": "eth_call of MandateExecutor.authorize from the bound executor before the real authorization, never broadcast"
+  },
+  "rootApproval": {
+    "transactionHash": "0x711067a4efde9d019624b3fb6d9888c7037bac5782e756b2bf9ed5ea5f942990",
+    "userOperationHash": "0x559fdbcfca6f17605a92b2c4f0a01406cd0a172f2102993a3fd372e3e7001b9b",
+    "explorer": "https://testnet.bscscan.com/tx/0x711067a4efde9d019624b3fb6d9888c7037bac5782e756b2bf9ed5ea5f942990"
+  },
+  "performRefusals": {
+    "control": "the exact mandate, action, and proof return SUCCEEDED from eth_call",
+    "refusals": [
+      {
+        "field": "mandate maxInput raised (excess spend)",
+        "refusal": "InvalidTransition"
+      },
+      {
+        "field": "mandate minOutput lowered",
+        "refusal": "InvalidTransition"
+      },
+      {
+        "field": "mandate recipient changed",
+        "refusal": "InvalidTransition"
+      },
+      {
+        "field": "mandate adapter changed to the pinned swap adapter",
+        "refusal": "InvalidTransition"
+      },
+      {
+        "field": "action amount raised (excess spend)",
+        "refusal": "ActionHashMismatch"
+      },
+      {
+        "field": "action minPositionOut lowered",
+        "refusal": "ActionHashMismatch"
+      },
+      {
+        "field": "action recipient changed",
+        "refusal": "ActionHashMismatch"
+      },
+      {
+        "field": "action poolId changed to another staking target",
+        "refusal": "ActionHashMismatch"
+      },
+      {
+        "field": "action asset changed to WBNB",
+        "refusal": "ActionHashMismatch"
+      },
+      {
+        "field": "executor proof signed by another key",
+        "refusal": "InvalidExecutorProof"
+      }
+    ],
+    "note": "eth_call of MandateExecutor.perform from the smart account while the mandate was EXECUTING, never broadcast"
+  },
+  "sessionRefusals": {
+    "refusals": [
+      {
+        "field": "session calls MandateExecutor.revoke, a selector outside its allowlist",
+        "refusal": "FailedOpWithRevert(AA23 reverted)"
+      },
+      {
+        "field": "session calls perform on another MandateExecutor (the production instance)",
+        "refusal": "FailedOpWithRevert(AA23 reverted)"
+      },
+      {
+        "field": "session calls transfer on the input token instead of perform",
+        "refusal": "FailedOpWithRevert(AA23 reverted)"
+      },
+      {
+        "field": "signed perform UserOperation with its action changed after signing (recipient changed)",
+        "refusal": "FailedOp(AA24 signature error)"
+      }
+    ],
+    "note": "session-signed UserOperations evaluated with eth_call of EntryPoint.handleOps from the executor; each fails account validation before any call"
+  },
+  "execution": {
+    "authorize": {
+      "transactionHash": "0x7232219c0df47c4216db18a35493523cedbf5382e07196474249301d98f9e159",
+      "explorer": "https://testnet.bscscan.com/tx/0x7232219c0df47c4216db18a35493523cedbf5382e07196474249301d98f9e159"
+    },
+    "begin": {
+      "transactionHash": "0x6ecbeea5bf4ded07be5a1780326504bc6d80cb3adca60f05df39eb058f2ab65d",
+      "explorer": "https://testnet.bscscan.com/tx/0x6ecbeea5bf4ded07be5a1780326504bc6d80cb3adca60f05df39eb058f2ab65d"
+    },
+    "executionStartedAt": "1790243891",
+    "exactAllowanceBeforePerform": "1000000000000000000"
+  },
+  "positionFreshness": {
+    "goal": "Stake 0.5 CAKE",
+    "taskId": "7a930d74-bc5e-4072-84d5-d399c8394b67",
+    "simulatedAtBlock": "132882159",
+    "committedPosition": {
+      "holder": "0x688806b5401e946d78486fdcdaa803ef0c8ee1d6",
+      "holderDeployed": false,
+      "sharesBefore": "0",
+      "withdrawFeeBps": "10",
+      "withdrawFeePeriodSeconds": "259200",
+      "performanceFeeBps": "200"
+    },
+    "preparedBeforeTheStake": true,
+    "unavailable": "not exercised on chain 97, whose pool cannot be made unreadable; proven on the fork journey and by src/simulation/stake.test.ts",
+    "stale": {
+      "prepare": {
+        "status": 409,
+        "error": {
+          "code": "STALE_POSITION",
+          "detail": "STALE_POSITION",
+          "message": "The staking position or the pool's fees changed since the simulation. Simulate again."
+        }
+      },
+      "currentShares": "24271418072",
+      "note": "every stale fact is reported in a fixed order; the code is the first of them"
+    }
+  },
+  "perform": {
+    "transactionHash": "0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92",
+    "explorer": "https://testnet.bscscan.com/tx/0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92",
+    "userOperationHash": "0xabf0bd2b6ae94ddb989cb4b9876861484987dc65d96b04b32cc0f94d6581fdb6",
+    "userOperationSuccess": true,
+    "onchainEvents": [
+      "MandateAuthorized",
+      "ExecutionBegun",
+      "ExecutionReceiptRecorded"
+    ]
+  },
+  "receipt": {
+    "status": "SUCCEEDED",
+    "authorityConsumed": true,
+    "verificationHash": "0xf3ff983eb877639f5ea772bddce358d657ff2be008275ada92a123b0b46c1a99",
+    "onchainVerificationHash": "0xf3ff983eb877639f5ea772bddce358d657ff2be008275ada92a123b0b46c1a99",
+    "execution": {
+      "status": "TERMINAL",
+      "mandateStatus": "SUCCEEDED",
+      "submissionAttempts": 3
+    }
+  },
+  "restart": {
+    "killed": "a loop worker received SIGKILL as soon as it logged the persisted PERFORM transaction and UserOperation hashes",
+    "persistedBeforeKill": {
+      "transactionHash": "0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92",
+      "userOperationHash": "0xabf0bd2b6ae94ddb989cb4b9876861484987dc65d96b04b32cc0f94d6581fdb6"
+    },
+    "restartEvents": [["worker.started", "job.leased", "job.finished"]],
+    "result": "the restarted processes submitted nothing; the one persisted UserOperation is the one the chain executed"
+  },
+  "outcome": {
+    "cakeSpent": "1000000000000000000",
+    "maxInput": "1000000000000000000",
+    "holder": "0x688806b5401e946d78486fdcdaa803ef0c8ee1d6",
+    "holderDeployedAfter": true,
+    "sharesBefore": "0",
+    "sharesAfter": "24271418072",
+    "sharesMinted": "24271418072",
+    "minPositionOut": "24028703891",
+    "allowanceAfter": "0",
+    "residualCake": {
+      "mandateExecutor": "0",
+      "stakeAdapter": "0",
+      "holder": "0"
+    },
+    "executorTransactions": 3
+  },
+  "replay": {
+    "refusals": [
+      {
+        "replayed": "exact authorize transaction input",
+        "transactionHash": "0x7232219c0df47c4216db18a35493523cedbf5382e07196474249301d98f9e159",
+        "refusal": "NonceAlreadyUsed"
+      },
+      {
+        "replayed": "exact begin transaction input",
+        "transactionHash": "0x6ecbeea5bf4ded07be5a1780326504bc6d80cb3adca60f05df39eb058f2ab65d",
+        "refusal": "InvalidTransition"
+      },
+      {
+        "replayed": "exact perform transaction input",
+        "transactionHash": "0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92",
+        "refusal": "FailedOp(AA25 invalid account nonce)"
+      },
+      {
+        "replayed": "fresh perform call from the account with a new proof",
+        "refusal": "InvalidTransition"
+      }
+    ],
+    "apiResubmission": {
+      "status": 201,
+      "mandateHash": "0x03f3333aed1be7855d17664463686592398f1f315446be7103c1550908b10f3d",
+      "executionsForMandate": 1
+    },
+    "redelivery": "a live loop worker found nothing to lease for 15 s; the executor nonce did not move"
+  },
+  "withdraw": {
+    "refusals": [
+      {
+        "caller": "executor key calling holder.withdrawAll directly",
+        "refusal": "WrongAccountCaller"
+      },
+      {
+        "caller": "executor session UserOperation calling holder.withdrawAll",
+        "refusal": "FailedOpWithRevert(AA23 reverted)"
+      }
+    ],
+    "withdrawal": {
+      "transactionHash": "0xafc0e7c9e4d2180169897304a2b3ee37d33c2464c11761fc212b80669bc5d350",
+      "userOperationHash": "0x2989d21d257ec7e13377cd192a6809bc8e921924d2a2dc5df5e851e2fc774d75",
+      "explorer": "https://testnet.bscscan.com/tx/0xafc0e7c9e4d2180169897304a2b3ee37d33c2464c11761fc212b80669bc5d350"
+    },
+    "sharesWithdrawn": "24271418072",
+    "cakeReturned": "998999999958074009",
+    "cakeStaked": "1000000000000000000",
+    "note": "the owner's root UserOperation made the account call CakeStakePosition.withdrawAll; the pool kept its early-withdrawal fee"
+  },
+  "logging": {
+    "lines": 17,
+    "check": "every executor stdout/stderr line is one JSON object and contains neither the executor key (with or without 0x) nor the worker token"
+  },
+  "observedAt": "2026-09-24T09:58:57.867Z"
+}

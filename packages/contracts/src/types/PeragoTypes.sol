@@ -11,6 +11,9 @@ library PeragoTypes {
     /// Domain tag of a swap postcondition commitment: the signed recipient receives at
     /// least the signed minimum of the signed output token.
     bytes32 internal constant SWAP_POSTCONDITION_KIND = keccak256("perago.postcondition.swap.v1");
+    /// Domain tag of a stake postcondition commitment: the signed recipient's position in
+    /// the pinned pool grows by at least the signed minimum of pool shares.
+    bytes32 internal constant STAKE_POSTCONDITION_KIND = keccak256("perago.postcondition.stake.v1");
 
     /// Legal transitions: NONE -> AUTHORIZED -> (EXECUTING -> SUCCEEDED | FAILED) | REVOKED | EXPIRED.
     enum MandateStatus {
@@ -70,6 +73,17 @@ library PeragoTypes {
         uint256 minAmountOut;
         address recipient;
         uint48 deadline;
+    }
+
+    /// The closed single-asset stake action. Its canonical ABI encoding is exactly six
+    /// words; `poolId` is a key into the adapter's one pinned pool, never an address.
+    struct StakeAction {
+        address asset;
+        uint256 amount;
+        uint256 minPositionOut;
+        address recipient;
+        uint48 deadline;
+        bytes32 poolId;
     }
 
     /// Root-signed registration that binds an account to its owner, epoch, policy, and session permission.

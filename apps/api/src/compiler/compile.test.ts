@@ -257,3 +257,99 @@ describe("deterministic compiler", () => {
     });
   });
 });
+
+describe("closed stake branch", () => {
+  const stakePolicy: WalletPolicy = {
+    ...policy,
+    protectedAssets: [],
+    activeAssets: [
+      ...policy.activeAssets,
+      {
+        token: cake,
+        maxInputPerTask: "5000000000000000000",
+        rollingDailyCap: "20000000000000000000",
+      },
+    ],
+    services: ["SWAP", "STAKE"],
+    approvedAdapterIds: ["pancakeswap-v3", "cake-pool"],
+  };
+  const stake = {
+    kind: "STAKE",
+    adapterId: "cake-pool",
+    inputSymbol: "Cake",
+    inputAmount: "1",
+    maxSlippageBps: null,
+    recipient: null,
+  };
+  const compileStake = (
+    action: Record<string, unknown>,
+    overrides: Partial<CompileInput> = {},
+  ) => compile(action, { policy: stakePolicy, ...overrides });
+
+  it("stakes only into the catalog's one pinned pool, for the policy account", () => {
+    const outcome = compileStake(stake);
+    expect(outcome.status).toBe("READY_TO_SIMULATE");
+    if (outcome.status !== "READY_TO_SIMULATE") return;
+    expect(outcome.plan.action).toEqual({
+      kind: "STAKE",
+      adapterId: "cake-pool",
+      inputToken: cake,
+      inputAmount: "1000000000000000000",
+      maxSlippageBps: "100",
+      recipient: account,
+    });
+  });
+
+  it.each([
+    ["the swap adapter as the stake target", { adapterId: "pancakeswap-v3" }],
+    ["an adapter outside the catalog", { adapterId: "cake-pool-locked" }],
+    ["a model-chosen pool", { poolId: `0x${"11".repeat(32)}` }],
+    ["a model-chosen lock duration", { lockDuration: "31536000" }],
+    ["a model-chosen output token", { outputSymbol: "WBNB" }],
+    ["a model-chosen minimum position", { minPositionOut: "1" }],
+  ])("fails %s as invalid planner output", (_name, change) => {
+    expect(compileStake({ ...stake, ...change })).toEqual({
+      status: "PLANNING_FAILED",
+      reasonCode: "PLANNER_OUTPUT_INVALID",
+    });
+  });
+
+  it.each([
+    [
+      "an asset other than the pool's",
+      { inputSymbol: "WBNB", inputAmount: "0.05" },
+      {},
+      [["ROUTE", "ROUTE_UNSUPPORTED"]],
+    ],
+    [
+      "a policy without the stake service",
+      {},
+      { policy: { ...stakePolicy, services: ["SWAP" as const] } },
+      [["SERVICE", "SERVICE_NOT_ALLOWED"]],
+    ],
+    [
+      "a policy that does not approve the pool",
+      {},
+      {
+        policy: { ...stakePolicy, approvedAdapterIds: ["pancakeswap-v3"] },
+      },
+      [["PROTOCOL", "PROTOCOL_NOT_APPROVED"]],
+    ],
+    [
+      "a stake above the per-task cap",
+      { inputAmount: "5.000000000000000001" },
+      {},
+      [["PER_TASK_CAP", "PER_TASK_CAP_EXCEEDED"]],
+    ],
+    [
+      "a stake for another recipient",
+      { recipient: stranger },
+      {},
+      [["RECIPIENT", "RECIPIENT_NOT_ALLOWED"]],
+    ],
+  ])("rejects %s in policy", (_name, change, overrides, expected) => {
+    expect(failures(compileStake({ ...stake, ...change }, overrides))).toEqual(
+      expected,
+    );
+  });
+});

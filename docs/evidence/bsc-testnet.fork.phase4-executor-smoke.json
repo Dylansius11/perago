@@ -1,0 +1,354 @@
+{
+  "label": "fork: every write below is on a local anvil fork of BSC Testnet (chain 97) mining one block per second with finalized = latest - 2; nothing was broadcast to chain 97",
+  "fork": {
+    "chainId": 97,
+    "forkedAtBlock": "132836118",
+    "forkedAtBlockHash": "0x2aa1058a4bdeeb8e0c827f75d78b67f387b27f08e9cc1afff9305eeb89c9a029",
+    "anvil": "--block-time 1 --slots-in-an-epoch 1",
+    "mandateExecutor": {
+      "address": "0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7",
+      "codeHash": "0x4096d49a34a4da49501bddb93ac52e9335eefd5ca0bd6ffa8f182f35a38b0bd5"
+    },
+    "mandateExecutorDeployTransaction": "0xdcd73a98fe71c927b8d226ed2d00fd1b585961c63247e78a875a2e3717674d15",
+    "mandateExecutorConstructor": {
+      "swapAdapter": "0xb9faeb0bb29401a1308e0c1287913d94b18ec635",
+      "stakeAdapter": "0xb68d52c76036744c5f7676d530295b3e8dd9d8ae",
+      "executionWindowSeconds": "600",
+      "allowUnboundCommerceJobs": true
+    },
+    "productionAdaptersAndVerifiers": "deployments/bsc-testnet.perago.json",
+    "account": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+    "rootOwner": "0x105d4b357acf1ca00454a5a0b29b25e817e78fcf",
+    "executorSession": "0x32f8dc550606b4efe82e38a495fb69930627d093",
+    "keys": "root owner, session/executor, and worker token were generated for this run and never persisted",
+    "executorProcess": "apps/executor/src/main.ts, spawned with only PATH and PERAGO_* deployment variables"
+  },
+  "policy": {
+    "policyHash": "0xb890b065e49db73034af682b7c919e074246d58532b546cad143397245ae77d3",
+    "accountPolicy": {
+      "account": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+      "chainId": "97",
+      "ownerEpoch": "1",
+      "permissionHash": "0x21b3483e84b421cb75ad8040626900a556ebbbebd22545fbeb61ced2da2e832a",
+      "policyHash": "0xb890b065e49db73034af682b7c919e074246d58532b546cad143397245ae77d3",
+      "rootOwner": "0x105d4b357acf1ca00454a5a0b29b25e817e78fcf",
+      "validUntil": "1790395995"
+    },
+    "session": {
+      "account": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+      "entityId": 1,
+      "nativeSpendLimit": "0",
+      "selectors": ["0xe756397f"],
+      "sessionSigner": "0x32F8Dc550606B4Efe82E38A495fb69930627D093",
+      "target": "0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7",
+      "validAfter": "1790223135",
+      "validUntil": "1790395995"
+    },
+    "activation": {
+      "transactionHash": "0x3d605a1fd822cc09fee20412e36b058e054fe72b46c2a1dfdd52390f845fa84e",
+      "userOperationHash": "0x9879cdc287ce7302a5c88d9b89a6626265666a5258dd0a37447ecbef35428e63",
+      "note": "one root UserOperation installed the perform-only session and registered the policy in MandateExecutor"
+    }
+  },
+  "forbiddenSessionCalls": {
+    "note": "session-signed UserOperations evaluated with eth_call of EntryPoint.handleOps on the fork; each fails validation before any call",
+    "refusals": [
+      {
+        "call": "token approve through the session",
+        "refusal": "FailedOpWithRevert(AA23 reverted, 0x4db96e3100000000003e826473a313e600b5b9b791f5a59a000000010000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000042b53784e00000000000000000000000000000000000000000000000000000000)"
+      },
+      {
+        "call": "MandateExecutor.revoke, a selector outside the perform-only allowlist",
+        "refusal": "FailedOpWithRevert(AA23 reverted, 0x4db96e3100000000003e826473a313e600b5b9b791f5a59a00000001000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004bdb518d200000000000000000000000000000000000000000000000000000000)"
+      },
+      {
+        "call": "executeBatch, a privileged account selector",
+        "refusal": "FailedOpWithRevert(AA23 reverted, 0xcf7b49f634fcd5be00000000000000000000000000000000000000000000000000000000)"
+      },
+      {
+        "call": "native value out of the account",
+        "refusal": "FailedOpWithRevert(AA23 reverted, 0x4db96e3100000000003e826473a313e600b5b9b791f5a59a000000010000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000042b53784e00000000000000000000000000000000000000000000000000000000)"
+      }
+    ]
+  },
+  "swap": {
+    "taskId": "ff61850d-5563-4a20-adbe-9f5cb283de2a",
+    "mandateHash": "0xc1e352e998eaa09461e5b7e902499dfd930174673b8e574c1c886076322c03ae",
+    "mandate": {
+      "account": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+      "rootOwner": "0x105d4b357acf1ca00454a5a0b29b25e817e78fcf",
+      "ownerEpoch": "1",
+      "executor": "0x32f8dc550606b4efe82e38a495fb69930627d093",
+      "chainId": "97",
+      "nonce": "22300610399490952752661186151122324506",
+      "expiresAt": "1790225003",
+      "policyHash": "0xb890b065e49db73034af682b7c919e074246d58532b546cad143397245ae77d3",
+      "intentHash": "0x3e0db5ea74489ab4024262e2ef149b4d51373ceefc7f3a97191a9b2ecdb42b16",
+      "planHash": "0x6cdf7777cc4f7bdeb55e293bd095e725827f97128b99de1dc3290d87704e9730",
+      "simulationHash": "0x13a543f5f9607cb7d317b21bfbf2c424f68b8ab666a63177a0482ef03b447a42",
+      "adapter": "0xb9faeb0bb29401a1308e0c1287913d94b18ec635",
+      "adapterSelector": "0x78cab83a",
+      "inputToken": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
+      "maxInput": "10000000000000000",
+      "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+      "minOutput": "364231492571185523693864631565",
+      "recipient": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+      "actionHash": "0xe3e3ab5918ded8f083d668ac8c640e5a035b89d2b8c4dd69b256cd7d9dae80b7",
+      "postconditionHash": "0x78dbed47c8f986c11d724ae03813a9dd72e542ea529a89cbdba4742a92bcee48",
+      "commerceContract": "0x0000000000000000000000000000000000000000",
+      "commerceJobId": "0"
+    },
+    "rootApproval": {
+      "transactionHash": "0xcbb65d416aacb84a88117f897e4509f68ed8b6867f4b7e646bd990d3e3376e51",
+      "userOperationHash": "0xe83dfefab9aee815ec913261274bcbf54340f168ae4dc4ce4694a68cef3baaed"
+    },
+    "duplicateExecutionInsert": "duplicate key value violates unique constraint \"executions_mandate_hash_key\"",
+    "steps": [
+      {
+        "worker": "p4-race-a",
+        "submitted": [
+          {
+            "kind": "AUTHORIZE",
+            "transactionHash": "0xfc2144de11f79bb4ece0c30816495fd2df8ac22164ca74a01dcf9bd59885fefb"
+          }
+        ],
+        "executionStatus": "AUTHORIZED",
+        "pending": "BEGIN",
+        "onchain": "AUTHORIZED"
+      },
+      {
+        "worker": "p4-race-b",
+        "submitted": [
+          {
+            "kind": "BEGIN",
+            "transactionHash": "0x3a8b63b581b6a90993e1b7beea79d10eeaa199576489f0c764f52f3a2bed5298"
+          }
+        ],
+        "executionStatus": "AUTHORIZED",
+        "pending": "BEGIN",
+        "onchain": "AUTHORIZED"
+      },
+      {
+        "worker": "p4-step-perform",
+        "submitted": [
+          {
+            "kind": "PERFORM",
+            "transactionHash": "0xd64d5ffada32ebf84aa0b7fddc2fdf7ba8c1dd8f6becce3160fbc201da7f4d17"
+          }
+        ],
+        "executionStatus": "VERIFYING",
+        "pending": "PERFORM",
+        "onchain": "EXECUTING"
+      },
+      {
+        "worker": "p4-step-finish",
+        "submitted": [],
+        "executionStatus": "TERMINAL",
+        "pending": null,
+        "onchain": "SUCCEEDED"
+      }
+    ],
+    "execution": {
+      "status": "TERMINAL",
+      "mandate_status": "SUCCEEDED",
+      "pending_transaction_kind": null,
+      "pending_transaction_hash": null,
+      "pending_user_operation_hash": null,
+      "authorize_tx_hash": "0xfc2144de11f79bb4ece0c30816495fd2df8ac22164ca74a01dcf9bd59885fefb",
+      "begin_tx_hash": "0x3a8b63b581b6a90993e1b7beea79d10eeaa199576489f0c764f52f3a2bed5298",
+      "execute_user_operation_hash": "0xff93d1e9783eff8b4d98bd8da4a47f949727794b524e354af1def939fd82be6d",
+      "execute_tx_hash": "0xd64d5ffada32ebf84aa0b7fddc2fdf7ba8c1dd8f6becce3160fbc201da7f4d17",
+      "finalize_tx_hash": null,
+      "submission_attempts": 3,
+      "last_error_code": null,
+      "last_error_detail": null
+    },
+    "onchainEvents": [
+      "MandateAuthorized",
+      "ExecutionBegun",
+      "ExecutionReceiptRecorded"
+    ],
+    "executorTransactions": 3,
+    "balances": {
+      "wbnbSpent": "10000000000000000",
+      "cakeReceived": "367910598556753054236226900571",
+      "minOutput": "364231492571185523693864631565",
+      "allowanceAfter": "0"
+    },
+    "receipt": {
+      "status": "SUCCEEDED",
+      "verificationHash": "0x3ce5137b10342502932132cc305f0a44e421ef37dcd4b5a6266f7273a5655088"
+    },
+    "finishedRowReopen": "finished execution is immutable",
+    "redelivery": "a live loop worker found nothing to lease for 6 s; the executor nonce did not move"
+  },
+  "stake": {
+    "taskId": "6f9386c0-6354-4b0a-8555-e169e254a47a",
+    "mandateHash": "0x3616ed73bee0a6495800d4f34a5e5c0e2a0e494b41e3bb5031cc40bdcb20f8f2",
+    "mandate": {
+      "account": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+      "rootOwner": "0x105d4b357acf1ca00454a5a0b29b25e817e78fcf",
+      "ownerEpoch": "1",
+      "executor": "0x32f8dc550606b4efe82e38a495fb69930627d093",
+      "chainId": "97",
+      "nonce": "24530918645572110893763207870676045931",
+      "expiresAt": "1790225031",
+      "policyHash": "0xb890b065e49db73034af682b7c919e074246d58532b546cad143397245ae77d3",
+      "intentHash": "0xfc2a5374cc5f87b21d358a31bf4946d49a37dce02f98001e0994b737bc908db1",
+      "planHash": "0x1863eb3f1e6d9f074a640f1d1740b9ce613ea484c0da77cda015c733f39a19f5",
+      "simulationHash": "0x3751e92967dc3787078c252340b981338a79982f4f2fbfc04c2cc1322d2f60ee",
+      "adapter": "0xb68d52c76036744c5f7676d530295b3e8dd9d8ae",
+      "adapterSelector": "0x78cab83a",
+      "inputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+      "maxInput": "1000000000000000000",
+      "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
+      "minOutput": "24028703972",
+      "recipient": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
+      "actionHash": "0x64aaa0e932513df11370fed8bc98e619136a29ba4c8ab595f498e78962bb7d2a",
+      "postconditionHash": "0x3b5226282797f26ae057aec24f43ad092064ea2d874c28042107826bbf5407e3",
+      "commerceContract": "0x0000000000000000000000000000000000000000",
+      "commerceJobId": "0"
+    },
+    "trail": [
+      {
+        "step": "authorize dropped from the mempool, then rebroadcast unchanged",
+        "transactionHash": "0x62125aed455d2414b89209286012adff4fa82486a04a380ba151699ed0df101c"
+      },
+      {
+        "step": "begin replaced by a same-nonce transfer, retired at finality, then re-signed",
+        "replacedTransactionHash": "0x9b661a19a71667a47a3180593ba7b5afd55086b8ab7eaa799ed3369a80c08903",
+        "replacementTransactionHash": "0x542d46fbea6b23c1b11545dbbfc017b4c5cd4f9ed327b8e267e8ade494c73daf",
+        "beginTransactionHash": "0xd737657e1fe41e59ce798c5a3b4f5928b35ac3bd63885a7fad3dabe720088ad0"
+      },
+      {
+        "step": "perform handleOps dropped, then rebroadcast unchanged",
+        "transactionHash": "0x50e279700040db548d8e7cdcefbbc1a85f6722d3060c6d2087a3d854525d989a",
+        "userOperationHash": "0x895f465d019f5f86172f771ac4b299173a33d6215d97767f26862030efb58ba6"
+      }
+    ],
+    "execution": {
+      "status": "TERMINAL",
+      "mandate_status": "SUCCEEDED",
+      "pending_transaction_kind": null,
+      "pending_transaction_hash": null,
+      "pending_user_operation_hash": null,
+      "authorize_tx_hash": "0x62125aed455d2414b89209286012adff4fa82486a04a380ba151699ed0df101c",
+      "begin_tx_hash": "0xd737657e1fe41e59ce798c5a3b4f5928b35ac3bd63885a7fad3dabe720088ad0",
+      "execute_user_operation_hash": "0x895f465d019f5f86172f771ac4b299173a33d6215d97767f26862030efb58ba6",
+      "execute_tx_hash": "0x50e279700040db548d8e7cdcefbbc1a85f6722d3060c6d2087a3d854525d989a",
+      "finalize_tx_hash": null,
+      "submission_attempts": 4,
+      "last_error_code": null,
+      "last_error_detail": null
+    },
+    "onchainEvents": [
+      "MandateAuthorized",
+      "ExecutionBegun",
+      "ExecutionReceiptRecorded"
+    ],
+    "cakeStaked": "1000000000000000000"
+  },
+  "revoked": {
+    "mandateHash": "0xa5bbdbb4e8881e2b28697daf4c59ac93471cc49f8b3861a76c41fdc1786d8597",
+    "authorizeTransaction": "0x11293ae14d17d967fc94c285f7d24a752387f215dbe46e0dfcf7fc2d2711ac15",
+    "rootRevocation": {
+      "transactionHash": "0x89a8bbb7eb102e3a753d445c6717e8c71b9bdd6218a648ab84ccc783bf9e3b89",
+      "userOperationHash": "0x12a53ce3b6fc9e7a862fee6b3e7fba1553f19200635f94803375ac1d4d3b18f8"
+    },
+    "execution": {
+      "status": "TERMINAL",
+      "mandate_status": "REVOKED",
+      "pending_transaction_kind": null,
+      "pending_transaction_hash": null,
+      "pending_user_operation_hash": null,
+      "authorize_tx_hash": "0x11293ae14d17d967fc94c285f7d24a752387f215dbe46e0dfcf7fc2d2711ac15",
+      "begin_tx_hash": null,
+      "execute_user_operation_hash": null,
+      "execute_tx_hash": null,
+      "finalize_tx_hash": null,
+      "submission_attempts": 1,
+      "last_error_code": null,
+      "last_error_detail": null
+    },
+    "onchainEvents": ["MandateAuthorized", "MandateRevoked"]
+  },
+  "rejectedBeforeAuthorization": {
+    "mandateHash": "0x0b858aeca7da7f5e5cdb32de16ec8ffd0bd1d08e7b697fb16be283096666df74",
+    "deferral": "APPROVAL_MISSING: the account had no allowance for MandateExecutor, so the worker neither authorized nor spent the nonce",
+    "rootNonceInvalidation": {
+      "transactionHash": "0x6e1248585e67d0b8d48aad0c3db03ed16c6e19238a23354f74ae2bb7a31aa5f5",
+      "userOperationHash": "0x9d32d83059bb1e08b05aeb5d2b10e17beb83a339bdadc990fd7b48909f6e5b86"
+    },
+    "execution": {
+      "status": "REJECTED",
+      "mandate_status": "SIGNED",
+      "pending_transaction_kind": null,
+      "pending_transaction_hash": null,
+      "pending_user_operation_hash": null,
+      "authorize_tx_hash": null,
+      "begin_tx_hash": null,
+      "execute_user_operation_hash": null,
+      "execute_tx_hash": null,
+      "finalize_tx_hash": null,
+      "submission_attempts": 0,
+      "last_error_code": "AUTHORIZATION_REJECTED",
+      "last_error_detail": "NonceAlreadyUsed"
+    },
+    "executorTransactions": 0
+  },
+  "expiredAndStalled": {
+    "timeWarp": "evm_increaseTime 3600 s on the fork after both mandates were parked",
+    "stalled": {
+      "mandateHash": "0x654b18c5b3893b81e5db83b05db2d743c153700a07d44152409d42bde2ea6f55",
+      "execution": {
+        "status": "TERMINAL",
+        "mandate_status": "FAILED",
+        "pending_transaction_kind": null,
+        "pending_transaction_hash": null,
+        "pending_user_operation_hash": null,
+        "authorize_tx_hash": "0x954a0df7feb46574667730c23b4ce6a4aa66312f518e11ac372be64cd49c2773",
+        "begin_tx_hash": "0x5818000da5ee61750bbd88a684327912df8baaa09549243ebab4688e2b093e54",
+        "execute_user_operation_hash": null,
+        "execute_tx_hash": null,
+        "finalize_tx_hash": "0x875550ad6b974779969a5477394b8f9644b4414fa2c5cbf647a426604411378a",
+        "submission_attempts": 3,
+        "last_error_code": null,
+        "last_error_detail": null
+      },
+      "onchainEvents": [
+        "MandateAuthorized",
+        "ExecutionBegun",
+        "ExecutionReceiptRecorded"
+      ]
+    },
+    "expired": {
+      "mandateHash": "0x8655afe884ae26dbf250dffae3159cd5ebb731585ca3eb9503f9aa119b02b1dd",
+      "execution": {
+        "status": "TERMINAL",
+        "mandate_status": "EXPIRED",
+        "pending_transaction_kind": null,
+        "pending_transaction_hash": null,
+        "pending_user_operation_hash": null,
+        "authorize_tx_hash": "0x8f44ec5335953389740c9fe035dddbc5bd47c8f6a2d4c3fccaa7f1a9be192364",
+        "begin_tx_hash": null,
+        "execute_user_operation_hash": null,
+        "execute_tx_hash": null,
+        "finalize_tx_hash": "0x442cdc2c6daea9f952e7336578bb272f0a3634f2eb64ba31c0416b307525e507",
+        "submission_attempts": 2,
+        "last_error_code": null,
+        "last_error_detail": null
+      },
+      "onchainEvents": ["MandateAuthorized", "MandateExpired"]
+    },
+    "sigkill": {
+      "killedWhileInFlight": "FINALIZE_EXPIRED",
+      "killedWorkerSubmissions": ["FINALIZE_EXPIRED"],
+      "restartedWorkerSubmissions": ["FINALIZE_STALLED"],
+      "note": "the worker was SIGKILLed after persisting an in-flight finalize; the restarted worker reconciled it and sent no second finalize"
+    }
+  },
+  "logging": {
+    "lines": 99,
+    "check": "every executor stdout/stderr line is one JSON object and contains neither the executor key (with or without 0x) nor the worker token"
+  }
+}

@@ -1,7 +1,7 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Evidence-backed through `P3-002`; chain-97 account, protocol, settlement, and atomic policy-transition proofs exist, while production adapters and deployment remain pending
-**Reviewed:** 2026-09-22
+**Status:** Evidence-backed through `P3-004`; chain-97 account, protocol, settlement, atomic policy-transition, production adapter, and pre-signature simulation proofs exist, while the executor lifecycle through a smart account remains pending
+**Reviewed:** 2026-09-23
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Evidence policy and statuses
@@ -25,17 +25,17 @@ No entry is marked “integrated” in this phase.
 | External self-custodial wallet | Root owner | `verified` | User-controlled MetaMask signatures activated and revoked the P3-002 policy on chain 97; the product wallet-connector journey remains implementation work. |
 | Alchemy Modular Account V2 | ERC-4337 smart account | `verified` | Selected; deployment, ownership, bounded session, and forbidden-shape rejection are proven on chain 97. |
 | Alchemy Bundler + Gas Manager | UserOperation transport/sponsorship | `verified` | Selected initial provider; sponsored and owner-paid paths both proven, and the owner-paid fallback is automatic. |
-| MandateExecutor | One-use semantic authority | `proposed` | A real non-upgradeable instance is verified for the P3-002 policy probe only; production adapters/verifiers and `SC-D-005` remain unresolved. |
+| MandateExecutor | One-use semantic authority | `proposed` | Production instance `0xc6184Fb3e12F4C79b50f37175f3229d91664EC66` on chain 97 pins the production swap and stake pairs with the `SC-D-005` 600-second window and unbound commerce jobs disabled ([manifest](../../deployments/bsc-testnet.perago.json)). Its adapters and verifiers are proven live ([evidence](../evidence/bsc-testnet.adapters-live.json)). Because the production executor requires an ERC-8183 job, which does not exist before Phase 6, the full lifecycle through a smart account is proven on the labelled `testnet-demo` instance `0x5587896753AD6f65ad40ee812f4e1160f6691b7C`. It is the same source over the same pairs and window, with unbound jobs allowed (`SC-D-006`, [manifest](../../deployments/bsc-testnet.demo.perago.json)). The swap lifecycle is proven there on chain 97 by `P4-003` ([evidence](../evidence/bsc-testnet.phase4-swap-journey.json), [fork](../evidence/bsc-testnet.fork.phase4-swap-journey.json)). The stake lifecycle is proven there by `P5-002` ([evidence](../evidence/bsc-testnet.phase5-stake-journey.json), [fork](../evidence/bsc-testnet.fork.phase5-stake-journey.json)). The production instance's job-bound lifecycle is Phase 6, so the status stays `proposed`. The P3-002 instance is policy-probe-only. |
 | BNB Agent SDK | ERC-8183 helpers/BNB ecosystem utilities | `needs re-verification` | Evaluate narrowly; do not adopt its key provider or SDK wholesale. |
 | Altana EIP-7702 sessions | Alternate session path | `verified in reference repo` | Not selected; historical experiment and current official SDK mention are insufficient for Perago's exact guarantees. |
 | Trust Wallet Agent Kit | Alternate wallet/agent runtime | `proposed` | Not selected for MVP; no need beside the chosen ERC-4337 path. |
 | ERC-8004 | Agent identity/reputation/validation | `proposed` | Deferred; does not earn MVP complexity. |
 | ERC-8183 / BNB APEX | Outcome-based agent commerce | `verified` | Selected; kernel pinned, Perago hook deployed, and completion, rejection, and expiry refunds proven on chain 97. |
 | PancakeSwap V3 | Exact-input swap | `verified` | Selected swap protocol; router, quoter, factory, and a liquid direct pool proven with a live swap. |
-| PancakeSwap CAKE Pool | Single-asset stake | `verified` | Selected; deposit, share position, and fee-bearing withdrawal proven from the smart account. |
+| PancakeSwap CAKE Pool | Single-asset stake | `verified` | Selected; deposit, share position, and fee-bearing withdrawal proven from the smart account, and a mandate-bound stake through `CakeStakeAdapter` proven end to end on chain 97 ([evidence](../evidence/bsc-testnet.phase5-stake-journey.json)). |
 | USD1 | Mainnet payment-token candidate | `needs re-verification` | Official BSC mainnet address exists; not a testnet token. |
 | APEX payment token (United Stables `U`) | ERC-8183 demo payment token | `verified` | Selected; upstream labels it USDC, onchain it is `U`. No faucet: funded through one V2 pair. |
-| Quote + pinned `eth_call` + UserOp simulation | Pre-sign simulation | `proposed` | Initial simulation source; add no third-party simulator until evidence requires it. |
+| Quote + pinned `eth_call` state override | Pre-sign simulation | `verified` | Selected in `P3-004`: a QuoterV2 quote or exact-path share estimate at one pinned block, then the account's exact calls run against the production executor, adapter, verifier, and protocol through one `eth_call` with a state override (section 11). Proven on a chain-97 fork and read-only on chain 97 ([evidence](../evidence/bsc-testnet.fork.phase3-smoke.json)). Bundler UserOperation simulation belongs to execution (`P4-002`), because a mandate cannot be authorized before it is signed. No third-party simulator is added. |
 | Groq `openai/gpt-oss-120b` | Untrusted intent planner | `verified` | Selected in `P3-003`; strict `json_schema` constrained decoding returned only the closed candidate across a ten-intent matrix on 2026-09-23 ([evidence](../evidence/p3-003-planner-live.json)). It never authorizes; the deterministic compiler owns every value. Sources: [structured outputs](https://console.groq.com/docs/structured-outputs), [data retention](https://console.groq.com/docs/your-data). |
 
 ## 3. BNB Smart Chain
@@ -59,7 +59,7 @@ The official [BSC faucet guide](https://docs.bnbchain.org/bnb-smart-chain/develo
 - API and contracts compare numeric chain ID; display names are never authoritative.
 - Use at least two independently operated RPC endpoints for critical comparisons and indexer recovery.
 - Record block number and block hash for every quote/simulation.
-- Determine confirmation depth by testnet measurement; do not assume finality from one receipt.
+- Confirmation rule (`SC-D-005`, measured 2026-09-23): chain 97 exposes BSC fast finality, with `finalized` trailing `latest` by 1-2 blocks (about 1 s at a 450 ms average block). A transaction counts as confirmed only when its block is at or below `finalized`; one receipt alone is never finality.
 - Reject endpoints returning the wrong genesis/chain ID or lagging beyond the configured threshold.
 
 ### Failure behavior
@@ -111,7 +111,7 @@ Perago allows only the combination now proven enforceable on the deployed module
 
 Both locally replayed chain-97 bytecode and signed chain-97 execution confirm the enforcement: the allowlisted call is accepted, while an unrelated target and an unallowlisted selector fail the allowlist hook, `installValidation` and a revoked session fail validation lookup, a self-call exceeds the account's self-call recursion guard, an over-limit spend reverts before any value moves, and an expired session fails the time-range window. Each rejection reason is decoded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md).
 
-Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. Token spend for a swap must therefore be authorized inside one account-executed call, or bounded by the AllowlistModule ERC-20 spend limit. That choice is decision gate `D-004` and is resolved with the swap adapter, not by widening the session.
+Because a session cannot bound call arguments, granting the token `approve` selector to a session key would permit an arbitrary allowance. The production adapters did not remove the need: `MandateExecutor.executeCore` pulls exactly `maxInput` from the account with `transferFrom`. **`D-004` was resolved by user decision on 2026-09-23 (`SMART-CONTRACT.md` §7):** the root owner grants `approve(MandateExecutor, maxInput)` in one root UserOperation when signing the mandate, and the session stays `perform`-only. The executor refuses to authorize or begin until it reads an allowance and a balance of at least `maxInput`. The `P3-004` simulation runs the same account calls, `approve(MandateExecutor, maxInput)` then `perform`, and shows that a successful attempt consumes the approval exactly. A `FAILED`, revoked, or expired mandate leaves at most that exact allowance, which only another root-signed mandate of the same account can use; the root owner clears or overwrites it with a later approval.
 
 A contract/function allowlist can still permit malicious arguments. MandateExecutor independently validates the root Task Mandate, action hash, amount, recipient, protocol, nonce, and postcondition.
 
@@ -227,6 +227,8 @@ Perago deliberately rejects PancakeSwap Smart Router, Universal Router, arbitrar
 
 If testnet liquidity is inadequate, use a transparently seeded test pool or a pinned BSC mainnet fork and label the evidence. Do not present mocked quotes or a local pool as public PancakeSwap liquidity.
 
+**Mainnet-fork pin (fork evidence only).** [`../../deployments/bsc-mainnet.fork.json`](../../deployments/bsc-mainnet.fork.json) pins the official BSC mainnet SwapRouter `0x1b81D678ffb9C0263b24A97847620C99d213eB14`, QuoterV2 `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997`, factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, and MasterChefV3 `0x556B9306565093C855AEA9AE92A594704c2Cd59e` from the [official address page](https://developer.pancakeswap.finance/contracts/v3/addresses), with WBNB read from `router.WETH9()` and CAKE from `MasterChefV3.CAKE()` and code hashes at finalized block `123518579`. The deepest direct WBNB/CAKE pool there is fee `2500`. The full swap adapter suite passes on that fork. Chain 56 remains disabled as a transaction target.
+
 ## 9. Selected staking adapter
 
 ### Candidate: PancakeSwap CAKE Pool
@@ -252,6 +254,8 @@ This is selected over LP farming because one input token and one position-share 
 5. `MIN_DEPOSIT_AMOUNT` is `1e13` wei, and a smaller deposit reverts with `Deposit amount must be greater than MIN_DEPOSIT_AMOUNT`;
 6. `performanceFee` is `200` bp on yield; locked staking stays out of the MVP.
 
+**Position ownership.** The pool keys positions by `msg.sender` and exposes no deposit-for-recipient or share transfer (bytecode selector probe on 2026-09-23 found only `deposit(uint256,uint256)`). Perago therefore stakes through one `CakeStakePosition` holder per recipient, deployed by `CakeStakeAdapter` with `CREATE2`; the holder is the pool account and only the recipient can withdraw ([`SMART-CONTRACT.md`](SMART-CONTRACT.md) §6). A pinned-fork run at block `132658000` and the live chain-97 probe ([evidence](../evidence/bsc-testnet.adapters-live.json)) prove deposit through the deployed adapter into holder `0x53239B4Df8a62E0E8836A4924Efc63E91635824d` (tx `0xcf02b385fba9f63ac9a0d0e5e8aa918c5bdbd07bf22b0053b95fc8d200b4a5f0`), share minting above the signed minimum, a non-owner exit rejected with `WrongAccountCaller`, and the owner's full exit (tx `0xd25b41e6315c56355a6a4446a1a0efa30cce2bc0552bc7d94e675693a23e66e3`) returning the stake minus the documented 0.1% fee with zero shares left.
+
 Testnet pricing in these pools is not economically meaningful, so amounts prove mechanics, not value. If the deployment later regresses, the contingency order is: a current official PancakeSwap/BNB staking testnet deployment; a pinned BSC mainnet fork labeled as fork evidence; or, with user approval, a minimal Perago test vault labeled as Perago test infrastructure — never a silent switch to lending, LP management, or an invented address.
 
 ## 10. Payment asset
@@ -272,26 +276,34 @@ It documents 18 decimals. USD1 is a mainnet candidate, not a BSC Testnet address
 
 ## 11. Simulation source and limitations
 
-### Initial deterministic stack
+### Implemented deterministic stack (`P3-004`)
 
-1. Read smart-account/token balances, active policy, nonces, account/module/adapter code hashes, protocol state, and latest safe block.
-2. Pin a block number/hash for all compatible reads.
-3. Obtain protocol quote from PancakeSwap `QuoterV2` or staking share/price views.
-4. Compile the exact closed action and Task Mandate fields.
-5. Run `eth_call`/Viem `simulateContract` for adapter validation/execution from the intended call context where possible.
-6. Run ERC-4337 UserOperation gas/simulation through the selected bundler for account permission/paymaster validation.
-7. Re-read expected recipient/position balances and compute the advertised expected delta/minimum.
-8. Store all requests, results, code hashes, block context, quote deadline, and limitations in `SimulationResult`.
+Implemented in `apps/api/src/simulation/` and verified by `pnpm --filter @perago/api smoke:phase3` ([evidence](../evidence/bsc-testnet.fork.phase3-smoke.json)).
+
+1. Pin one block: the `finalized` tag on a live chain (`SC-D-005`), `latest` on a local fork, which has no separate finality. Every read below uses that block number.
+2. Read the account's `accountConfig`, the ERC-1967 implementation slot, and the code hashes of the account, MandateExecutor, adapter, verifier, and protocol target; confirm the executor pins this adapter and verifier and every code hash matches the reviewed manifest. Refuse an unregistered account, a mismatched owner, epoch, or policy hash, an executor that requires an ERC-8183 job Perago cannot yet create, a session permission that expires before the mandate, and an input balance below the spend.
+3. For a stake, read the position first (`P5-002`): the holder `CakeStakeAdapter.positionOf(recipient)` names, whether it is deployed, its CAKE Pool `userInfo` shares, and the pool's `withdrawFee`, `withdrawFeePeriod`, and `performanceFee`. A read that reverts, or a fee above 10,000 bp, refuses with `POSITION_UNAVAILABLE` before any estimate; a transport failure surfaces as `CHAIN_UNAVAILABLE`. The result commits these as the explicit `position` object, and a passing stake's `sharesBefore` must equal the measured shares before.
+4. Estimate the outcome: PancakeSwap `QuoterV2.quoteExactInputSingle` for a swap; for a stake, the exact path itself run once with `minPositionOut = 1`, because the CAKE Pool mints shares against its live balance. The signed minimum is the estimate less the plan's slippage bound, rounded down; a zero minimum is refused.
+5. Build the canonical action, `actionHash`, `postconditionHash`, a random 128-bit nonce, the chain-time expiry, and a quote deadline no later than that expiry.
+6. Run the account's exact execution calls in one `eth_call` at the pinned block: `MandateSimulationHarness` runtime code is installed at the account address by state override, MandateExecutor's `_mandates[digest]` record is overridden to `EXECUTING` for a one-off simulation executor key (storage slot 2, `forge inspect MandateExecutor storageLayout`), and the harness calls `approve(MandateExecutor, maxInput)` then the real `perform`. MandateExecutor, adapter, verifier, and protocol all run their deployed code. The harness reverts if the injected record is not where the executor reads it, so a layout drift fails closed. A `PASSED` result requires `SUCCEEDED`, exact spend, an outcome at or above the minimum, and no allowance left.
+7. Store the request, the result, every code hash, the block, and the quote deadline in `SimulationResult`; its hash is the mandate's `simulationHash`, and the mandate is derived from the document alone (`taskMandateFromSimulation`).
+
+The fork suite `test/fork/MandateSimulationHarness.fork.t.sol` proves step 6 predicts the real `authorize` → `beginExecution` → `approve` → `perform` path from the same state: equal spend, equal outcome delta, and an identical `verificationHash`, for both the swap and the stake.
+
+`eth_simulateV1` was measured and rejected as the primary mechanism on 2026-09-23: Alchemy's chain-97 endpoint serves it, but a local anvil fork answers every `eth_simulateV1` request with `Required data unavailable`, while `eth_call` state overrides work on both. One mechanism serves the fork smoke and the live chain.
+
+### Freshness at prepare and signature
+
+Preparing the signing payload and accepting a signature each re-read, at a newly pinned block: the canonical hash at the simulated height, chain time against the quote deadline, the policy row and the onchain active policy hash, the onchain and stored owner and epoch, the account code and implementation, the executor, adapter, verifier, and protocol code hashes, the nonce, and for a stake every `position` fact (holder, deployment, shares, and the three pool fees). Any change marks the simulation `STALE`, returns the task to `READY_TO_SIMULATE`, and refuses with a `STALE_*` reason code (`STALE_POSITION` for the stake position). A position that can no longer be read refuses with `POSITION_UNAVAILABLE` and signs nothing. Signature acceptance also re-runs the exact path with the signed mandate itself, evaluates `authorize` with `eth_call` from the bound executor, and re-runs every Wallet Policy rule, including the rolling daily cap, inside the transaction that writes the mandate.
 
 ### Limitations
 
 - `eth_call` proves execution against one state snapshot; it does not guarantee inclusion state or ordering.
 - Quoter output is not a minimum; the signed `minOutput` is derived from the user's slippage bound.
-- Bundler simulation may differ from inclusion and is provider-operated.
-- Public BSC RPCs may not expose full state diffs or trace methods.
+- The simulation skips account validation (session signature, permission hooks, EntryPoint accounting). Those are proven in `P1-003`/`P3-002` and are simulated through the bundler at execution time (`P4-002`).
 - Balance before/expected-after values are estimates until a transaction is mined.
 - MEV can move price within accepted limits; exceeding limits must revert.
-- A third-party simulator is not added unless Phase 3 cannot produce judge-verifiable facts with this stack. If added, its result remains advisory and contract limits stay authoritative.
+- A third-party simulator is not added: this stack produced judge-verifiable facts in `P3-004`. If one is ever added, its result stays advisory and contract limits stay authoritative.
 
 ## 12. Address and capability validation procedure
 

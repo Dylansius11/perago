@@ -34,7 +34,7 @@ Required for the swap MVP. It accepts one closed exact-input action, calls the p
 
 ### 2.3 `CakeStakeAdapter`
 
-Conditionally required after decision gate `D-002`. It accepts one closed single-asset staking action for the validated PancakeSwap CAKE Pool deployment. If the chain-97 deployment probe fails, this adapter is not implemented against an invented address; the labeled mainnet-fork contingency is used or the user selects another verified protocol.
+Required; `D-002` is resolved. It accepts one closed single-asset flexible staking action for the validated PancakeSwap CAKE Pool deployment. Because the pool credits `msg.sender`, each recipient's position lives in its own `CakeStakePosition` holder that the adapter deploys with `CREATE2`; see §6.
 
 ### 2.4 `SwapVerifier` and `StakeVerifier`
 
@@ -58,8 +58,8 @@ The MVP emits immutable receipts from MandateExecutor and pins exactly two adapt
 ### Selected path
 
 - **Account:** Alchemy Modular Account V2 controlled by a self-custodial external root EOA.
-- **Transport:** ERC-4337 UserOperations through a BNB Testnet-supported bundler; optional gas sponsorship through a capped paymaster policy.
-- **Executor permission:** non-root validation scoped to the smart account's execution function, MandateExecutor target/selectors, approved token approval selectors, token/spend limits, gas limit, and expiry.
+- **Transport:** ERC-4337 UserOperations. The executor submits its own session-signed `perform` UserOperation to the pinned EntryPoint with `handleOps` from its bound executor address, with zero UserOperation fees so the account pays nothing and the executor pays the outer transaction (`P4-002`). A third-party bundler or paymaster is an optional transport only.
+- **Executor permission:** non-root validation scoped to the smart account's `execute` function, the one MandateExecutor target, the `perform` selector, a native spend cap, and an expiry. The session holds no token `approve` authority.
 - **Task authority:** root-owner EIP-712 Task Mandate verified independently by MandateExecutor.
 
 ### Why session/account policy is insufficient alone
@@ -210,7 +210,7 @@ EXECUTING -> SUCCEEDED | FAILED
 
 1. requires `msg.sender == mandate.executor`;
 2. requires `block.chainid == mandate.chainId` and `block.timestamp < expiresAt`;
-3. validates all nonzero fields, spend bounds, and the commerce-binding shape: a live deployment requires a bound `(commerceContract, jobId)` pair, and only a deployment explicitly constructed with `allowUnboundCommerceJobs` accepts a fully zero pair;
+3. validates all nonzero fields, spend bounds, and the commerce-binding shape: a live deployment requires a bound `(commerceContract, jobId)` pair, and only a deployment explicitly constructed with `allowUnboundCommerceJobs` accepts a fully zero pair. That flag is for a local or fork deployment, or the one labelled `testnet-demo` deployment that `SC-D-006` allows. It is never set on the production deployment;
 4. resolves the adapter against the two constructor-pinned deployments, requires `adapterSelector == IPeragoAdapter.execute.selector`, enforces the token relationship the adapter kind implies, and carries the adapter's immutable paired verifier into the record;
 5. loads `accountConfigs[account]` and matches root owner, owner epoch, active policy hash, and a registered permission hash;
 6. requires the nonce unused and the ERC-8183 job binding free;
@@ -230,7 +230,7 @@ No external protocol or token call occurs during authorization. Reading `kind()`
 
 The smart account then submits `perform(mandate, action, executorProof)`. Pre-call validation failure in `perform` does not widen authority; the mandate remains `EXECUTING` and can only be completed by a valid performance or terminally failed after the execution timeout. It cannot return to `AUTHORIZED`.
 
-`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + executionWindow` and records `FAILED` if no terminal receipt exists. `executionWindow` is an immutable constructor argument, not a source literal, because its safe value is a measured chain property (`SC-D-005`); the contract rejects zero and anything above the `MAX_EXECUTION_WINDOW` ceiling of one hour, which keeps a stalled execution from outliving the mandate expiry horizon.
+`finalizeStalledExecution(mandateHash)` is permissionless after `executionStartedAt + executionWindow` and records `FAILED` if no terminal receipt exists. `executionWindow` is an immutable constructor argument, not a source literal, because its safe value is a measured chain property (`SC-D-005`, resolved at 600 seconds for the chain-97 production deployment); the contract rejects zero and anything above the `MAX_EXECUTION_WINDOW` ceiling of one hour, which keeps a stalled execution from outliving the mandate expiry horizon.
 
 ### 5.5 Why not a single transaction
 
@@ -291,16 +291,18 @@ The adapter maps `poolId` to one deployment-pinned staking target. It never trea
 
 **Position ownership (user decision, 2026-09-23).** The chain-97 CAKE Pool exposes only `deposit(uint256,uint256)`, which credits `msg.sender`; it has no deposit-for-recipient entry point and no share transfer (bytecode selector probe on `0x683433ba14e8F26774D43D3E90DA6Dd7a22044Fe`). Under MandateExecutor the caller is the adapter, so a plain adapter would own every user's stake. Perago therefore adds one small contract, `CakeStakePosition`: `CakeStakeAdapter` deploys exactly one per recipient with `CREATE2` (salt = the recipient address), and that holder is the pool account for that recipient alone.
 
-- `CakeStakePosition` pins the pool, the asset, its deploying adapter, and its owner (the recipient) as immutables. `stake(amount)` is callable only by its adapter: it grants the pool exactly `amount`, calls `deposit(amount, 0)` (flexible staking only), resets and re-reads the allowance, and requires its asset balance to return to the pre-call value. `withdraw(shares)` and `withdrawAll()` are callable only by the owner and send every asset unit the holder holds to the owner. There is no other function, no admin, and no sweep to anyone but the owner.
+- `CakeStakePosition` pins the pool, the asset, its deploying adapter, and its owner (the recipient) as immutables. `stake(amount)` is callable only by its adapter (`UnsupportedAdapter`): it grants the pool exactly `amount`, calls `deposit(amount, 0)` (flexible staking only), resets and re-reads the allowance (`AllowanceNotCleared`), and requires its asset balance to fall by exactly `amount` (`ResidualBalance`), so a donation can neither block nor join a stake. `withdraw(shares)` and `withdrawAll()` are callable only by the owner (`WrongAccountCaller`) and send every asset unit the holder holds, including donations, to the owner. There is no other function, no admin, and no sweep to anyone but the owner.
 - Positions are never pooled across accounts, so no pro-rata accounting exists to get wrong, and the recipient keeps a direct exit path that needs no Perago contract to cooperate beyond its own holder.
-- A stake mandate uses `inputToken == outputToken == asset` and `minOutput == minPositionOut`, measured in pool shares.
-- `StakeVerifier` resolves the holder from the adapter's deterministic address for the signed recipient, measures `cakePool.userInfo(holder).shares` before and after, and requires the delta to reach `minPositionOut` and the holder to be owned by the signed recipient.
-- `postconditionHash = keccak256(abi.encode(keccak256("perago.postcondition.stake.v1"), recipient, poolId, minPositionOut))`.
+- `CakeStakeAdapter(pool, asset, verifier)` refuses a pool whose `token()` is not the asset and a pool or verifier without code (`InvalidDeploymentPair`). `poolId = keccak256("perago.stake.pancakeswap.cake-pool.flexible.v1")`. `positionOf(recipient)` returns the holder address, deployed or not.
+- **Field binding.** Checked in this order: adapter and selector identity, length exactly six words (`InvalidAction`), `asset == inputToken == outputToken == pinned asset` and `poolId` (`InvalidTokenPair`), `amount == maxInput` and `minPositionOut == minOutput > 0` (`AmountOutOfBounds`), `recipient` (`RecipientMismatch`), `0 < deadline <= expiresAt` (`ExpiredMandate`). A stake mandate therefore uses `inputToken == outputToken == asset` and `minOutput == minPositionOut`, measured in pool shares.
+- **Call.** The pool has no deadline, so `execute` refuses `block.timestamp > deadline` itself. It deploys the recipient's holder on first use, transfers `amount` from its caller straight to the holder (the adapter never holds input), calls `stake`, and requires the holder's share delta to reach `minPositionOut` inside the call (`AmountOutOfBounds`), so the economic floor is enforced before the verifier runs. `protocolEvidenceHash = keccak256(abi.encode(pool, holder, amount, sharesMinted))`.
+- **Verifier.** `StakeVerifier(pool, asset)` pins the pool and asset itself and derives the holder from `mandate.adapter` with the same `CREATE2` formula (`cakeStakePositionAddress`), so an adapter cannot point the measurement anywhere else. It accepts only a stake-kind adapter paired with itself, re-runs `adapter.validate`, recomputes the postcondition, binds its pre-state context, measures `userInfo(holder).shares` before and after, requires the delta to reach `minOutput` (`VerificationFailed`), and requires the reported spend to equal `maxInput` (`AmountOutOfBounds`).
+- `postconditionHash = keccak256(abi.encode(keccak256("perago.postcondition.stake.v1"), recipient, poolId, minPositionOut))`. The SDK's `encodeStakeAction`, `hashStakePostcondition`, and `CAKE_POOL_ID` reproduce the action hash, postcondition, and pool id pinned in the shared fixture.
 
 ## 7. ERC-20 and fund handling
 
 1. MVP actions use ERC-20 inputs; native BNB is wrapped before task creation.
-2. The smart-account UserOperation grants MandateExecutor exactly `maxInput` immediately before `perform` in the same batch where account permissions permit it.
+2. **`D-004`, resolved by user decision on 2026-09-23:** when the root owner signs a Task Mandate, the same owner also submits one root UserOperation calling `approve(MandateExecutor, maxInput)` on the input token. The session never approves. The executor authorizes and begins only after reading an allowance of at least `maxInput` and a balance of at least `maxInput`, so a missing approval never consumes the nonce or the accepted attempt. If a mandate never runs, at most its exact allowance to MandateExecutor remains; MandateExecutor can pull it only for another root-signed, authorized, executing mandate of the same account.
 3. MandateExecutor pulls at most `maxInput` into its execution subcall.
 4. It grants the approved adapter exactly the required amount with a zero-first/force-approve pattern compatible with the pinned token.
 5. It clears the adapter allowance to zero before the subcall returns success.
@@ -520,7 +522,7 @@ The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or misma
 | Executor/session key compromise | Exact account modules plus root-signed mandate and execution proof | Attacker can execute already signed/authorized tasks within bounds; revoke permission/account policy. |
 | Bundler/paymaster manipulation | Signed UserOperation/calls; simulation; onchain checks | Censorship or delay; owner-funded fallback, expiry. |
 | Malicious adapter | Immutable minimal adapters, source audit, code-hash binding, verifier state reads | Protocol-approved adapter bug; fork/fuzz/invariant tests and pause new policy offchain. |
-| Approval theft | Exact same-batch account approval, exact adapter approval, zero cleanup, atomic subcall | Nonstandard token behavior excluded. |
+| Approval theft | Exact per-task root approval to MandateExecutor only, no session `approve`, exact adapter approval, zero cleanup, atomic subcall | Nonstandard token behavior excluded; an unexecuted mandate leaves its exact allowance usable only by another root-signed mandate. |
 | Reentrancy | Outer non-reentrancy, checks before effects, immutable targets, no arbitrary callbacks | Protocol callback complexity; adversarial token/adapter tests. |
 | Oracle/quote manipulation | Direct protocol quote, signed min output, pinned block/freshness, enforce inside call | MEV within signed slippage; user-visible risk. |
 | Simulation drift | Block/code hashes, quote deadline, policy/account freshness, min result | Favorable state changes permitted only if bounds still hold. |
@@ -617,6 +619,7 @@ Not part of the initial public execution gate. Before any mainnet deployment: re
 | SC-D-002 | PancakeSwap CAKE Pool viability or replacement staking adapter | Contract/integration owner | Official source, chain-97 bytecode, asset/position reads, deposit/verification/withdraw smoke. |
 | SC-D-003 | ERC-8183 kernel/router/evaluator interface and deployment | Contract/integration owner | Pin upstream commit/ABI/address/code hash; execute complete/reject/refund test lifecycle. |
 | SC-D-004 | Live demo payment token | Product/contract owner | Verify chain/address/decimals/funding path and ERC-8183 compatibility; otherwise deploy and label a test token. |
-| SC-D-005 | Immutable `EXECUTION_WINDOW` and BSC confirmation depth | Executor/contract owner | Measure testnet inclusion/finality and choose the smallest safe bounds before deployment. |
+| SC-D-005 | Immutable `EXECUTION_WINDOW` and BSC confirmation depth | Executor/contract owner | **Resolved 2026-09-23 by user decision** from chain-97 measurement (450 ms average block over 1,000 blocks; the `finalized` tag trailing `latest` by 1-2 blocks, about 1 s, across six samples): `executionWindow = 600` seconds in the production deployment [`../../deployments/bsc-testnet.perago.json`](../../deployments/bsc-testnet.perago.json), and a transaction counts as confirmed only once its block is at or below the chain's `finalized` tag. |
+| SC-D-006 | Live chain-97 evidence for the mandate lifecycle before Phase 6 creates ERC-8183 jobs | Executor/contract owner | **Resolved 2026-09-24 by user decision.** The production executor requires a bound job, so no production mandate can be authorized before Phase 6. A second MandateExecutor is deployed from the same source and labelled `testnet-demo`: `0x5587896753AD6f65ad40ee812f4e1160f6691b7C` ([manifest](../../deployments/bsc-testnet.demo.perago.json), deploy transaction `0xa546d06f…3d91600` in block `132858957`). It uses the production swap and stake pairs, the `SC-D-005` window, and `allowUnboundCommerceJobs = true`. The full adversarial matrix runs first on a labelled fork, then the happy path, replay, and mutation checks run on the demo executor for explorer-linked evidence. Demo evidence never stands in for the production executor, and payment evidence remains Phase 6. The P4-003 swap journey ([live](../evidence/bsc-testnet.phase4-swap-journey.json), [fork](../evidence/bsc-testnet.fork.phase4-swap-journey.json)) and the P5-002 stake journey ([live](../evidence/bsc-testnet.phase5-stake-journey.json), [fork](../evidence/bsc-testnet.fork.phase5-stake-journey.json)) run on it. |
 
 No open item may be filled with an assumed address, capability, or silent fallback.

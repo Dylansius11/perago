@@ -74,9 +74,13 @@ The stable product states from the PRD are `SIGNED`, `AUTHORIZED`, `EXECUTING`, 
 
 ### `execution_status`
 
-`QUEUED | LEASED | AUTHORIZING | AUTHORIZED | EXECUTING | VERIFYING | SETTLING | RETRY_WAIT | TERMINAL`
+`QUEUED | LEASED | AUTHORIZING | AUTHORIZED | EXECUTING | VERIFYING | SETTLING | RETRY_WAIT | TERMINAL | REJECTED`
 
-This is operational state only. Chain-derived mandate and receipt status wins.
+This is operational state only. Chain-derived mandate and receipt status wins. `REJECTED` (migration `0004`) ends a job whose mandate `authorize` reverts at a finalized block, so the mandate never gained authority. `RETRY_WAIT` parks a job only on a precondition the chain may still satisfy (`APPROVAL_MISSING`, `INPUT_BALANCE_SHORT`, `CHAIN_UNAVAILABLE`).
+
+### `execution_transaction_kind`
+
+`AUTHORIZE | BEGIN | PERFORM | FINALIZE_EXPIRED | FINALIZE_STALLED` (migration `0004`): the only transactions the executor key sends, each to one fixed function.
 
 ### `verification_status`
 
@@ -262,6 +266,7 @@ Constraints:
 - unique `(task_id, sequence)` and `simulation_hash`;
 - immutable after insert except a derived `STALE` marker;
 - signable only when `PASSED`, unexpired, canonical block, active policy unchanged, adapter still `ACTIVE`, and current adapter code hash matches.
+- a task enters `SIMULATED` or `READY_TO_SIGN` only while its highest-`sequence` simulation is `PASSED` (trigger `task_signable_evidence`, migration `0003`); a `SIGNED` task requires its `SIGNED` mandate.
 
 ### 5.7 `mandates`
 
@@ -282,7 +287,7 @@ One signed authorization and its chain-derived lifecycle projection.
 | `executor_address` | bytea | not null; executor/session public key bound by mandate |
 | `nonce` | numeric(78,0) | not null |
 | `expires_at_chain_seconds` | numeric(78,0) | not null |
-| `typed_data` | jsonb | exact versioned EIP-712 payload |
+| `typed_data` | jsonb | the signed document `{ primaryType: "TaskMandate", domain, message }` validated by SDK `signedMandateDocumentSchema`; rebuilds the exact digest |
 | `signature` | bytea | root-owner signature; public authorization data, access logged |
 | `status` | `mandate_status` | not null |
 | `erc8183_contract` | bytea | nullable only when payment disabled for a local test |
@@ -302,6 +307,7 @@ Constraints:
 - signed fields and signature are immutable;
 - terminal states require terminal transaction, reason, and timestamp;
 - state changes after `SIGNED` are accepted only from confirmed events or a verified direct chain read.
+- a mandate is inserted only as `SIGNED`, only against the task's latest `PASSED` simulation with the same adapter and chain while the task is `READY_TO_SIGN`, and only under the wallet's `ACTIVE` policy (trigger `mandate_insert_evidence`, migration `0003`).
 
 ### 5.8 `executions`
 
@@ -315,11 +321,18 @@ Operational record for the single allowed mandate attempt.
 | `lease_owner` | text | nullable; opaque worker instance ID |
 | `lease_expires_at` | timestamptz | nullable |
 | `submission_attempts` | integer | nonnegative; infrastructure submissions, not business attempts |
-| `authorize_tx_hash` | bytea | nullable |
-| `execute_user_operation_hash` | bytea | nullable; ERC-4337 UserOperation identifier |
-| `execute_tx_hash` | bytea | nullable until included |
-| `settlement_tx_hash` | bytea | nullable |
-| `last_error_code` | text | nullable; stable and redacted |
+| `authorize_tx_hash` | bytea | nullable; write-once, set only when a successful `authorize` is finalized |
+| `begin_tx_hash` | bytea | nullable; write-once, successful `beginExecution` at finality (migration `0004`) |
+| `execute_user_operation_hash` | bytea | nullable; write-once ERC-4337 UserOperation identifier, set with `execute_tx_hash` when the UserOperation is included at finality |
+| `execute_tx_hash` | bytea | nullable until included; write-once |
+| `finalize_tx_hash` | bytea | nullable; write-once `finalizeExpired` or `finalizeStalledExecution` at finality (migration `0004`) |
+| `settlement_tx_hash` | bytea | nullable; write-once |
+| `pending_transaction_kind` | `execution_transaction_kind` | nullable; `AUTHORIZE`, `BEGIN`, `PERFORM`, `FINALIZE_EXPIRED`, or `FINALIZE_STALLED` (migration `0004`) |
+| `pending_transaction_hash` | bytea | nullable; the one in-flight transaction, persisted before broadcast |
+| `pending_raw_transaction` | bytea | nullable; its exact signed bytes, rebroadcast unchanged if dropped |
+| `pending_user_operation_hash` | bytea | nullable; set if and only if the pending kind is `PERFORM` |
+| `last_error_code` | text | nullable; stable SDK reason code |
+| `last_error_detail` | text | nullable, at most 200 characters; decoded contract error name only (migration `0004`) |
 | `next_retry_at` | timestamptz | nullable |
 | `created_at` | timestamptz | not null |
 | `updated_at` | timestamptz | not null |
@@ -327,15 +340,19 @@ Operational record for the single allowed mandate attempt.
 Constraints:
 
 - one row per mandate;
-- active lease requires owner and future expiry;
+- active lease requires owner and future expiry, measured by the database clock;
 - retries reuse identical signed payload/action and reconcile chain/UserOperation status first;
-- `TERMINAL` requires matching mandate terminal state, not just a worker decision.
+- the worker never writes `status`: the API derives it from the mandate projection at the chain's `finalized` block and the pending transaction (`services/executions.ts`);
+- `TERMINAL` requires matching mandate terminal state and no pending transaction, not just a worker decision; `REJECTED` (migration `0004`) requires a `SIGNED` mandate that was never authorized, no pending transaction, and an error code, and is set only when `authorize` reverts at a finalized block;
+- a finished (`TERMINAL` or `REJECTED`) row is immutable; the stage hashes are write-once; a pending transaction must be cleared (confirmed, or retired once its nonce is finalized under another transaction) before another is recorded; `submission_attempts` grows by exactly one per recorded pending transaction (trigger `execution_progress`, migration `0004`);
+- a row is inserted only as `QUEUED` with no lease and zero submission attempts, and only for a `SIGNED` mandate (trigger `execution_insert_queue`, migration `0003`);
+- a mandate bound to an ERC-8183 job is never leased until settlement exists (Phase 6).
 
 Detailed transport attempts may be stored in a bounded JSON audit field or structured logs; a separate table is added only if production diagnosis requires it.
 
 ### 5.9 `verification_results`
 
-One immutable normalized verifier result per execution.
+Reserved normalized verifier-detail row per execution when those measurements are independently observable. `ExecutionReceiptRecorded` emits the terminal status, `verificationHash`, and `failureReasonHash`, **not** its measured spend, delta, or `evidenceHash`; the P6-001 indexer must not manufacture a `verification_results` row from simulation estimates or worker assertions. The public receipt derives `PASSED` only from a canonical `SUCCEEDED` event with a nonzero commitment; `FAILED` is exposed as `NOT_VERIFIED` with the onchain failure commitment, and revoke/expiry as `NOT_APPLICABLE`. Rich observed documents require separately verifiable evidence in a later task.
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
@@ -360,7 +377,7 @@ Constraints:
 
 ### 5.10 `execution_receipts`
 
-Public, immutable receipt projection. Private text is represented only by hashes.
+Public, rebuildable receipt projection. Private text is represented only by hashes. Rows may be deleted and reinserted when rebuilding from retained canonical events; the immutability trigger forbids arbitrary in-place changes except the first confirmed settlement write.
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
@@ -372,7 +389,7 @@ Public, immutable receipt projection. Private text is represented only by hashes
 | `simulation_hash` | bytea | 32 bytes, not null |
 | `action_hash` | bytea | 32 bytes, not null |
 | `postcondition_hash` | bytea | 32 bytes, not null |
-| `verification_hash` | bytea | 32 bytes, nullable only for revoke/expiry before execution |
+| `verification_hash` | bytea | 32 bytes; non-null on success (enforced by the database), zero on failed execution, null on revoke/expiry (enforced by the projector) |
 | `authority_consumed` | boolean | always true for an onchain receipt |
 | `authorize_tx_hash` | bytea | not null |
 | `execution_tx_hash` | bytea | nullable for revoke/expiry |
@@ -384,10 +401,10 @@ Public, immutable receipt projection. Private text is represented only by hashes
 
 Constraints:
 
-- immutable except settlement fields, which transition once from null to a confirmed matching settlement;
-- `SUCCEEDED` requires a `PASSED` verification result;
-- non-success cannot have a settlement transaction that completed payment;
-- every field must reconcile to confirmed contract logs.
+- immutable in-place except settlement fields, which the database permits to transition once from null; a confirmed matching evaluator event is required before a future public `CONFIRMED` payment claim. Deleting and rebuilding from canonical events is allowed;
+- `SUCCEEDED` requires a nonzero onchain `verificationHash` from the terminal event; the projector rejects zero, and the public route compares both success and failure commitments against the finalized MandateExecutor record. A separately populated `PASSED` verification-result row is not required unless measured evidence can be independently reconstructed;
+- non-success cannot have a settlement transaction that completed payment; a bound non-success job is public `INELIGIBLE`, not `PENDING`, and an unpinned settlement log never upgrades a bound success from `PENDING`;
+- public terminal status and commitments reconcile to confirmed contract logs and immutable signed fields. The worker-recorded UserOperation hash is returned only with its matching terminal transaction and remains independently checkable from the EntryPoint event.
 
 ### 5.11 `chain_events`
 
@@ -395,11 +412,11 @@ Append-only raw event ledger.
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
-| `chain_id` | bigint | composite PK |
+| `chain_id` | bigint | composite PK; canonical identity is chain + transaction + log index |
 | `transaction_hash` | bytea | composite PK |
 | `log_index` | integer | composite PK |
 | `block_number` | bigint | not null |
-| `block_hash` | bytea | 32 bytes, not null |
+| `block_hash` | bytea | composite PK, 32 bytes; distinguishes immutable versions when a transaction is re-included after a reorg |
 | `contract_address` | bytea | not null |
 | `topic0` | bytea | 32 bytes, not null |
 | `topics` | jsonb | not null |
@@ -411,20 +428,20 @@ Append-only raw event ledger.
 | `confirmed_at` | timestamptz | nullable |
 | `orphaned_at` | timestamptz | nullable |
 
-Rows are never deleted during normal reconciliation. An event may move `OBSERVED → CONFIRMED` or `OBSERVED/CONFIRMED → ORPHANED`; payload fields are immutable.
+Rows are never deleted during normal reconciliation. A raw event version is keyed by `(chain_id, transaction_hash, log_index, block_hash)`; a partial unique index permits at most one `CONFIRMED` version per canonical `(chain_id, transaction_hash, log_index)`. Payload fields are immutable. A re-included transaction in a new block or with a new log position creates a new version after the old one is orphaned; if the identical block version becomes canonical again, its status may return to `CONFIRMED` without changing its payload. Duplicate payload disagreement is an error, not a silent overwrite.
 
 ### 5.12 `indexer_checkpoints`
 
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
 | `chain_id` | bigint | composite PK |
-| `stream_name` | text | composite PK; identifies contract set/ABI version |
+| `stream_name` | text | composite PK; identifies contract set/ABI version, or `mandate:0x<hash>` for the executor's forward-only finalized scan of one mandate (`P4-002`) |
 | `next_block_number` | bigint | not null |
 | `last_canonical_block_hash` | bytea | 32 bytes, not null |
 | `confirmation_depth` | integer | positive |
 | `updated_at` | timestamptz | not null |
 
-Checkpoint update and the corresponding event batch commit in one transaction. On hash mismatch, the indexer rewinds to the last canonical ancestor and replays projections.
+Checkpoint update and the corresponding event batch commit in one transaction. On hash mismatch, the indexer replays only when the supplied parent matches a retained canonical event. If the parent block has no retained event, the batch aborts; a trusted header rescan is required before advancing. This is a fail-closed limitation, not a fabricated successful reorg repair.
 
 ### 5.13 `protocol_adapters`
 
@@ -500,7 +517,7 @@ Confirmed contract events drive `AUTHORIZED`, `SUCCEEDED`, `FAILED`, `REVOKED`, 
 | Build/sign mandate | task + fresh simulation + wallet | immutable `mandates`, task `SIGNED`, `executions` queue row |
 | Read lifecycle | mandate/execution/receipt projections | none |
 | Revoke | mandate + chain | pending projection only; confirmed event finalizes |
-| Public receipt | `execution_receipts`, `verification_results`, confirmed events | none |
+| Public receipt | `execution_receipts`, signed commitment columns, confirmed `chain_events`, execution transaction hashes | on-demand finalized cursor and a replay-safe receipt projection; no private document returned |
 | Executor lease | queued executions + mandate | lease/retry operational fields only |
 | Index events | checkpoint + RPC | append events, update projections/checkpoint transactionally |
 

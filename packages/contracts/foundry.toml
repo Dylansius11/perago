@@ -12,6 +12,12 @@ bytecode_hash = "none"
 # Fork tests resolve protocol addresses from the pinned manifest, never from literals.
 fs_permissions = [{ access = "read", path = "../../deployments" }]
 
+[rpc_endpoints]
+# Resolved from the process environment; `pnpm --filter @perago/contracts test:fork`
+# loads the repository .env first, so provider URLs never appear on a command line.
+bsc_testnet = "${PERAGO_BSC_TESTNET_RPC}"
+bsc_mainnet = "${PERAGO_BSC_MAINNET_RPC}"
+
 [fuzz]
 runs = 256
 

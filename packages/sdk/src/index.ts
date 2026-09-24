@@ -1,9 +1,14 @@
 export {
+  cakeStakeAdapterAbi,
+  cakeStakePositionAbi,
   mandateExecutorAbi,
+  mandateSimulationHarnessAbi,
+  mandateSimulationHarnessRuntime,
   pancakeV3SwapAdapterAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,
   peragoVerifierAbi,
+  stakeVerifierAbi,
   swapVerifierAbi,
 } from "./abi/perago-contracts.js";
 export {
@@ -46,9 +51,21 @@ export {
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
 export {
+  buildUserOperation,
+  encodeHandleOps,
+  encodeSessionPerformCallData,
+  hashUserOperation,
+  PERAGO_USER_OPERATION_GAS,
+} from "./account/user-operation.js";
+export {
+  CAKE_POOL_ID,
+  encodeStakeAction,
   encodeSwapAction,
+  hashStakePostcondition,
   hashSwapPostcondition,
+  type StakeAction,
   type SwapAction,
+  stakeActionSchema,
   swapActionSchema,
 } from "./actions.js";
 export {
@@ -60,6 +77,33 @@ export {
   walletChallengeVerificationSchema,
   walletSessionSchema,
 } from "./api/auth.js";
+export {
+  type DeferExecutionRequest,
+  deferExecutionRequestSchema,
+  deferralCodeSchema,
+  type ExecutionJob,
+  type ExecutionStatus,
+  type ExecutionTransactionKind,
+  executionJobResponseSchema,
+  executionJobSchema,
+  executionStatusSchema,
+  executionTransactionKindSchema,
+  leaseExecutionResponseSchema,
+  type MandateProjectionStatus,
+  mandateProjectionStatusSchema,
+  type PendingTransaction,
+  pendingTransactionSchema,
+  type RecordPendingTransactionRequest,
+  rawTransactionSchema,
+  recordPendingTransactionRequestSchema,
+  retireReplacedTransactionRequestSchema,
+  workerIdSchema,
+  workerRequestSchema,
+} from "./api/executions.js";
+export {
+  type SubmitMandateSignatureRequest,
+  submitMandateSignatureRequestSchema,
+} from "./api/mandates.js";
 export {
   type ConfirmPolicyActivationRequest,
   type ConfirmPolicyRevocationRequest,
@@ -77,6 +121,10 @@ export {
   createTaskRequestSchema,
 } from "./api/tasks.js";
 export { canonicalJson } from "./canonical-json.js";
+export {
+  type PeragoDeploymentManifest,
+  peragoDeploymentManifestSchema,
+} from "./deployment.js";
 export {
   type CompiledPlan,
   compiledPlanSchema,
@@ -137,7 +185,15 @@ export {
   walletPolicySchema,
 } from "./domain/wallet-policy.js";
 export {
+  type ExecutionProof,
+  executionProofSchema,
+  executionProofTypeString,
+  executionProofTypes,
+  getExecutionProofTypedData,
   getTaskMandateTypedData,
+  mandateDomainSchema,
+  type SignedMandateDocument,
+  signedMandateDocumentSchema,
   type TaskMandateDomain,
   taskMandateTypeString,
   taskMandateTypes,
@@ -149,6 +205,11 @@ export {
   hashTaskIntent,
   hashWalletPolicy,
 } from "./hashes.js";
+export {
+  ADAPTER_EXECUTE_SELECTOR,
+  encodeSimulatedAction,
+  taskMandateFromSimulation,
+} from "./mandate.js";
 export {
   REASON_MESSAGES,
   type ReasonCode,

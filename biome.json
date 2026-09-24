@@ -9,6 +9,7 @@
       "!**/next-env.d.ts",
       "!**/dist",
       "!packages/contracts/cache",
+      "!packages/contracts/broadcast",
       "!packages/contracts/lib",
       "!packages/contracts/out",
       "!.agents",

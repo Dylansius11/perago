@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc --project tsconfig.json",
+    "start": "node --env-file-if-exists=../../.env src/main.ts",
+    "test": "vitest run --passWithNoTests",
     "probe:account-abstraction": "node --env-file-if-exists=../../.env src/probes/account-abstraction.ts",
     "probe:account-address": "node --env-file-if-exists=../../.env src/probes/account-address.ts",
     "probe:account-session": "node --env-file-if-exists=../../.env src/probes/account-session.ts",
@@ -13,7 +15,8 @@
     "probe:policy-live": "node --env-file-if-exists=../../.env src/probes/policy-live.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "probe:account-live": "node --env-file-if-exists=../../.env src/probes/account-live.ts",
-    "probe:protocol-live": "node --env-file-if-exists=../../.env src/probes/protocol-live.ts"
+    "probe:protocol-live": "node --env-file-if-exists=../../.env src/probes/protocol-live.ts",
+    "probe:adapters-live": "node --env-file-if-exists=../../.env src/probes/adapters-live.ts"
   },
   "dependencies": {
     "@aa-sdk/core": "4.88.5",

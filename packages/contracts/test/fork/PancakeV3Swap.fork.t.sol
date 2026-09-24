@@ -28,12 +28,13 @@ interface IQuoterV2 {
         returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
 }
 
-/// @notice `P4-001`: the bounded PancakeSwap V3 swap against the real chain-97 router and
-/// pool. Every test names the break it guards: an unpinned route, an amount, minimum,
+/// @notice `P4-001`: the bounded PancakeSwap V3 swap against a real router and pool. The
+/// same suite runs on the chain-97 fork and on a BSC mainnet fork with real liquidity.
+/// Every test names the break it guards: an unpinned route, an amount, minimum,
 /// recipient, or deadline the owner never signed, a standing approval, or an output the
 /// verifier did not measure at the recipient.
-contract PancakeV3SwapForkTest is PeragoForkBase {
-    uint24 private constant POOL_FEE = 500;
+abstract contract PancakeV3SwapForkSuite is PeragoForkBase {
+    uint24 private poolFee;
     uint256 private constant AMOUNT_IN = 0.05 ether;
     uint256 private constant ACCOUNT_FUNDING = 1 ether;
 
@@ -54,9 +55,10 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
         cake = _manifestAddress("cake");
         router = _manifestAddress("pancakeV3SwapRouter");
         quoter = _manifestAddress("pancakeV3QuoterV2");
+        poolFee = _manifestSwapFee();
 
         swapVerifier = new SwapVerifier();
-        swapAdapter = new PancakeV3SwapAdapter(router, wbnb, cake, POOL_FEE, address(swapVerifier));
+        swapAdapter = new PancakeV3SwapAdapter(router, wbnb, cake, poolFee, address(swapVerifier));
         MockStakeAdapter stakeStandIn = new MockStakeAdapter(address(new MockPeragoVerifier(keccak256("stake"))));
         executor = new MandateExecutor(address(swapAdapter), address(stakeStandIn), EXECUTION_WINDOW, true);
         _register();
@@ -65,7 +67,7 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
         (quoted,,,) = IQuoterV2(quoter)
             .quoteExactInputSingle(
                 IQuoterV2.QuoteExactInputSingleParams({
-                    tokenIn: wbnb, tokenOut: cake, amountIn: AMOUNT_IN, fee: POOL_FEE, sqrtPriceLimitX96: 0
+                    tokenIn: wbnb, tokenOut: cake, amountIn: AMOUNT_IN, fee: poolFee, sqrtPriceLimitX96: 0
                 })
             );
         require(quoted > 0, "the pinned pool quotes nothing");
@@ -76,8 +78,8 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
     function test_pinsTheFactoryPoolForThePairAndFee() public onFork {
         address factory = IPancakeV3SwapRouter(router).factory();
         assertEq(address(swapAdapter.router()), router);
-        assertEq(swapAdapter.pool(), IPancakeV3Factory(factory).getPool(wbnb, cake, POOL_FEE));
-        assertEq(swapAdapter.poolFee(), POOL_FEE);
+        assertEq(swapAdapter.pool(), IPancakeV3Factory(factory).getPool(wbnb, cake, poolFee));
+        assertEq(swapAdapter.poolFee(), poolFee);
         assertEq(swapAdapter.kind(), PeragoTypes.SWAP_ADAPTER_KIND);
         assertEq(swapAdapter.verifier(), address(swapVerifier));
         assertEq(swapVerifier.verifierId(), keccak256("perago.verifier.swap.v1"));
@@ -90,9 +92,9 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
 
     function test_refusesAnIdenticalPairOrAVerifierWithoutCode() public onFork {
         vm.expectRevert(PancakeV3SwapAdapter.InvalidDeploymentPair.selector);
-        new PancakeV3SwapAdapter(router, wbnb, wbnb, POOL_FEE, address(swapVerifier));
+        new PancakeV3SwapAdapter(router, wbnb, wbnb, poolFee, address(swapVerifier));
         vm.expectRevert(PancakeV3SwapAdapter.InvalidDeploymentPair.selector);
-        new PancakeV3SwapAdapter(router, wbnb, cake, POOL_FEE, makeAddr("no-code-verifier"));
+        new PancakeV3SwapAdapter(router, wbnb, cake, poolFee, makeAddr("no-code-verifier"));
     }
 
     // --- closed action ------------------------------------------------------------
@@ -111,7 +113,7 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
         _expectRejected(mandate, mutated, PancakeV3SwapAdapter.InvalidTokenPair.selector);
 
         mutated = _copy(swap);
-        mutated.poolFee = 2500;
+        mutated.poolFee = poolFee + 1;
         _expectRejected(mandate, mutated, PancakeV3SwapAdapter.InvalidTokenPair.selector);
 
         mutated = _copy(swap);
@@ -136,11 +138,18 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
     }
 
     function test_rejectsATokenOutsideThePinnedPoolEvenWhenSigned() public onFork {
-        address foreign = _manifestAddress("apexPaymentToken");
+        address foreign = makeAddr("token-outside-the-pinned-pool");
         (PeragoTypes.TaskMandate memory mandate, PeragoTypes.SwapAction memory swap) = _boundParts(quoted);
         mandate.outputToken = foreign;
         swap.tokenOut = foreign;
         _expectRejected(mandate, swap, PancakeV3SwapAdapter.InvalidTokenPair.selector);
+    }
+
+    function test_rejectsAZeroMinimumEvenWhenSigned() public onFork {
+        (PeragoTypes.TaskMandate memory mandate, PeragoTypes.SwapAction memory swap) = _boundParts(quoted);
+        mandate.minOutput = 0;
+        swap.minAmountOut = 0;
+        _expectRejected(mandate, swap, PancakeV3SwapAdapter.AmountOutOfBounds.selector);
     }
 
     function test_rejectsNonCanonicalActionBytes() public onFork {
@@ -216,7 +225,7 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
     function test_executeRejectsAPartialFillThatLeavesInputBehind() public onFork {
         PartialFillRouter shortRouter = new PartialFillRouter(IPancakeV3SwapRouter(router).factory());
         PancakeV3SwapAdapter partialAdapter =
-            new PancakeV3SwapAdapter(address(shortRouter), wbnb, cake, POOL_FEE, address(swapVerifier));
+            new PancakeV3SwapAdapter(address(shortRouter), wbnb, cake, poolFee, address(swapVerifier));
         deal(cake, address(shortRouter), quoted);
 
         PeragoTypes.TaskMandate memory mandate = _mandate(address(partialAdapter), wbnb, AMOUNT_IN, cake, quoted);
@@ -224,7 +233,7 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
             PeragoTypes.SwapAction({
                 tokenIn: wbnb,
                 tokenOut: cake,
-                poolFee: POOL_FEE,
+                poolFee: poolFee,
                 amountIn: AMOUNT_IN,
                 minAmountOut: quoted,
                 recipient: account,
@@ -256,7 +265,7 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
 
     function test_verifierRejectsAnAdapterPairedWithAnotherVerifier() public onFork {
         SwapVerifier other = new SwapVerifier();
-        PancakeV3SwapAdapter foreign = new PancakeV3SwapAdapter(router, wbnb, cake, POOL_FEE, address(other));
+        PancakeV3SwapAdapter foreign = new PancakeV3SwapAdapter(router, wbnb, cake, poolFee, address(other));
         (PeragoTypes.TaskMandate memory mandate, PeragoTypes.SwapAction memory swap) = _boundParts(quoted);
         mandate.adapter = address(foreign);
         bytes memory action = abi.encode(swap);
@@ -340,7 +349,7 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
         swap = PeragoTypes.SwapAction({
             tokenIn: wbnb,
             tokenOut: cake,
-            poolFee: POOL_FEE,
+            poolFee: poolFee,
             amountIn: AMOUNT_IN,
             minAmountOut: minOut,
             recipient: account,
@@ -385,5 +394,24 @@ contract PancakeV3SwapForkTest is PeragoForkBase {
         assertEq(IERC20(cake).balanceOf(address(executor)), 0);
         assertEq(IERC20(wbnb).allowance(address(executor), address(swapAdapter)), 0);
         assertEq(IERC20(wbnb).allowance(address(swapAdapter), router), 0);
+    }
+}
+
+/// @notice The swap suite on the chain-97 fork, against the pinned testnet deployment.
+contract PancakeV3SwapTestnetForkTest is PancakeV3SwapForkSuite {}
+
+/// @notice The same suite on a read-only BSC mainnet fork, against real liquidity in the
+/// deepest direct WBNB/CAKE pool recorded in the mainnet-fork manifest.
+contract PancakeV3SwapMainnetForkTest is PancakeV3SwapForkSuite {
+    function _forkRpcEnv() internal pure override returns (string memory) {
+        return "PERAGO_BSC_MAINNET_RPC";
+    }
+
+    function _forkBlock() internal pure override returns (uint256) {
+        return 123_518_579;
+    }
+
+    function _manifestPath() internal pure override returns (string memory) {
+        return "../../deployments/bsc-mainnet.fork.json";
     }
 }

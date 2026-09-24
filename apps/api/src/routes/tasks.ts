@@ -8,6 +8,13 @@ import {
 import type { WalletAuthConfig } from "../auth/wallet-auth.js";
 import type { Planner } from "../planner/provider.js";
 import {
+  type MandateServiceConfig,
+  prepareMandate,
+  simulateTask,
+  submitMandateSignature,
+  validateMandateConfig,
+} from "../services/mandates.js";
+import {
   createTask,
   type TaskServiceConfig,
   validateTaskConfig,
@@ -21,11 +28,13 @@ const PLANNING_STATUS = {
 
 export function createTaskRoutes(input: {
   authConfig: WalletAuthConfig;
+  mandateConfig: MandateServiceConfig;
   planner: Planner;
   sql: Sql;
   taskConfig: TaskServiceConfig;
 }) {
   validateTaskConfig(input.taskConfig);
+  validateMandateConfig(input.mandateConfig);
   const routes = new Hono<WalletRouteBindings>();
 
   routes.use("*", requireWalletSession(input.sql, input.authConfig));
@@ -61,6 +70,37 @@ export function createTaskRoutes(input: {
       },
       PLANNING_STATUS[result.reasonCode],
     );
+  });
+
+  routes.post("/:taskId/simulations", async (context) => {
+    const view = await simulateTask(
+      input.sql,
+      context.get("wallet"),
+      context.req.param("taskId"),
+      input.mandateConfig,
+    );
+    return context.json(view, 201);
+  });
+
+  routes.post("/:taskId/mandate/prepare", async (context) => {
+    const prepared = await prepareMandate(
+      input.sql,
+      context.get("wallet"),
+      context.req.param("taskId"),
+      input.mandateConfig,
+    );
+    return context.json(prepared, 200);
+  });
+
+  routes.post("/:taskId/mandate", async (context) => {
+    const signed = await submitMandateSignature(
+      input.sql,
+      context.get("wallet"),
+      context.req.param("taskId"),
+      await context.req.json(),
+      input.mandateConfig,
+    );
+    return context.json(signed, 201);
   });
 
   return routes;

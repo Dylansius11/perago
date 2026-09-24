@@ -11,7 +11,7 @@ description: Use when writing, changing, testing, or deploying Perago Solidity -
 
 ## The five contracts, and nothing else
 
-`MandateExecutor`, `PancakeV3SwapAdapter`, `CakeStakeAdapter`, `SwapVerifier` + `StakeVerifier`, `OutcomeEvaluator`. There is deliberately **no** receipt contract and **no** mutable adapter registry: adapter and verifier pairs are constructor-pinned immutables. Adding a registry, a proxy, a pause, an admin sweep, a nonce reset, or a settlement override is a specification change, not an implementation detail.
+`MandateExecutor`, `PancakeV3SwapAdapter`, `CakeStakeAdapter` with its per-recipient `CakeStakePosition`, `SwapVerifier` + `StakeVerifier`, `OutcomeEvaluator`. There is deliberately **no** receipt contract and **no** mutable adapter registry: adapter and verifier pairs are constructor-pinned immutables. `CakeStakePosition` exists only because the CAKE Pool credits `msg.sender` (user decision, 2026-09-23); it is owned by one recipient, deployable only by its adapter, and has no admin. Adding a registry, a proxy, a pause, an admin sweep, a nonce reset, or a settlement override is a specification change, not an implementation detail.
 
 ## Non-negotiable structure
 

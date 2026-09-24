@@ -63,6 +63,14 @@ export const executionStatus = pgEnum("execution_status", [
   "SETTLING",
   "RETRY_WAIT",
   "TERMINAL",
+  "REJECTED",
+]);
+export const executionTransactionKind = pgEnum("execution_transaction_kind", [
+  "AUTHORIZE",
+  "BEGIN",
+  "PERFORM",
+  "FINALIZE_EXPIRED",
+  "FINALIZE_STALLED",
 ]);
 export const verificationStatus = pgEnum("verification_status", [
   "PASSED",
@@ -540,10 +548,19 @@ export const executions = pgTable(
     leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
     submissionAttempts: integer("submission_attempts").notNull().default(0),
     authorizeTxHash: bytea("authorize_tx_hash"),
+    beginTxHash: bytea("begin_tx_hash"),
     executeUserOperationHash: bytea("execute_user_operation_hash"),
     executeTxHash: bytea("execute_tx_hash"),
     settlementTxHash: bytea("settlement_tx_hash"),
+    finalizeTxHash: bytea("finalize_tx_hash"),
+    pendingTransactionKind: executionTransactionKind(
+      "pending_transaction_kind",
+    ),
+    pendingTransactionHash: bytea("pending_transaction_hash"),
+    pendingRawTransaction: bytea("pending_raw_transaction"),
+    pendingUserOperationHash: bytea("pending_user_operation_hash"),
     lastErrorCode: text("last_error_code"),
+    lastErrorDetail: text("last_error_detail"),
     nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
     createdAt,
     updatedAt,
@@ -672,8 +689,16 @@ export const chainEvents = pgTable(
   },
   (table) => [
     primaryKey({
-      columns: [table.chainId, table.transactionHash, table.logIndex],
+      columns: [
+        table.chainId,
+        table.transactionHash,
+        table.logIndex,
+        table.blockHash,
+      ],
     }),
+    uniqueIndex("chain_event_confirmed_identity_unique")
+      .on(table.chainId, table.transactionHash, table.logIndex)
+      .where(sql`${table.status} = 'CONFIRMED'`),
     index("chain_event_replay_index").on(
       table.chainId,
       table.blockNumber,

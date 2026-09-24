@@ -1,7 +1,13 @@
 import { keccak256, size } from "viem";
 import { describe, expect, it } from "vitest";
 
-import { encodeSwapAction, hashSwapPostcondition } from "../src/index.js";
+import {
+  CAKE_POOL_ID,
+  encodeStakeAction,
+  encodeSwapAction,
+  hashStakePostcondition,
+  hashSwapPostcondition,
+} from "../src/index.js";
 
 // Same fixture and constants as packages/contracts/test/ActionFixtures.t.sol.
 const swap = {
@@ -35,5 +41,28 @@ describe("closed action cross-stack fixture", () => {
     expect(() => encodeSwapAction({ ...swap, poolFee: "16777216" })).toThrow();
     expect(() => encodeSwapAction({ ...swap, minAmountOut: "0" })).toThrow();
     expect(() => encodeSwapAction({ ...swap, path: "0x" })).toThrow();
+  });
+
+  it("encodes a stake to six words and the Solidity action hash", () => {
+    expect(CAKE_POOL_ID).toBe(
+      "0xa6902dcdf9185809eb31d8d3711eb92e531124d8e8c028c19962dca62ad2a905",
+    );
+    const action = encodeStakeAction({
+      asset: swap.tokenIn,
+      amount: "1000000000000000000",
+      minPositionOut: "987654321",
+      recipient: swap.recipient,
+      deadline: "2000000000",
+      poolId: CAKE_POOL_ID,
+    });
+    expect(size(action)).toBe(6 * 32);
+    expect(keccak256(action)).toBe(
+      "0xd8b8bf3ecb40fbfcdfda786b96c42a422b648c70b66a6b113107be6a1fc3331a",
+    );
+    expect(
+      hashStakePostcondition(swap.recipient, CAKE_POOL_ID, "987654321"),
+    ).toBe(
+      "0xa57569c7d1be4a062fc50f256032ef11d84965e2d274094e6042b285f4261d49",
+    );
   });
 });

@@ -18,7 +18,7 @@ import {
   type TaskIntent,
   walletPolicySchema,
 } from "@perago/sdk";
-import type { JSONValue, Sql } from "postgres";
+import type { JSONValue, Sql, TransactionSql } from "postgres";
 
 import type { WalletIdentity } from "../auth/wallet-auth.js";
 import { COMPILER_VERSION, compileCandidate } from "../compiler/compile.js";
@@ -148,8 +148,8 @@ async function loadTask(sql: Sql, taskId: string): Promise<TaskRow> {
 }
 
 /** Signed ceilings of live or spent mandates signed in the trailing 24 hours. */
-async function loadDailySpent(
-  sql: Sql,
+export async function loadDailySpent(
+  sql: Sql | TransactionSql,
   walletId: string,
   now: Date,
 ): Promise<Map<Address, bigint>> {

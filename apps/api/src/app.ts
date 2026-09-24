@@ -1,21 +1,30 @@
+import { REASON_MESSAGES } from "@perago/sdk";
 import { Hono } from "hono";
 import type { Sql } from "postgres";
 import { ZodError } from "zod";
 
 import { createAuthRoutes } from "./auth/routes.js";
 import type { WalletAuthConfig } from "./auth/wallet-auth.js";
+import { ReasonError } from "./errors.js";
 import type { Planner } from "./planner/provider.js";
+import { createExecutionRoutes } from "./routes/executions.js";
 import { createPolicyRoutes } from "./routes/policies.js";
+import { createReceiptRoutes } from "./routes/receipts.js";
 import { createTaskRoutes } from "./routes/tasks.js";
+import type { ExecutionServiceConfig } from "./services/executions.js";
+import type { MandateServiceConfig } from "./services/mandates.js";
 import type {
   PolicyChainVerifier,
   PolicyServiceConfig,
 } from "./services/policies.js";
 import type { TaskServiceConfig } from "./services/tasks.js";
+import { isTransportError } from "./simulation/user-operation.js";
 
 export function createApiApp(input: {
   authConfig: WalletAuthConfig;
+  mandateConfig: MandateServiceConfig;
   planner: Planner;
+  executionConfig: ExecutionServiceConfig;
   policyConfig: PolicyServiceConfig;
   policyVerifier: PolicyChainVerifier;
   sql: Sql;
@@ -36,13 +45,42 @@ export function createApiApp(input: {
     "/tasks",
     createTaskRoutes({
       authConfig: input.authConfig,
+      mandateConfig: input.mandateConfig,
       planner: input.planner,
       sql: input.sql,
       taskConfig: input.taskConfig,
     }),
   );
+  app.route(
+    "/internal/executions",
+    createExecutionRoutes({ config: input.executionConfig, sql: input.sql }),
+  );
+  app.route("/receipts", createReceiptRoutes(input.sql, input.executionConfig));
 
   app.onError((error, context) => {
+    if (error instanceof ReasonError) {
+      return context.json(
+        {
+          error: {
+            code: error.code,
+            detail: error.detail,
+            message: error.message,
+          },
+        },
+        409,
+      );
+    }
+    if (isTransportError(error)) {
+      return context.json(
+        {
+          error: {
+            code: "CHAIN_UNAVAILABLE",
+            message: REASON_MESSAGES.CHAIN_UNAVAILABLE,
+          },
+        },
+        503,
+      );
+    }
     if (error instanceof ZodError || error instanceof SyntaxError) {
       return context.json(
         { error: { code: "INVALID_REQUEST", message: "request is invalid" } },

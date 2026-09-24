@@ -4,6 +4,96 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-24 - Serialize destructive database suites and fork journeys
+
+- Observed: a combined fork smoke passed swap 9/9, then stake failed 6/12 after a concurrently launched database integration test executed `drop schema public cascade; create schema public` against the same `TEST_DATABASE_URL`. The stake worker stopped progressing at BEGIN, and its authenticated API session returned `AUTH_INVALID`.
+- Root cause: the integration suite and the fork journey share one disposable PostgreSQL database; a schema reset invalidated the active worker's execution rows and wallet session while the journey was running.
+- Rule: never run `test:db`, focused DB integration files, or migration resets concurrently with a fork/testnet journey using the same `TEST_DATABASE_URL`; serialize these suites and rerun a disrupted journey without changing product code.
+
+### 2026-09-24 - Publish only verification facts the chain actually exposes
+
+- Observed: `ExecutionReceiptRecorded` has a terminal status, `verificationHash`, and `failureReasonHash`; it does not emit measured spend, position/output delta, or a plain-language revert cause. The P6-001 public route can prove a successful verifier commitment and expose a failure commitment, but cannot reconstruct those omitted measurements from the receipt log.
+- Root cause: the verified outcome is committed onchain as a hash, while detailed measurement is local to the atomic execution subcall and never persisted as independent event data.
+- Rule: public receipts distinguish `PASSED`, `NOT_VERIFIED`, and `NOT_APPLICABLE`; never fill verifier-detail columns or explain a failure from simulation data, worker reports, or an undecodable hash.
+
+### 2026-09-24 - A fork that mines while it fetches cold accounts can deadlock
+
+- Observed: the P4-003 and P5-002 fork journeys hung in `beforeAll` until the 600 s hook timeout in four of eight runs, always inside `registerDeploymentAdapters`. A throwaway repro replayed the same setup reads on fresh forks. With `--block-time 1`, or with `evm_mine` sent every second, it stalled within one to eleven rounds on both anvil `1.8.0-nightly` and the pinned `1.8.3`. Each time, the four parallel `eth_getCode` reads of the cold stake contracts never returned, and even `eth_blockNumber` timed out. A 5 s upstream `--timeout` did not help. With automine it passed 12 of 12 rounds. Fetching every manifest account one at a time before `evm_setIntervalMining` also passed 12 of 12 rounds on the nightly build.
+- Root cause: anvil's fork backend deadlocks when block production overlaps several first-time fetches of accounts from the upstream RPC. This is the class reported in foundry-rs/foundry#1688 and #6036. It is a tooling defect, and chain 97 itself is unaffected.
+- Rule: a fork smoke starts anvil in automine, fetches every `deployments/*.json` account one at a time, and only then switches to interval mining (`startAnvil`). A hang in a fork hook is diagnosed by checking whether anvil still answers `eth_blockNumber` before blaming the product code or the database.
+
+### 2026-09-24 - Prove unchanged chain state before trusting identical outputs across runs
+
+- Observed: the P4-003 fork and live chain-97 swaps, and the P3 fork simulation 25,000 blocks earlier, all reported the same `minOutput` of 364231492571185523693864631565 CAKE; the two swaps also received the same 367910598556753054236226900571 CAKE.
+- Root cause: nobody else trades the testnet fee-500 WBNB/CAKE pool. Its `sqrtPriceX96` was identical at blocks `132837392` and `132862940`, and it moved only when the live journey swapped.
+- Rule: when two runs agree to the wei, read the state that prices them (pool `slot0`, reserves, balances) at both blocks before accepting the evidence. Identical output is evidence only when that state is proven unchanged; otherwise suspect a cache or a replayed fixture.
+
+### 2026-09-24 - A path guard needs escape cases at both ends, and a mutation script must verify its restore
+
+- Observed: the `protocolManifest` rule `^deployments/[\w.-]+\.json$` survived two mutants, one dropping `^` and one dropping `$`, until the test named `../deployments/...json` and `deployments/x.json/../../.env`. Separately, a mutation script's restore on Windows failed once with `UNKNOWN` (not `EBUSY`) and left the mutated source on disk.
+- Root cause: fixtures that are wrong in both places at once cannot tell which anchor is holding. On Windows, a file a test runner just released can fail to open with several error codes, not only `EBUSY`.
+- Rule: for every path or format guard, add one fixture that escapes only past the prefix and one that escapes only past the suffix. A throwaway mutation script retries writes on `EBUSY`, `EPERM`, and `UNKNOWN`, compares the restored bytes to the original, and the run ends with `git diff` on the mutated file.
+
+### 2026-09-24 - Read logs in bounded ranges from a persisted cursor, and never across a fork point
+
+- Observed: the executor's finalized reconciliation called `eth_getLogs` from the simulation block to `finalized`, and the chain-97 Alchemy endpoint rejected every range wider than 10 blocks. A local anvil fork failed the same way, and it also returned intermittent upstream 503s for ranges that included the fork block.
+- Root cause: anvil serves blocks at or below its fork point from the upstream RPC, so a fork inherits the provider's range limit and availability. A scan that restarts from its origin grows with chain age.
+- Rule: scan logs in chunks of at most 10 blocks, and advance a forward-only `indexer_checkpoints` cursor in the same database transaction that applies the events. Fork smokes read only blocks after the fork point.
+
+### 2026-09-24 - Never make a well-known key a `handleOps` beneficiary on a fork
+
+- Observed: in the Phase 4 fork smoke, the first root UserOperation relayed by anvil's first dev key succeeded, and every later one failed with `Insufficient funds`, even after `anvil_setBalance` to 100 BNB.
+- Root cause: on chain 97 that key (`0xf39F…2266`) carries an EIP-7702 delegation (`eth_getCode` returns `0xef0100…`). `EntryPoint.handleOps` calls its beneficiary, which runs the delegate's code, and the code drains the balance.
+- Rule: fork relayers, beneficiaries, and funders are freshly generated keys funded with `anvil_setBalance`. Before a smoke trusts any public address, check `eth_getCode`.
+
+### 2026-09-24 - Persist the signed bytes, not just the intent, before broadcast
+
+- Observed: a crash can land between signing and broadcast, a node can drop a transaction, and another transaction can consume the executor nonce. A worker that re-derives its transaction after a restart can send a second, different transaction for the same stage.
+- Root cause: when only the intent is recorded durably, recovery has to guess whether the original transaction is still live.
+- Rule: persist the transaction hash and exact raw bytes through the API before broadcast. Rebroadcast the same bytes while the nonce is open. Retire a hash only once its nonce is finalized under another transaction. Sign nothing new while one transaction is unresolved.
+
+### 2026-09-24 - Node type stripping needs `erasableSyntaxOnly`
+
+- Observed: the executor typechecked cleanly, then crashed at start under Node 24 with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` on constructor parameter properties.
+- Root cause: Node strips types but cannot transform TypeScript-only runtime syntax: parameter properties, enums, and namespaces.
+- Rule: any package that Node runs from `.ts` source sets `"erasableSyntaxOnly": true`, so `tsc` rejects that syntax before the first run.
+
+### 2026-09-23 - Simulate the exact onchain path with `eth_call` state overrides, not `eth_simulateV1`
+
+- Observed: Alchemy's chain-97 endpoint serves `eth_simulateV1`, but a local anvil fork answers every request with `Required data unavailable`, so a simulator built on it could never be proven on the fork.
+- Root cause: `eth_simulateV1` support differs by node implementation, while `eth_call` with code and storage overrides is served identically by the live RPC and the fork.
+- Rule: run preflight as one pinned-block `eth_call` that installs a never-deployed harness at the account address and overrides only the one mandate record needed to reach `perform`. Prove on a fork that it predicts the real `authorize` → `beginExecution` → `perform` path (equal spend, outcome, and `verificationHash`). Any slot-layout drift then fails closed, never open.
+
+### 2026-09-23 - A rejection test must break exactly one invariant
+
+- Observed: the mutation audit showed that deleting the SDK `maxInput`, `minOutput`, and `recipient` equality checks survived the tests that claimed to cover them.
+- Root cause: each fixture changed one field, which also broke a neighbouring check (spent balance or postcondition hash), so the suite rejected the fixture for another reason.
+- Rule: a rejection fixture keeps every other commitment consistent with the changed field, so that only the guard under test can reject it; confirm with a mutation audit of each guard.
+
+### 2026-09-23 - A fork whale trade needs a price limit
+
+- Observed: an unbounded 50 WBNB `exactInputSingle` on a thin chain-97 pool hung the anvil fork past a 180-second RPC timeout.
+- Root cause: the swap crossed to the tick bound, and the fork lazily fetched every empty tick-bitmap word from the remote RPC.
+- Rule: bound a fork price-moving trade with `sqrtPriceLimitX96` derived from the pool's current `slot0`, just past the move the test needs.
+
+### 2026-09-23 - Forge does not load the repository root `.env`; a green fork suite may be reading the machine environment
+
+- Observed: the chain-97 fork suite ran without any env loading, which looked like Forge reading the root `.env`; a newly added `PERAGO_BSC_MAINNET_RPC` then silently skipped the whole mainnet suite.
+- Root cause: `PERAGO_BSC_TESTNET_RPC` was also set in the workstation's own environment, so the first suite passed for a reason that does not hold on another machine; Forge reads process environment variables, not the monorepo root `.env`.
+- Rule: load `.env` explicitly (`pnpm --filter @perago/contracts test:fork` runs Node with `--env-file-if-exists`) and treat an unexpectedly skipped suite as a failed prerequisite, never as a pass.
+
+### 2026-09-23 - `vm.revertToState` also reverts the test contract's own storage
+
+- Observed: the stake fork `setUp` measured the share delta inside a snapshot, stored it in a state variable, reverted, and then failed with "the pinned pool minted no shares".
+- Root cause: a Foundry snapshot covers every account, including the test contract, so a value written to its storage before the revert is rolled back with everything else.
+- Rule: carry a value measured inside a snapshot across the revert in a local variable, and assign it to storage only after `revertToState`.
+
+### 2026-09-23 - A guard that only a misbehaving protocol can reach needs a stand-in that misbehaves
+
+- Observed: the mutation audit showed that deleting the adapter's allowance reset or residual-input check survived every fork test, because the real PancakeSwap router and CAKE Pool always consume exactly what they are offered.
+- Root cause: against an honest counterparty those guards are unreachable, so a real-protocol fork cannot distinguish a guarded adapter from an unguarded one.
+- Rule: for each guard that defends against a counterparty's failure, add a minimal stand-in that produces exactly that failure (`PartialFillRouter`, `ShortDepositPool`) and pin the exact revert selector, so removing either the guard or the cleanup before it changes the observed reason.
+
 ### 2026-09-23 - Keep quote-derived values out of anything hashed before the quote
 
 - Observed: the P1-002 `CompiledPlan` carried `minAmountOut`, `minPositionOut`, and `deadline`, but the compiler that produces the plan runs before any quote or block is pinned, and a stale quote must re-simulate without mutating the plan.

@@ -1,7 +1,10 @@
 import { hashTypedData } from "viem";
 import { describe, expect, it } from "vitest";
 
-import { getTaskMandateTypedData } from "../src/index.js";
+import {
+  getExecutionProofTypedData,
+  getTaskMandateTypedData,
+} from "../src/index.js";
 
 const hash =
   "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -30,6 +33,7 @@ const mandate = {
   commerceJobId: "0",
 };
 
+/** Pinned against the real MandateExecutor in `packages/contracts/test/SdkDigestParity.t.sol`. */
 describe("TaskMandate cross-stack fixture", () => {
   it("matches the Solidity EIP-712 digest", () => {
     expect(
@@ -41,6 +45,24 @@ describe("TaskMandate cross-stack fixture", () => {
       ),
     ).toBe(
       "0x9b204a82d741df2398ef74a699cc6a9b5cc4dae63aac247b0d69c29e4f206574",
+    );
+  });
+
+  it("matches the MandateExecutor ExecutionProof digest", () => {
+    expect(
+      hashTypedData(
+        getExecutionProofTypedData(
+          {
+            mandateHash: `0x${"bb".repeat(32)}`,
+            account: "0x1111111111111111111111111111111111111111",
+            executor: "0x3333333333333333333333333333333333333333",
+            validUntil: "2000000000",
+          },
+          { chainId: "97", verifyingContract: mandate.adapter },
+        ),
+      ),
+    ).toBe(
+      "0x1b9f6acce141f1800f7b96964586e0bec5f00fa79c1b70468fbc731ed9ec5199",
     );
   });
 });
