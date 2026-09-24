@@ -1,12 +1,14 @@
 import {
   type ExecutionReceipt,
   executionReceiptSchema,
+  type Hash,
   hashSchema,
   REASON_MESSAGES,
   reasonCodeSchema,
 } from "@perago/sdk";
 import type { JSONValue, Sql } from "postgres";
 import { bscTestnet } from "viem/chains";
+import type { MandateRecordStatus } from "../executions/chain.js";
 
 const hex = (value: Buffer) => `0x${value.toString("hex")}` as `0x${string}`;
 
@@ -41,6 +43,37 @@ interface ReceiptRow {
   terminal_block_hash: Buffer;
   terminal_log_index: number;
   terminal_decoded_args: Record<string, JSONValue> | null;
+}
+
+const ZERO_HASH = `0x${"0".repeat(64)}`;
+
+/** A confirmed DB event cannot override the finalized contract's commitments. */
+export function assertReceiptCommitments(
+  receipt: Pick<ExecutionReceipt, "status" | "verification">,
+  record: {
+    recordStatus: MandateRecordStatus;
+    verificationHash: Hash;
+    failureReasonHash: Hash;
+  },
+): void {
+  const expectedVerification =
+    record.recordStatus === "SUCCEEDED"
+      ? "PASSED"
+      : record.recordStatus === "FAILED"
+        ? "NOT_VERIFIED"
+        : "NOT_APPLICABLE";
+  if (
+    receipt.status !== record.recordStatus ||
+    receipt.verification.status !== expectedVerification ||
+    (receipt.verification.hash ?? ZERO_HASH) !==
+      record.verificationHash.toLowerCase() ||
+    (receipt.verification.failureReasonHash ?? ZERO_HASH) !==
+      record.failureReasonHash.toLowerCase()
+  ) {
+    throw new Error(
+      "public receipt commitment disagrees with finalized MandateExecutor",
+    );
+  }
 }
 
 /** Read only the canonical, confirmed receipt and its public commitment fields. */

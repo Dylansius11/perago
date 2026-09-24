@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1–5 are complete; `P6-001` public receipt indexing/query is in progress.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires an ERC-8183 job that Phase 6 has not created. The API has wallet authentication, policy compilation, simulation, EIP-712 mandate signing, finalized event projections, and a durable executor queue; the public receipt path is being verified on a chain-97 fork.
+**Phases 1–5 and `P6-001` are complete; `P6-002` (deterministic ERC-8183 evaluator) is next and starts when the user opens it.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires an ERC-8183 job that Phase 6 has not created. The API has wallet authentication, policy compilation, simulation, EIP-712 signing, a durable executor queue, and [fork-proven finalized public receipt queries](docs/evidence/bsc-testnet.fork.phase5-stake-journey.json); no hosted production receipt API or payment settlement is claimed.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 
@@ -49,7 +49,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-The SDK owns domain/account/action types and the public receipt schema; the API and worker reconcile against onchain mandate status. `P6-001` is open; payment settlement is not implemented.
+The SDK owns domain/account/action types and the public receipt schema; the API and worker reconcile against onchain mandate status and verification commitments. `P6-001` is complete; evaluator-linked payment settlement is not implemented.
 
 ## Documentation
 

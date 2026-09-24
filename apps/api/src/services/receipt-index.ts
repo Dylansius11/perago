@@ -1,7 +1,10 @@
 import { type Hash, hashSchema } from "@perago/sdk";
 import type { Sql } from "postgres";
 
-import { readFinalizedMandate } from "../executions/chain.js";
+import {
+  type MandateRecordStatus,
+  readFinalizedMandate,
+} from "../executions/chain.js";
 import {
   applyFinalizedEvents,
   rebuildMandateProjection,
@@ -16,8 +19,12 @@ export async function indexFinalizedReceipt(
   sql: Sql,
   config: ExecutionServiceConfig,
   inputHash: string,
-): Promise<boolean> {
-  const mandateHash = hashSchema.parse(inputHash).toLowerCase() as Hash;
+): Promise<{
+  recordStatus: MandateRecordStatus;
+  verificationHash: Hash;
+  failureReasonHash: Hash;
+} | null> {
+  const mandateHash = hashSchema.parse(inputHash);
   const key = buffer(mandateHash);
   const [source] = await sql<
     {
@@ -34,7 +41,7 @@ export async function indexFinalizedReceipt(
       and c.stream_name = ${stream(mandateHash)}
     where m.mandate_hash = ${key}
   `;
-  if (!source) return false;
+  if (!source) return null;
   const { deployment, client } = config;
   if (
     source.chain_id !== String(deployment.chainId) ||
@@ -105,5 +112,9 @@ export async function indexFinalizedReceipt(
         updated_at = now()
     `;
   });
-  return true;
+  return {
+    recordStatus: scan.recordStatus,
+    verificationHash: scan.verificationHash,
+    failureReasonHash: scan.failureReasonHash,
+  };
 }

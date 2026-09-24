@@ -4,7 +4,10 @@ import type { Sql } from "postgres";
 
 import type { ExecutionServiceConfig } from "../services/executions.js";
 import { indexFinalizedReceipt } from "../services/receipt-index.js";
-import { getPublicReceipt } from "../services/receipts.js";
+import {
+  assertReceiptCommitments,
+  getPublicReceipt,
+} from "../services/receipts.js";
 
 export function createReceiptRoutes(sql: Sql, config: ExecutionServiceConfig) {
   const routes = new Hono();
@@ -29,6 +32,7 @@ export function createReceiptRoutes(sql: Sql, config: ExecutionServiceConfig) {
         404,
       );
     }
+    assertReceiptCommitments(receipt, indexed);
     return context.json(receipt);
   });
   return routes;

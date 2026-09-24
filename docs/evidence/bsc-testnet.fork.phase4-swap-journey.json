@@ -2,8 +2,8 @@
   "label": "fork: every write below is on a local anvil fork of chain 97 mining one block per second with finalized = latest - 2, against the forked testnet-demo MandateExecutor; nothing was broadcast to chain 97",
   "venue": {
     "chainId": 97,
-    "forkedAtFinalizedBlock": "132863532",
-    "blockHash": "0x759d4c77954c18bad962970d9fc3df6aeea536254f97a378425fbb4dfb4055f4",
+    "forkedAtFinalizedBlock": "132911326",
+    "blockHash": "0x94e24f5775763d62a1a05a3cb856974e5538feceb6b3c122b1fcf100c1a06bdf",
     "mandateExecutor": {
       "address": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
       "codeHash": "0xc1c989fd4895f58aa05f65b3e780cbcf0be2ed96ed890c932d3effe8984e52d2",
@@ -11,49 +11,53 @@
       "manifest": "deployments/bsc-testnet.demo.perago.json",
       "codeHashMatchedAtStart": true
     },
-    "swapAdapter": {
+    "adapter": {
       "address": "0xb9faeb0bb29401a1308e0c1287913d94b18ec635",
       "codeHash": "0x2ff420edbaceee25cbf4f78473aad835b1493fb02b98ed70a801d0a38e198721"
     },
-    "swapVerifier": {
+    "verifier": {
       "address": "0xbeeaeea965b70117dd2f05e227413d04d5ee53a5",
       "codeHash": "0x301520a46a6caecb1383965435f9e20a9bc5d11b9d6e67980f315b4028d784e6"
     },
+    "protocolTarget": {
+      "address": "0x1b81d678ffb9c0263b24a97847620c99d213eb14",
+      "codeHash": "0xb9a158fb57e65ea1fea1f1149e30720ccbc413f65fb1aecfe734c199f132fc14"
+    },
     "executionWindowSeconds": "600",
-    "owner": "0xd8ee9aa9fe5929d130cfe9f7f9457aa3ec677fd1",
-    "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
-    "executor": "0xbba384a6149d4d6a22891de80cd1df724f6b0176",
-    "relayer": "0x279eaed0fa90aeb7b36daf101a533df88f4243da",
+    "owner": "0x9abf647c1706add642b3d5630985ce10df044871",
+    "account": "0xfcedd212272d461e7738c38520914851fbe1e888",
+    "executor": "0xac79afcd1f45c62d7ca6395e87f8deb848f26086",
+    "relayer": "0x3c8b3c44b1b7bfce9f80e0965740eaf76c61bf3a",
     "keys": "owner, executor, and relayer keys and the worker token were generated for this run and never persisted",
     "executorProcess": "apps/executor/src/main.ts, spawned with only public variables and its PERAGO_* deployment variables",
     "policyVerifier": "createViemPolicyChainVerifier: exact UserOperation calldata, AccountPolicySet event, pinned EntryPoint/account/MandateExecutor code, three-block depth",
     "funding": {}
   },
   "policy": {
-    "policyId": "e0c5d540-08d7-43bb-b938-5a8c40792861",
-    "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
+    "policyId": "8fee9c37-86a7-4187-842d-9a327c637c59",
+    "policyHash": "0xc1616f899a832c2d6fff5e7bce0852667d9ecfcd7385406bb9018c725f503a14",
     "accountPolicy": {
-      "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+      "account": "0xfcedd212272d461e7738c38520914851fbe1e888",
       "chainId": "97",
       "ownerEpoch": "1",
-      "permissionHash": "0x6889d1ed17c3f2a70712ae3a9eb743543c04c1f4b0a84e9852e580352f79937d",
-      "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
-      "rootOwner": "0xd8ee9aa9fe5929d130cfe9f7f9457aa3ec677fd1",
-      "validUntil": "1790257128"
+      "permissionHash": "0x6b29fd21b4a143c04e5718bdf0c0e1408d8868031d5cef890d60c851c2fdef6f",
+      "policyHash": "0xc1616f899a832c2d6fff5e7bce0852667d9ecfcd7385406bb9018c725f503a14",
+      "rootOwner": "0x9abf647c1706add642b3d5630985ce10df044871",
+      "validUntil": "1790278642"
     },
     "session": {
-      "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
-      "entityId": 1902336401,
+      "account": "0xfcedd212272d461e7738c38520914851fbe1e888",
+      "entityId": 2024403810,
       "nativeSpendLimit": "0",
       "selectors": ["0xe756397f"],
-      "sessionSigner": "0xBBA384A6149d4D6A22891DE80Cd1Df724f6B0176",
+      "sessionSigner": "0xAc79AfCd1F45c62d7CA6395E87F8DEB848F26086",
       "target": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
-      "validAfter": "1790235468",
-      "validUntil": "1790257128"
+      "validAfter": "1790256982",
+      "validUntil": "1790278642"
     },
     "activation": {
-      "transactionHash": "0xe2ff70be02d1c8cc6b99391069b997d83b2f8b5413e5a8ac97a82c1ac52dfeac",
-      "userOperationHash": "0x42b7f659069e3ec7b884830299d00bc896efab86f4ffc8f1a25674ee5eb6911d",
+      "transactionHash": "0x72b5410afb76470d36cdc7fd4bee863a3049c3b3e33e5e7c075b43ff2dc99f63",
+      "userOperationHash": "0xc39fe5016aa1cb2138c785d996c0c4a0d41baa7bab0460ad97f17fa92026bbe8",
       "explorer": null,
       "note": "one root UserOperation installed the perform-only session and called MandateExecutor.setAccountPolicy; the API confirmed it through the real policy-chain verifier"
     },
@@ -91,13 +95,13 @@
   },
   "task": {
     "goal": "Swap 0.01 WBNB for CAKE",
-    "taskId": "9c25f635-3348-414a-b4c3-4d3aca95e441",
-    "planHash": "0x8c891e58108e373644b7f5c5cda867ad9372e8603195a893812ca93e4264da35",
+    "taskId": "a9317c7f-c8da-45e4-89c8-7dd6601a5294",
+    "planHash": "0x2336df77df35c9c73a88cda1ea56692ab9855e774f93bb80ef3608643fbdaf17",
     "decision": {
       "schemaVersion": "1",
       "compilerVersion": "perago-compiler/1",
-      "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
-      "intentHash": "0x2d840c6ab284fcdb7c4677942fed4215223e4789250ead0f0f6cf8db5ed4272d",
+      "policyHash": "0xc1616f899a832c2d6fff5e7bce0852667d9ecfcd7385406bb9018c725f503a14",
+      "intentHash": "0xcf6187794c4805f907c3bbc9ccde2f079d319461d1d8b4947ca85f59bc5a50e2",
       "outcome": "PASS",
       "rules": [
         {
@@ -111,8 +115,8 @@
           "rule": "ACCOUNT",
           "outcome": "PASS",
           "reasonCode": null,
-          "limit": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
-          "observed": "0xb88762bc78ef33e864f1256773d653c78eeb24b0"
+          "limit": "0xfcedd212272d461e7738c38520914851fbe1e888",
+          "observed": "0xfcedd212272d461e7738c38520914851fbe1e888"
         },
         {
           "rule": "SERVICE",
@@ -181,8 +185,8 @@
           "rule": "RECIPIENT",
           "outcome": "PASS",
           "reasonCode": null,
-          "limit": "SELF (0xb88762bc78ef33e864f1256773d653c78eeb24b0)",
-          "observed": "0xb88762bc78ef33e864f1256773d653c78eeb24b0"
+          "limit": "SELF (0xfcedd212272d461e7738c38520914851fbe1e888)",
+          "observed": "0xfcedd212272d461e7738c38520914851fbe1e888"
         },
         {
           "rule": "LIFETIME",
@@ -195,11 +199,11 @@
     }
   },
   "simulation": {
-    "simulationHash": "0xca1ddddc217a2002e36cbe1f3c46038a6c2e9accdcc4759b3cdd37f103673155",
+    "simulationHash": "0x4fc4e4a8199e3a2d96b45639330847b25f8760a718f234f52285479ffdd8534d",
     "block": {
-      "number": "132863555",
-      "hash": "0x7124999ed62f6f11e027ec6563e75b8f6ae584d9105fe6b130341c5efa8083b0",
-      "timestamp": "1790235538"
+      "number": "132911351",
+      "hash": "0xceda36e3cabc03acee70e9c1689c1691b5e5cc8d536c976fce87c6691c86c50c",
+      "timestamp": "1790257054"
     },
     "minOutput": "341283321954688247639078135270",
     "expectedOutput": "344730628237058835999068823506",
@@ -209,36 +213,36 @@
       "poolFee": "500",
       "amountIn": "10000000000000000",
       "minAmountOut": "341283321954688247639078135270",
-      "recipient": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
-      "deadline": "1790237338",
+      "recipient": "0xfcedd212272d461e7738c38520914851fbe1e888",
+      "deadline": "1790258854",
       "kind": "SWAP"
     }
   },
   "digest": {
-    "api": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
-    "sdk": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
-    "mandateExecutorHashMandate": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
+    "api": "0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5",
+    "sdk": "0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5",
+    "mandateExecutorHashMandate": "0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5",
     "mandate": {
-      "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
-      "rootOwner": "0xd8ee9aa9fe5929d130cfe9f7f9457aa3ec677fd1",
+      "account": "0xfcedd212272d461e7738c38520914851fbe1e888",
+      "rootOwner": "0x9abf647c1706add642b3d5630985ce10df044871",
       "ownerEpoch": "1",
-      "executor": "0xbba384a6149d4d6a22891de80cd1df724f6b0176",
+      "executor": "0xac79afcd1f45c62d7ca6395e87f8deb848f26086",
       "chainId": "97",
-      "nonce": "232232811985110448165814945745150035047",
-      "expiresAt": "1790237338",
-      "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
-      "intentHash": "0x2d840c6ab284fcdb7c4677942fed4215223e4789250ead0f0f6cf8db5ed4272d",
-      "planHash": "0x8c891e58108e373644b7f5c5cda867ad9372e8603195a893812ca93e4264da35",
-      "simulationHash": "0xca1ddddc217a2002e36cbe1f3c46038a6c2e9accdcc4759b3cdd37f103673155",
+      "nonce": "252656820246567806876521152596960385956",
+      "expiresAt": "1790258854",
+      "policyHash": "0xc1616f899a832c2d6fff5e7bce0852667d9ecfcd7385406bb9018c725f503a14",
+      "intentHash": "0xcf6187794c4805f907c3bbc9ccde2f079d319461d1d8b4947ca85f59bc5a50e2",
+      "planHash": "0x2336df77df35c9c73a88cda1ea56692ab9855e774f93bb80ef3608643fbdaf17",
+      "simulationHash": "0x4fc4e4a8199e3a2d96b45639330847b25f8760a718f234f52285479ffdd8534d",
       "adapter": "0xb9faeb0bb29401a1308e0c1287913d94b18ec635",
       "adapterSelector": "0x78cab83a",
       "inputToken": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
       "maxInput": "10000000000000000",
       "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
       "minOutput": "341283321954688247639078135270",
-      "recipient": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
-      "actionHash": "0xfbaf2fc5a4bc315b69e6160111ca848c6d31aff660dac9ca8ca3826634a27114",
-      "postconditionHash": "0x440ba0c99fcfda28e0d1f69c00d4664f0f21732888e9dd9ec8cf9f494c871992",
+      "recipient": "0xfcedd212272d461e7738c38520914851fbe1e888",
+      "actionHash": "0xa34651e7ec80c2de307eb6fb0fe741a3f23eff42a3d13d82a99daf2f3f01327f",
+      "postconditionHash": "0x0b05e53aae7661d67687255c7597b6093bdb4046801fb2bfe18f5609c02b8a68",
       "commerceContract": "0x0000000000000000000000000000000000000000",
       "commerceJobId": "0"
     }
@@ -271,14 +275,14 @@
       }
     ],
     "accepted": {
-      "mandateHash": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
+      "mandateHash": "0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5",
       "status": "SIGNED",
       "executionStatus": "QUEUED"
     },
     "note": "each tampered mandate was signed by the real root owner; the API refuses any signature that does not recover over the exact prepared digest"
   },
   "authorizeRefusals": {
-    "control": "the exact mandate returns 0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36 from eth_call",
+    "control": "the exact mandate returns 0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5 from eth_call",
     "refusals": [
       {
         "field": "maxInput raised (excess spend)",
@@ -316,21 +320,9 @@
     "note": "eth_call of MandateExecutor.authorize from the bound executor before the real authorization, never broadcast"
   },
   "rootApproval": {
-    "transactionHash": "0x325ef2e5a930f8d3008757e9faed8faec86c74cc39627c4764be4f333eed6a2a",
-    "userOperationHash": "0x0cade47309d0d78aad6471141c784ce1be3bd9c0bbe52d8768de42177e1fc136",
+    "transactionHash": "0xb7f3e7b2448cdb08e99c4fc5e98a2a0084039218ea84a3fdf2e10a7503671ea2",
+    "userOperationHash": "0x2a78c672cba6858994b4bfab07f90b689ee784a5286bfe48f51700a432e63ec1",
     "explorer": null
-  },
-  "execution": {
-    "authorize": {
-      "transactionHash": "0x98e0aae27c1904f770fb6b58978cdb678a1ae844f1839c5ac0201de69ea6376e",
-      "explorer": null
-    },
-    "begin": {
-      "transactionHash": "0x54af0df6d4ac53386db23f9431548520902d8087db1572c58ab8a3930f961fa1",
-      "explorer": null
-    },
-    "executionStartedAt": "1790235557",
-    "exactAllowanceBeforePerform": "10000000000000000"
   },
   "performRefusals": {
     "control": "the exact mandate, action, and proof return SUCCEEDED from eth_call",
@@ -385,27 +377,103 @@
         "refusal": "FailedOpWithRevert(AA23 reverted)"
       },
       {
-        "field": "session calls WBNB.transfer instead of perform",
+        "field": "session calls transfer on the input token instead of perform",
         "refusal": "FailedOpWithRevert(AA23 reverted)"
       },
       {
-        "field": "signed perform UserOperation with its action bytes changed after signing",
+        "field": "signed perform UserOperation with its action changed after signing (recipient changed)",
         "refusal": "FailedOp(AA24 signature error)"
       }
     ],
     "note": "session-signed UserOperations evaluated with eth_call of EntryPoint.handleOps from the executor; each fails account validation before any call"
   },
+  "execution": {
+    "authorize": {
+      "transactionHash": "0xb076a39969d0841ce47e78e1b1130c46f693377c48a1d1d62d4c28f36cc3c408",
+      "explorer": null
+    },
+    "begin": {
+      "transactionHash": "0xac873fbdcab8aa2ea87881f61d1bc2282127348e53621926f3f1644b7fd2370a",
+      "explorer": null
+    },
+    "executionStartedAt": "1790257072",
+    "exactAllowanceBeforePerform": "10000000000000000"
+  },
   "perform": {
-    "transactionHash": "0xf2c022554ab4f22d1ba86c4c2997441d1d6caa8214f700c0d6c4672b8f263e01",
+    "transactionHash": "0x486bb672b9848de066bef3e3a7ff8c46ac3fa42bc61ff35978f7f2e230c2b87e",
     "explorer": null,
-    "userOperationHash": "0xedf1519d2a268b292555e79aa4ffac2a7fea58092d9815f4d837c101f85d3022",
+    "userOperationHash": "0x3b9ee69c16eb05a21eeb8fa4506f129cedb939501916aa7807815772c6384882",
     "userOperationSuccess": true,
     "onchainEvents": [
       "MandateAuthorized",
       "ExecutionBegun",
       "ExecutionReceiptRecorded"
-    ],
-    "executorTransactions": 3
+    ]
+  },
+  "receipt": {
+    "status": "SUCCEEDED",
+    "authorityConsumed": true,
+    "verificationHash": "0x3203bdd1f394aafacd8f5c88e3df4046cde32e1fa626b01034fc298bcb6e1c06",
+    "onchainVerificationHash": "0x3203bdd1f394aafacd8f5c88e3df4046cde32e1fa626b01034fc298bcb6e1c06",
+    "execution": {
+      "status": "TERMINAL",
+      "mandateStatus": "SUCCEEDED",
+      "submissionAttempts": 3
+    },
+    "public": {
+      "schemaVersion": "1",
+      "status": "SUCCEEDED",
+      "chainId": "97",
+      "account": "0xfcedd212272d461e7738c38520914851fbe1e888",
+      "mandateExecutor": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
+      "mandateHash": "0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5",
+      "policyHash": "0xc1616f899a832c2d6fff5e7bce0852667d9ecfcd7385406bb9018c725f503a14",
+      "intentHash": "0xcf6187794c4805f907c3bbc9ccde2f079d319461d1d8b4947ca85f59bc5a50e2",
+      "planHash": "0x2336df77df35c9c73a88cda1ea56692ab9855e774f93bb80ef3608643fbdaf17",
+      "simulationHash": "0x4fc4e4a8199e3a2d96b45639330847b25f8760a718f234f52285479ffdd8534d",
+      "actionHash": "0xa34651e7ec80c2de307eb6fb0fe741a3f23eff42a3d13d82a99daf2f3f01327f",
+      "postconditionHash": "0x0b05e53aae7661d67687255c7597b6093bdb4046801fb2bfe18f5609c02b8a68",
+      "nonce": "252656820246567806876521152596960385956",
+      "authorityConsumed": true,
+      "terminalReasonCode": "ONCHAIN_SUCCEEDED",
+      "terminalMessage": "The mandate succeeded onchain and its verifier commitment was recorded.",
+      "transactions": {
+        "authorize": "0xb076a39969d0841ce47e78e1b1130c46f693377c48a1d1d62d4c28f36cc3c408",
+        "begin": "0xac873fbdcab8aa2ea87881f61d1bc2282127348e53621926f3f1644b7fd2370a",
+        "userOperation": "0x3b9ee69c16eb05a21eeb8fa4506f129cedb939501916aa7807815772c6384882",
+        "execution": "0x486bb672b9848de066bef3e3a7ff8c46ac3fa42bc61ff35978f7f2e230c2b87e"
+      },
+      "authorization": {
+        "blockNumber": "132911364",
+        "blockHash": "0x488d23a53e67fde5a3057fe2850bdc24ef4b86baa119421ca392ab8b131876a4"
+      },
+      "begin": {
+        "blockNumber": "132911369",
+        "blockHash": "0x8602c398c5cc80932374e37b26dfd7ff3a43468f7e9f82271b97ad2ed93a95ff"
+      },
+      "terminal": {
+        "transactionHash": "0x486bb672b9848de066bef3e3a7ff8c46ac3fa42bc61ff35978f7f2e230c2b87e",
+        "blockNumber": "132911375",
+        "blockHash": "0x5ce2da28399b133c50ca32d6c1e2f7ef9a14629f233c6bed049917d9322a30f3",
+        "logIndex": 10
+      },
+      "explorer": {
+        "authorization": "https://testnet.bscscan.com/tx/0xb076a39969d0841ce47e78e1b1130c46f693377c48a1d1d62d4c28f36cc3c408",
+        "begin": "https://testnet.bscscan.com/tx/0xac873fbdcab8aa2ea87881f61d1bc2282127348e53621926f3f1644b7fd2370a",
+        "execution": "https://testnet.bscscan.com/tx/0x486bb672b9848de066bef3e3a7ff8c46ac3fa42bc61ff35978f7f2e230c2b87e",
+        "terminal": "https://testnet.bscscan.com/tx/0x486bb672b9848de066bef3e3a7ff8c46ac3fa42bc61ff35978f7f2e230c2b87e",
+        "block": "https://testnet.bscscan.com/block/132911375"
+      },
+      "verification": {
+        "status": "PASSED",
+        "hash": "0x3203bdd1f394aafacd8f5c88e3df4046cde32e1fa626b01034fc298bcb6e1c06",
+        "failureReasonHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "reasonCode": "ONCHAIN_SUCCEEDED"
+      },
+      "settlement": {
+        "status": "NOT_BOUND"
+      }
+    }
   },
   "outcome": {
     "wbnbSpent": "10000000000000000",
@@ -414,34 +482,24 @@
     "minOutput": "341283321954688247639078135270",
     "allowanceAfter": "0",
     "mandateExecutorResidualWbnb": "0",
-    "mandateExecutorResidualCake": "0"
-  },
-  "receipt": {
-    "status": "SUCCEEDED",
-    "authorityConsumed": true,
-    "verificationHash": "0xa7707f479dbfd46756e7ad998367366714f78e58bec1a524e9cbdeefb76eee1c",
-    "onchainVerificationHash": "0xa7707f479dbfd46756e7ad998367366714f78e58bec1a524e9cbdeefb76eee1c",
-    "execution": {
-      "status": "TERMINAL",
-      "mandateStatus": "SUCCEEDED",
-      "submissionAttempts": 3
-    }
+    "mandateExecutorResidualCake": "0",
+    "executorTransactions": 3
   },
   "replay": {
     "refusals": [
       {
         "replayed": "exact authorize transaction input",
-        "transactionHash": "0x98e0aae27c1904f770fb6b58978cdb678a1ae844f1839c5ac0201de69ea6376e",
+        "transactionHash": "0xb076a39969d0841ce47e78e1b1130c46f693377c48a1d1d62d4c28f36cc3c408",
         "refusal": "NonceAlreadyUsed"
       },
       {
         "replayed": "exact begin transaction input",
-        "transactionHash": "0x54af0df6d4ac53386db23f9431548520902d8087db1572c58ab8a3930f961fa1",
+        "transactionHash": "0xac873fbdcab8aa2ea87881f61d1bc2282127348e53621926f3f1644b7fd2370a",
         "refusal": "InvalidTransition"
       },
       {
         "replayed": "exact perform transaction input",
-        "transactionHash": "0xf2c022554ab4f22d1ba86c4c2997441d1d6caa8214f700c0d6c4672b8f263e01",
+        "transactionHash": "0x486bb672b9848de066bef3e3a7ff8c46ac3fa42bc61ff35978f7f2e230c2b87e",
         "refusal": "FailedOp(AA25 invalid account nonce)"
       },
       {
@@ -451,7 +509,7 @@
     ],
     "apiResubmission": {
       "status": 201,
-      "mandateHash": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
+      "mandateHash": "0x1f1b850efa7db10b837e7936afdc65f94b0968be7ca44e5a2ac9706cdd1999f5",
       "executionsForMandate": 1
     },
     "redelivery": "a live loop worker found nothing to lease for 6 s; the executor nonce did not move"
@@ -460,5 +518,5 @@
     "lines": 17,
     "check": "every executor stdout/stderr line is one JSON object and contains neither the executor key (with or without 0x) nor the worker token"
   },
-  "observedAt": "2026-09-24T07:39:34.326Z"
+  "observedAt": "2026-09-24T13:38:09.872Z"
 }

@@ -389,7 +389,7 @@ Public, rebuildable receipt projection. Private text is represented only by hash
 | `simulation_hash` | bytea | 32 bytes, not null |
 | `action_hash` | bytea | 32 bytes, not null |
 | `postcondition_hash` | bytea | 32 bytes, not null |
-| `verification_hash` | bytea | 32 bytes, nullable only for revoke/expiry before execution |
+| `verification_hash` | bytea | 32 bytes; non-null on success (enforced by the database), zero on failed execution, null on revoke/expiry (enforced by the projector) |
 | `authority_consumed` | boolean | always true for an onchain receipt |
 | `authorize_tx_hash` | bytea | not null |
 | `execution_tx_hash` | bytea | nullable for revoke/expiry |
@@ -401,10 +401,10 @@ Public, rebuildable receipt projection. Private text is represented only by hash
 
 Constraints:
 
-- immutable in-place except settlement fields, which transition once from null to a confirmed matching settlement; deleting and rebuilding from canonical events is allowed;
-- `SUCCEEDED` requires a nonzero onchain `verificationHash` from the terminal event. A separately populated `PASSED` verification-result row is not required unless measured evidence can be independently reconstructed;
-- non-success cannot have a settlement transaction that completed payment; a bound non-success job is public `INELIGIBLE`, not `PENDING`;
-- every public field reconciles to confirmed contract logs or immutable signed commitments.
+- immutable in-place except settlement fields, which the database permits to transition once from null; a confirmed matching evaluator event is required before a future public `CONFIRMED` payment claim. Deleting and rebuilding from canonical events is allowed;
+- `SUCCEEDED` requires a nonzero onchain `verificationHash` from the terminal event; the projector rejects zero, and the public route compares both success and failure commitments against the finalized MandateExecutor record. A separately populated `PASSED` verification-result row is not required unless measured evidence can be independently reconstructed;
+- non-success cannot have a settlement transaction that completed payment; a bound non-success job is public `INELIGIBLE`, not `PENDING`, and an unpinned settlement log never upgrades a bound success from `PENDING`;
+- public terminal status and commitments reconcile to confirmed contract logs and immutable signed fields. The worker-recorded UserOperation hash is returned only with its matching terminal transaction and remains independently checkable from the EntryPoint event.
 
 ### 5.11 `chain_events`
 
@@ -441,7 +441,7 @@ Rows are never deleted during normal reconciliation. A raw event version is keye
 | `confirmation_depth` | integer | positive |
 | `updated_at` | timestamptz | not null |
 
-Checkpoint update and the corresponding event batch commit in one transaction. On hash mismatch, the indexer rewinds to the last canonical ancestor and replays projections.
+Checkpoint update and the corresponding event batch commit in one transaction. On hash mismatch, the indexer replays only when the supplied parent matches a retained canonical event. If the parent block has no retained event, the batch aborts; a trusted header rescan is required before advancing. This is a fail-closed limitation, not a fabricated successful reorg repair.
 
 ### 5.13 `protocol_adapters`
 

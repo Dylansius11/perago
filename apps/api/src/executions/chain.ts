@@ -112,6 +112,8 @@ export async function readFinalizedMandate(input: {
   finalized: { hash: Hash; number: bigint };
   events: ChainEventInput[];
   recordStatus: MandateRecordStatus;
+  verificationHash: Hash;
+  failureReasonHash: Hash;
 }> {
   const finalized = await input.client.getBlock({ blockTag: "finalized" });
   const events: ChainEventInput[] = [];
@@ -153,5 +155,7 @@ export async function readFinalizedMandate(input: {
     events,
     finalized: { hash: finalized.hash, number: finalized.number },
     recordStatus,
+    verificationHash: record.verificationHash,
+    failureReasonHash: record.failureReasonHash,
   };
 }
