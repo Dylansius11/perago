@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc --project tsconfig.json",
+    "start": "node --env-file-if-exists=../../.env src/main.ts",
+    "test": "vitest run --passWithNoTests",
     "probe:account-abstraction": "node --env-file-if-exists=../../.env src/probes/account-abstraction.ts",
     "probe:account-address": "node --env-file-if-exists=../../.env src/probes/account-address.ts",
     "probe:account-session": "node --env-file-if-exists=../../.env src/probes/account-session.ts",

@@ -4,6 +4,8 @@
     // Probes run straight from source under Node type stripping, which resolves
     // the real `.ts` specifier; the build rewrites it to `.js` on emit.
     "allowImportingTsExtensions": true,
+    // Node strips types but cannot transform syntax such as parameter properties.
+    "erasableSyntaxOnly": true,
     "rewriteRelativeImportExtensions": true,
     "declaration": true,
     "outDir": "dist",
