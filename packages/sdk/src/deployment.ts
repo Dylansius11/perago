@@ -20,6 +20,8 @@ export const peragoDeploymentManifestSchema = z.object({
   schemaVersion: z.literal(1),
   chainId: z.number().int().positive(),
   label: z.string().min(1),
+  /** Repository-relative path of the protocol manifest these contracts were deployed against. */
+  protocolManifest: z.string().regex(/^deployments\/[\w.-]+\.json$/u),
   constructor: z.object({
     executionWindowSeconds: uint48StringSchema,
     allowUnboundCommerceJobs: z.boolean(),

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test:fork": "node --env-file-if-exists=../../.env script/forge-env.mjs test --match-path test/fork/*",
-    "deploy:testnet": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployPerago.s.sol --rpc-url bsc_testnet --broadcast --slow"
+    "deploy:testnet": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployPerago.s.sol --rpc-url bsc_testnet --broadcast --slow",
+    "deploy:testnet-demo": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployDemoExecutor.s.sol --rpc-url bsc_testnet --broadcast --slow"
   }
 }
