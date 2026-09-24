@@ -271,10 +271,11 @@ async function submits(name: string, kind: string): Promise<Submission> {
     name,
   ).toEqual([kind]);
   const [line] = lines;
+  if (!line?.transactionHash) throw new Error(`${name} logged no hash`);
   return {
     kind,
-    transactionHash: line?.transactionHash,
-    userOperationHash: line?.userOperationHash ?? null,
+    transactionHash: line.transactionHash,
+    userOperationHash: line.userOperationHash ?? null,
   };
 }
 

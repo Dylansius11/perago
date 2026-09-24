@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { hashSchema } from "@perago/sdk";
 import type { Hex } from "viem";
 import { expect } from "vitest";
+import { z } from "zod";
 
 /**
  * Runs the real executor process (`apps/executor/src/main.ts`) for the phase
@@ -14,8 +16,15 @@ const EXECUTOR_DIR = fileURLToPath(
   new URL("../../../executor/", import.meta.url),
 );
 
-// biome-ignore lint/suspicious/noExplicitAny: worker log lines are untyped JSON
-export type WorkerEvent = Record<string, any>;
+/** One worker log line: a JSON object naming its event, plus the fields the smokes read. */
+const workerEventSchema = z.looseObject({
+  event: z.string(),
+  kind: z.string().optional(),
+  code: z.string().optional(),
+  transactionHash: hashSchema.optional(),
+  userOperationHash: hashSchema.nullable().optional(),
+});
+export type WorkerEvent = z.infer<typeof workerEventSchema>;
 export type WorkerRun = { code: number | null; lines: string[] };
 
 export type ExecutorProcessConfig = {
@@ -100,7 +109,7 @@ export function createExecutorProcesses(config: ExecutorProcessConfig) {
 
 /** The events a run printed, parsed as the JSON the worker must emit. */
 export const events = (run: WorkerRun) =>
-  run.lines.map((line) => JSON.parse(line) as WorkerEvent);
+  run.lines.map((line) => workerEventSchema.parse(JSON.parse(line)));
 
 export const submitted = (run: WorkerRun) =>
   events(run).filter((line) => line.event === "transaction.submitted");

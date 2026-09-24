@@ -4,6 +4,18 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-24 - Prove unchanged chain state before trusting identical outputs across runs
+
+- Observed: the P4-003 fork and live chain-97 swaps, and the P3 fork simulation 25,000 blocks earlier, all reported the same `minOutput` of 364231492571185523693864631565 CAKE; the two swaps also received the same 367910598556753054236226900571 CAKE.
+- Root cause: nobody else trades the testnet fee-500 WBNB/CAKE pool. Its `sqrtPriceX96` was identical at blocks `132837392` and `132862940`, and it moved only when the live journey swapped.
+- Rule: when two runs agree to the wei, read the state that prices them (pool `slot0`, reserves, balances) at both blocks before accepting the evidence. Identical output is evidence only when that state is proven unchanged; otherwise suspect a cache or a replayed fixture.
+
+### 2026-09-24 - A path guard needs escape cases at both ends, and a mutation script must verify its restore
+
+- Observed: the `protocolManifest` rule `^deployments/[\w.-]+\.json$` survived two mutants, one dropping `^` and one dropping `$`, until the test named `../deployments/...json` and `deployments/x.json/../../.env`. Separately, a mutation script's restore on Windows failed once with `UNKNOWN` (not `EBUSY`) and left the mutated source on disk.
+- Root cause: fixtures that are wrong in both places at once cannot tell which anchor is holding. On Windows, a file a test runner just released can fail to open with several error codes, not only `EBUSY`.
+- Rule: for every path or format guard, add one fixture that escapes only past the prefix and one that escapes only past the suffix. A throwaway mutation script retries writes on `EBUSY`, `EPERM`, and `UNKNOWN`, compares the restored bytes to the original, and the run ends with `git diff` on the mutated file.
+
 ### 2026-09-24 - Read logs in bounded ranges from a persisted cursor, and never across a fork point
 
 - Observed: the executor's finalized reconciliation called `eth_getLogs` from the simulation block to `finalized`, and the chain-97 Alchemy endpoint rejected every range wider than 10 blocks. A local anvil fork failed the same way, and it also returned intermittent upstream 503s for ranges that included the fork block.

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import {
   type Address,
+  accountPolicySchema,
   buildUserOperation,
   buildUserOperationNonceKey,
   deriveSemiModularAccountAddress,
@@ -22,15 +23,18 @@ import {
   getExecutionProofTypedData,
   getTaskMandateTypedData,
   type Hash,
+  hashSchema,
   hashUserOperation,
   MAX_SESSION_ENTITY_ID,
   MODULAR_ACCOUNT_V2_ADDRESSES,
   mandateExecutorAbi,
   packUserOperationSignature,
   peragoAdapterAbi,
+  policyDecisionSchema,
   ROOT_OWNER_ENTITY_ID,
-  type SimulationResult,
+  simulationResultSchema,
   type TaskMandate,
+  taskMandateSchema,
   wrapExecuteUserOp,
 } from "@perago/sdk";
 import postgres from "postgres";
@@ -60,6 +64,7 @@ import { entryPoint07Abi } from "viem/account-abstraction";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { bscTestnet } from "viem/chains";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
@@ -135,8 +140,43 @@ const MANDATE_STATUS = [
 ];
 const wbnbAbi = parseAbi(["function deposit() payable"]);
 
-// biome-ignore lint/suspicious/noExplicitAny: untyped JSON response bodies
-type ApiBody = Record<string, any>;
+/** The API response fields this journey consumes, validated once at the HTTP boundary. */
+const hexSchema = z.custom<Hex>(
+  (value) => typeof value === "string" && /^0x[0-9a-fA-F]*$/u.test(value),
+);
+const errorBody = z.object({
+  error: z.object({ code: z.string(), message: z.string() }),
+});
+const challengeBody = z.object({
+  challengeId: z.string(),
+  message: z.string(),
+});
+const sessionBody = z.object({ token: z.string() });
+const policyBody = z.object({ policyId: z.string(), policyHash: hashSchema });
+const activationBody = z.object({
+  accountPolicy: accountPolicySchema,
+  permissionCallData: hexSchema,
+});
+const confirmationBody = z.looseObject({ status: z.string() });
+const taskBody = z.object({
+  taskId: z.string(),
+  planHash: hashSchema.nullable(),
+  decision: policyDecisionSchema,
+});
+const simulationBody = z.object({
+  status: z.string(),
+  simulationHash: hashSchema,
+  result: simulationResultSchema,
+});
+const preparedBody = z.object({
+  mandate: taskMandateSchema,
+  mandateHash: hashSchema,
+});
+const acceptedBody = z.object({
+  mandateHash: hashSchema,
+  status: z.string(),
+  executionStatus: z.string(),
+});
 
 type ExecutionRow = {
   status: string;
@@ -274,16 +314,25 @@ export function defineSwapJourney(venue: JourneyVenue): void {
   let authorization = "";
   let sessionEntityId = 0;
 
-  async function api(path: string, body: unknown, method = "POST") {
+  async function api<T>(
+    schema: z.ZodType<T>,
+    path: string,
+    body: unknown,
+    method = "POST",
+  ) {
     const response = await fetch(new URL(path, apiUrl), {
       body: JSON.stringify(body),
       headers: { authorization, "content-type": "application/json" },
       method,
     });
-    return {
-      body: (await response.json()) as ApiBody,
-      status: response.status,
-    };
+    const json: unknown = await response.json();
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      throw new Error(
+        `${method} ${path} answered ${response.status} with an unexpected body: ${JSON.stringify(json)}`,
+      );
+    }
+    return { body: parsed.data, status: response.status };
   }
 
   async function send(request: { to: Address; data?: Hex; value?: bigint }) {
@@ -442,7 +491,9 @@ export function defineSwapJourney(venue: JourneyVenue): void {
       lines.map((line) => line.kind),
       name,
     ).toEqual([kind]);
-    return lines[0]?.transactionHash as Hash;
+    const hash = lines[0]?.transactionHash;
+    if (!hash) throw new Error(`${name} logged no transaction hash`);
+    return hash;
   }
 
   beforeAll(async () => {
@@ -673,13 +724,13 @@ export function defineSwapJourney(venue: JourneyVenue): void {
     const transactions: Record<string, Hash> = {};
 
     it("activates a Wallet Policy and installs a perform-only session with one root UserOperation", async () => {
-      const challenge = await api("/auth/challenges", {
+      const challenge = await api(challengeBody, "/auth/challenges", {
         account,
         chainId: "97",
         rootOwner: rootOwner.address,
       });
       expect(challenge.status, JSON.stringify(challenge.body)).toBe(201);
-      const session = await api("/auth/sessions", {
+      const session = await api(sessionBody, "/auth/sessions", {
         challengeId: challenge.body.challengeId,
         signature: await rootOwner.signMessage({
           message: challenge.body.message,
@@ -688,7 +739,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
       expect(session.status).toBe(201);
       authorization = `Bearer ${session.body.token}`;
 
-      const policy = await api("/policies", {
+      const policy = await api(policyBody, "/policies", {
         policy: {
           schemaVersion: "1",
           account,
@@ -735,6 +786,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
         validUntil,
       };
       const prepared = await api(
+        activationBody,
         `/policies/${policy.body.policyId}/activation/prepare`,
         transition,
       );
@@ -751,9 +803,9 @@ export function defineSwapJourney(venue: JourneyVenue): void {
           rootSignature: signature,
         }),
       );
-      let confirmed = { body: {} as ApiBody, status: 0 };
-      for (let attempt = 0; attempt < 180; attempt += 1) {
-        confirmed = await api(
+      const confirm = () =>
+        api(
+          confirmationBody,
           `/policies/${policy.body.policyId}/activation`,
           {
             ...transition,
@@ -763,9 +815,14 @@ export function defineSwapJourney(venue: JourneyVenue): void {
           },
           "PUT",
         );
-        if (confirmed.status !== 200 || confirmed.body.status !== "PENDING")
-          break;
+      let confirmed = await confirm();
+      for (
+        let attempt = 0;
+        attempt < 180 && confirmed.body.status === "PENDING";
+        attempt += 1
+      ) {
         await delay(1_000); // The verifier answers PENDING until the receipt is three blocks deep.
+        confirmed = await confirm();
       }
       expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
       expect(confirmed.body.status).not.toBe("PENDING");
@@ -792,7 +849,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
     });
 
     it("refuses excess spend and a foreign recipient in policy, before anything is signed", async () => {
-      const excess = await api("/tasks", {
+      const excess = await api(taskBody, "/tasks", {
         clientRequestId: "p4-journey-excess",
         intent: {
           schemaVersion: "1",
@@ -804,19 +861,20 @@ export function defineSwapJourney(venue: JourneyVenue): void {
         },
       });
       expect(excess.status, JSON.stringify(excess.body)).toBe(200);
-      const failing = (body: ApiBody) =>
-        (body.decision?.rules ?? [])
-          .filter((rule: ApiBody) => rule.outcome === "FAIL")
-          .map((rule: ApiBody) => `${rule.rule}:${rule.reasonCode}`);
+      const failing = (body: z.infer<typeof taskBody>) =>
+        body.decision.rules
+          .filter((rule) => rule.outcome === "FAIL")
+          .map((rule) => `${rule.rule}:${rule.reasonCode}`);
       expect(excess.body.decision.outcome).toBe("FAIL");
       expect(failing(excess.body).join()).toMatch(/PER_TASK_CAP/u);
       const excessSimulation = await api(
+        errorBody,
         `/tasks/${excess.body.taskId}/simulations`,
         {},
       );
       expect(excessSimulation.status).not.toBe(201);
 
-      const recipient = await api("/tasks", {
+      const recipient = await api(taskBody, "/tasks", {
         clientRequestId: "p4-journey-recipient",
         intent: {
           schemaVersion: "1",
@@ -831,6 +889,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
       expect(recipient.body.decision.outcome).toBe("FAIL");
       expect(failing(recipient.body).join()).toMatch(/RECIPIENT/u);
       const recipientSimulation = await api(
+        errorBody,
         `/tasks/${recipient.body.taskId}/simulations`,
         {},
       );
@@ -858,7 +917,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
     });
 
     it("compiles, simulates, and prepares one swap digest the chain agrees with", async () => {
-      const task = await api("/tasks", {
+      const task = await api(taskBody, "/tasks", {
         clientRequestId: "p4-journey-swap",
         intent: {
           schemaVersion: "1",
@@ -872,11 +931,19 @@ export function defineSwapJourney(venue: JourneyVenue): void {
       expect(task.status, JSON.stringify(task.body)).toBe(200);
       expect(task.body.decision.outcome).toBe("PASS");
       taskId = task.body.taskId;
-      const simulation = await api(`/tasks/${taskId}/simulations`, {});
+      const simulation = await api(
+        simulationBody,
+        `/tasks/${taskId}/simulations`,
+        {},
+      );
       expect(simulation.status, JSON.stringify(simulation.body)).toBe(201);
       expect(simulation.body.status).toBe("PASSED");
-      const result = simulation.body.result as SimulationResult;
-      const prepared = await api(`/tasks/${taskId}/mandate/prepare`, {});
+      const result = simulation.body.result;
+      const prepared = await api(
+        preparedBody,
+        `/tasks/${taskId}/mandate/prepare`,
+        {},
+      );
       expect(prepared.status, JSON.stringify(prepared.body)).toBe(200);
       mandate = prepared.body.mandate;
       mandateHash = prepared.body.mandateHash;
@@ -952,7 +1019,9 @@ export function defineSwapJourney(venue: JourneyVenue): void {
         const signature = await rootOwner.signTypedData(
           getTaskMandateTypedData(mutated, domain),
         );
-        const response = await api(`/tasks/${taskId}/mandate`, { signature });
+        const response = await api(errorBody, `/tasks/${taskId}/mandate`, {
+          signature,
+        });
         expect(response.status, field).toBe(409);
         expect(response.body.error.code, field).toBe("SIGNATURE_INVALID");
         refusals.push({ field, api: response.body.error.code });
@@ -960,7 +1029,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
       rootSignature = await rootOwner.signTypedData(
         getTaskMandateTypedData(mandate, domain),
       );
-      const accepted = await api(`/tasks/${taskId}/mandate`, {
+      const accepted = await api(acceptedBody, `/tasks/${taskId}/mandate`, {
         signature: rootSignature,
       });
       expect(accepted.status, JSON.stringify(accepted.body)).toBe(201);
@@ -1436,7 +1505,8 @@ export function defineSwapJourney(venue: JourneyVenue): void {
         ["begin", /^InvalidTransition$/u],
         ["perform", /^FailedOp.*AA25/u],
       ] as const) {
-        const hash = transactions[kind] as Hash;
+        const hash = transactions[kind];
+        if (!hash) throw new Error(`no ${kind} transaction was recorded`);
         const sent = await client.getTransaction({ hash });
         const reason = await refused(() =>
           client.call({
@@ -1478,7 +1548,7 @@ export function defineSwapJourney(venue: JourneyVenue): void {
         refusal: direct,
       });
 
-      const resubmitted = await api(`/tasks/${taskId}/mandate`, {
+      const resubmitted = await api(acceptedBody, `/tasks/${taskId}/mandate`, {
         signature: rootSignature,
       });
       expect(resubmitted.body.mandateHash).toBe(mandateHash);

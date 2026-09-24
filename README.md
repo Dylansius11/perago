@@ -22,7 +22,7 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1 and 2 are complete; Phase 3 is complete through `P3-003`, and `P3-004` (simulation and signing payload) is next.** By user decision `P4-001` and `P5-001` were built first so simulation runs against real adapters: the bounded PancakeSwap V3 swap and the CAKE Pool stake (through per-recipient position holders) are implemented, fork-tested on chain 97 and BSC mainnet, deployed with a production MandateExecutor on chain 97 ([`deployments/bsc-testnet.perago.json`](deployments/bsc-testnet.perago.json)), and proven live ([`docs/evidence/bsc-testnet.adapters-live.json`](docs/evidence/bsc-testnet.adapters-live.json)). The SDK owns the canonical mandate, policy, planner-candidate, compiled-plan, policy-decision, and closed action encodings; the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, onchain-transition verification, and an untrusted Groq planner feeding a deterministic compiler.
+**Phases 1 through 3 are complete, and Phase 4 is complete through `P4-003`: one bounded swap is proven end to end. `P5-002` (the staking path) is next and starts once the user opens it.** By user decision `P4-001` and `P5-001` were built first so simulation runs against real adapters: the bounded PancakeSwap V3 swap and the CAKE Pool stake (through per-recipient position holders) are implemented, fork-tested on chain 97 and BSC mainnet, deployed with a production MandateExecutor on chain 97 ([`deployments/bsc-testnet.perago.json`](deployments/bsc-testnet.perago.json)), and proven live ([`docs/evidence/bsc-testnet.adapters-live.json`](docs/evidence/bsc-testnet.adapters-live.json)). The SDK owns the canonical mandate, policy, planner-candidate, compiled-plan, policy-decision, and closed action encodings; the API has constrained PostgreSQL persistence, signed wallet authentication, authenticated policy routes, onchain-transition verification, an untrusted Groq planner feeding a deterministic compiler, pinned-block simulation, EIP-712 mandate signing, and a durable execution queue that the executor worker drives.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 
@@ -30,16 +30,17 @@ Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evi
 - a bounded session that performs its one allowlisted call and is rejected for an unrelated target, an unallowlisted selector, module install, a self-call, an over-limit spend, an expired window, and after revocation;
 - user-controlled MetaMask signatures activating and revoking one Wallet Policy, each through one atomic root UserOperation that changes the bounded account permission and MandateExecutor policy together;
 - a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
-- an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund.
+- an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund;
+- one natural-language swap carried end to end on the labelled `testnet-demo` MandateExecutor (`SC-D-006`). It covers policy activation, simulation, the signed digest, authorize, begin, the executor's perform UserOperation, the measured output, and a verified receipt. Replays and a tampered spend, minimum, recipient, adapter, selector, target, or action are all refused ([`docs/evidence/bsc-testnet.phase4-swap-journey.json`](docs/evidence/bsc-testnet.phase4-swap-journey.json)). Payment is Phase 6.
 
-Also built: the approved Perago landing shell, 113 passing Foundry contract tests, local PostgreSQL lifecycle constraints and reorg-safe projections, one-use root-wallet challenge authentication, and the policy activation/revocation service. `P3-002` is closed by the owner-paid BSC Testnet activation and revocation evidence in [`docs/evidence/bsc-testnet.p3-policy-live.json`](docs/evidence/bsc-testnet.p3-policy-live.json). Its MandateExecutor deployment is explicitly policy-probe-only: production adapters/verifiers and the production execution window remain later work. Not built yet: planner/compiler, simulations, executor service, production adapters/verifiers, settlement evaluator, or the full product journey.
+Also built: the approved Perago landing shell, 113 passing Foundry contract tests, local PostgreSQL lifecycle constraints and reorg-safe projections, one-use root-wallet challenge authentication, and the policy activation/revocation service. `P3-002` is closed by the owner-paid BSC Testnet activation and revocation evidence in [`docs/evidence/bsc-testnet.p3-policy-live.json`](docs/evidence/bsc-testnet.p3-policy-live.json). Its MandateExecutor deployment is explicitly policy-probe-only. Not built yet: the staking compiler, simulation, and executor path (`P5-002`), ERC-8183 settlement (Phase 6), and the product web journey.
 
 ## Planned repository map
 
 ```text
 apps/
   web/       Approved Perago landing shell; product journeys remain pending
-  api/       Persistence, wallet authentication, policy lifecycle; compiler/simulation pending
+  api/       Persistence, wallet auth, policy lifecycle, compiler, simulation, signing, execution queue
   executor/  Constrained autonomous execution worker and existing probes
 packages/
   sdk/       Shared schemas, ABIs, typed clients
@@ -47,7 +48,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-Current source includes the SDK domain/account/action layer, MandateExecutor with the production swap and stake adapters and verifiers, executor probes, the approved landing shell, and API persistence, authentication, policy, chain-verification, planner, and compiler infrastructure. `P3-004` is next.
+Current source includes the SDK domain/account/action layer, MandateExecutor with the production swap and stake adapters and verifiers, executor probes, the approved landing shell, and API persistence, authentication, policy, chain-verification, planner, compiler, simulation, signing, and execution-queue infrastructure, and the executor worker. `P5-002` is next.
 
 ## Documentation
 

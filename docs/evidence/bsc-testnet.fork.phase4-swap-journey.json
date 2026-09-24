@@ -2,8 +2,8 @@
   "label": "fork: every write below is on a local anvil fork of chain 97 mining one block per second with finalized = latest - 2, against the forked testnet-demo MandateExecutor; nothing was broadcast to chain 97",
   "venue": {
     "chainId": 97,
-    "forkedAtFinalizedBlock": "132862621",
-    "blockHash": "0x3e3b2a8c11382edb35b2f6148f7fc6bde9996b6c3444bfa2e48f72aefdde5a09",
+    "forkedAtFinalizedBlock": "132863532",
+    "blockHash": "0x759d4c77954c18bad962970d9fc3df6aeea536254f97a378425fbb4dfb4055f4",
     "mandateExecutor": {
       "address": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
       "codeHash": "0xc1c989fd4895f58aa05f65b3e780cbcf0be2ed96ed890c932d3effe8984e52d2",
@@ -20,40 +20,40 @@
       "codeHash": "0x301520a46a6caecb1383965435f9e20a9bc5d11b9d6e67980f315b4028d784e6"
     },
     "executionWindowSeconds": "600",
-    "owner": "0x3c04f04f4d1ad90b982e0fff4f767139471dd525",
-    "account": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-    "executor": "0xd9fad92ee34f6d7a6a05cb5cfc8830d1e3e0c979",
-    "relayer": "0x554321278403db2e38d5058876d67d9746369890",
+    "owner": "0xd8ee9aa9fe5929d130cfe9f7f9457aa3ec677fd1",
+    "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+    "executor": "0xbba384a6149d4d6a22891de80cd1df724f6b0176",
+    "relayer": "0x279eaed0fa90aeb7b36daf101a533df88f4243da",
     "keys": "owner, executor, and relayer keys and the worker token were generated for this run and never persisted",
     "executorProcess": "apps/executor/src/main.ts, spawned with only public variables and its PERAGO_* deployment variables",
     "policyVerifier": "createViemPolicyChainVerifier: exact UserOperation calldata, AccountPolicySet event, pinned EntryPoint/account/MandateExecutor code, three-block depth",
     "funding": {}
   },
   "policy": {
-    "policyId": "03286b09-e301-4a05-af41-51bc445c46cc",
-    "policyHash": "0xc0621853e6b84d641db4683b3358258ecdec87ebfc11d497a64e1c704aaa4fa1",
+    "policyId": "e0c5d540-08d7-43bb-b938-5a8c40792861",
+    "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
     "accountPolicy": {
-      "account": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
+      "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
       "chainId": "97",
       "ownerEpoch": "1",
-      "permissionHash": "0xc68244c021a76abe3a47d36fda909cb31c23b6cdf7fc8803dac1a5a00e8653a4",
-      "policyHash": "0xc0621853e6b84d641db4683b3358258ecdec87ebfc11d497a64e1c704aaa4fa1",
-      "rootOwner": "0x3c04f04f4d1ad90b982e0fff4f767139471dd525",
-      "validUntil": "1790256718"
+      "permissionHash": "0x6889d1ed17c3f2a70712ae3a9eb743543c04c1f4b0a84e9852e580352f79937d",
+      "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
+      "rootOwner": "0xd8ee9aa9fe5929d130cfe9f7f9457aa3ec677fd1",
+      "validUntil": "1790257128"
     },
     "session": {
-      "account": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-      "entityId": 815042789,
+      "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+      "entityId": 1902336401,
       "nativeSpendLimit": "0",
       "selectors": ["0xe756397f"],
-      "sessionSigner": "0xd9FAD92ee34F6d7a6a05cb5cFc8830d1E3E0c979",
+      "sessionSigner": "0xBBA384A6149d4D6A22891DE80Cd1Df724f6B0176",
       "target": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
-      "validAfter": "1790235058",
-      "validUntil": "1790256718"
+      "validAfter": "1790235468",
+      "validUntil": "1790257128"
     },
     "activation": {
-      "transactionHash": "0x63a9c97a24889df129e068d5ed7ea96835a6adc31dce5a972f979be0d1a082d5",
-      "userOperationHash": "0x343f383b59898920672ab49904045be7d5cf82d0adc0fdd4c11617c4b23de2c1",
+      "transactionHash": "0xe2ff70be02d1c8cc6b99391069b997d83b2f8b5413e5a8ac97a82c1ac52dfeac",
+      "userOperationHash": "0x42b7f659069e3ec7b884830299d00bc896efab86f4ffc8f1a25674ee5eb6911d",
       "explorer": null,
       "note": "one root UserOperation installed the perform-only session and called MandateExecutor.setAccountPolicy; the API confirmed it through the real policy-chain verifier"
     },
@@ -91,154 +91,154 @@
   },
   "task": {
     "goal": "Swap 0.01 WBNB for CAKE",
-    "taskId": "031bc089-d8e5-4480-b75d-3c8efab8652e",
-    "planHash": "0x7b8b6f561f344e817a19f6e523054cbca26bae2d67c4de488f836e7c330b8796",
+    "taskId": "9c25f635-3348-414a-b4c3-4d3aca95e441",
+    "planHash": "0x8c891e58108e373644b7f5c5cda867ad9372e8603195a893812ca93e4264da35",
     "decision": {
+      "schemaVersion": "1",
+      "compilerVersion": "perago-compiler/1",
+      "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
+      "intentHash": "0x2d840c6ab284fcdb7c4677942fed4215223e4789250ead0f0f6cf8db5ed4272d",
+      "outcome": "PASS",
       "rules": [
         {
           "rule": "CHAIN",
-          "limit": "97",
           "outcome": "PASS",
-          "observed": "intent 97; catalog 97",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "97",
+          "observed": "intent 97; catalog 97"
         },
         {
           "rule": "ACCOUNT",
-          "limit": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
           "outcome": "PASS",
-          "observed": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+          "observed": "0xb88762bc78ef33e864f1256773d653c78eeb24b0"
         },
         {
           "rule": "SERVICE",
-          "limit": "SWAP,STAKE",
           "outcome": "PASS",
-          "observed": "SWAP",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "SWAP,STAKE",
+          "observed": "SWAP"
         },
         {
           "rule": "PROTOCOL",
-          "limit": "pancakeswap-v3,cake-pool",
           "outcome": "PASS",
-          "observed": "pancakeswap-v3",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "pancakeswap-v3,cake-pool",
+          "observed": "pancakeswap-v3"
         },
         {
           "rule": "ROUTE",
-          "limit": "0xae13d989dac2f0debff460ac112a837c89baa7cd/0xfa60d973f7642b748046464e165a65b7323b0dee@500",
           "outcome": "PASS",
-          "observed": "0xae13d989dac2f0debff460ac112a837c89baa7cd->0xfa60d973f7642b748046464e165a65b7323b0dee",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "0xae13d989dac2f0debff460ac112a837c89baa7cd/0xfa60d973f7642b748046464e165a65b7323b0dee@500",
+          "observed": "0xae13d989dac2f0debff460ac112a837c89baa7cd->0xfa60d973f7642b748046464e165a65b7323b0dee"
         },
         {
           "rule": "PROTECTED_ASSET",
-          "limit": "",
           "outcome": "PASS",
-          "observed": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "",
+          "observed": "0xae13d989dac2f0debff460ac112a837c89baa7cd"
         },
         {
           "rule": "ACTIVE_ASSET",
-          "limit": "0xae13d989dac2f0debff460ac112a837c89baa7cd,0xfa60d973f7642b748046464e165a65b7323b0dee",
           "outcome": "PASS",
-          "observed": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "0xae13d989dac2f0debff460ac112a837c89baa7cd,0xfa60d973f7642b748046464e165a65b7323b0dee",
+          "observed": "0xae13d989dac2f0debff460ac112a837c89baa7cd"
         },
         {
           "rule": "INPUT_AMOUNT",
-          "limit": "> 0 with at most 18 decimals",
           "outcome": "PASS",
-          "observed": "0.01 (10000000000000000 base units)",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "> 0 with at most 18 decimals",
+          "observed": "0.01 (10000000000000000 base units)"
         },
         {
           "rule": "PER_TASK_CAP",
-          "limit": "50000000000000000",
           "outcome": "PASS",
-          "observed": "10000000000000000",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "50000000000000000",
+          "observed": "10000000000000000"
         },
         {
           "rule": "DAILY_CAP",
-          "limit": "500000000000000000",
           "outcome": "PASS",
-          "observed": "0 reserved in 24h + 10000000000000000",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "500000000000000000",
+          "observed": "0 reserved in 24h + 10000000000000000"
         },
         {
           "rule": "SLIPPAGE",
-          "limit": "100",
           "outcome": "PASS",
-          "observed": "100 (policy default)",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "100",
+          "observed": "100 (policy default)"
         },
         {
           "rule": "RECIPIENT",
-          "limit": "SELF (0x0b6f606e71ebedf5e8af3501284014dcda27685d)",
           "outcome": "PASS",
-          "observed": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "SELF (0xb88762bc78ef33e864f1256773d653c78eeb24b0)",
+          "observed": "0xb88762bc78ef33e864f1256773d653c78eeb24b0"
         },
         {
           "rule": "LIFETIME",
-          "limit": "3600",
           "outcome": "PASS",
-          "observed": "1800",
-          "reasonCode": null
+          "reasonCode": null,
+          "limit": "3600",
+          "observed": "1800"
         }
-      ],
-      "outcome": "PASS",
-      "intentHash": "0x531a463fe5018525daaf80299318dd191d0f71f8efffcf44815f59ce7f880ecb",
-      "policyHash": "0xc0621853e6b84d641db4683b3358258ecdec87ebfc11d497a64e1c704aaa4fa1",
-      "schemaVersion": "1",
-      "compilerVersion": "perago-compiler/1"
+      ]
     }
   },
   "simulation": {
-    "simulationHash": "0x513d551b8dcd6af87b5bd8ca226f90b8518fff257ea8e03bfc92efe109c05375",
+    "simulationHash": "0xca1ddddc217a2002e36cbe1f3c46038a6c2e9accdcc4759b3cdd37f103673155",
     "block": {
-      "number": "132862644",
-      "hash": "0xb965364cee5431644325fe990abaebecd3bb734e9abb35aa245277b6da8f5b7e",
-      "timestamp": "1790235129"
+      "number": "132863555",
+      "hash": "0x7124999ed62f6f11e027ec6563e75b8f6ae584d9105fe6b130341c5efa8083b0",
+      "timestamp": "1790235538"
     },
-    "minOutput": "364231492571185523693864631565",
-    "expectedOutput": "367910598556753054236226900571",
+    "minOutput": "341283321954688247639078135270",
+    "expectedOutput": "344730628237058835999068823506",
     "action": {
       "tokenIn": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
       "tokenOut": "0xfa60d973f7642b748046464e165a65b7323b0dee",
       "poolFee": "500",
       "amountIn": "10000000000000000",
-      "minAmountOut": "364231492571185523693864631565",
-      "recipient": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-      "deadline": "1790236929",
+      "minAmountOut": "341283321954688247639078135270",
+      "recipient": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+      "deadline": "1790237338",
       "kind": "SWAP"
     }
   },
   "digest": {
-    "api": "0x88b16e03e0ace65b8dd0159ff411c91b70cd0e6cfcc0c3a9c2a1fd37352aba31",
-    "sdk": "0x88b16e03e0ace65b8dd0159ff411c91b70cd0e6cfcc0c3a9c2a1fd37352aba31",
-    "mandateExecutorHashMandate": "0x88b16e03e0ace65b8dd0159ff411c91b70cd0e6cfcc0c3a9c2a1fd37352aba31",
+    "api": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
+    "sdk": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
+    "mandateExecutorHashMandate": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
     "mandate": {
-      "account": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-      "rootOwner": "0x3c04f04f4d1ad90b982e0fff4f767139471dd525",
+      "account": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+      "rootOwner": "0xd8ee9aa9fe5929d130cfe9f7f9457aa3ec677fd1",
       "ownerEpoch": "1",
-      "executor": "0xd9fad92ee34f6d7a6a05cb5cfc8830d1e3e0c979",
+      "executor": "0xbba384a6149d4d6a22891de80cd1df724f6b0176",
       "chainId": "97",
-      "nonce": "171540084737610104348903217800947726294",
-      "expiresAt": "1790236929",
-      "policyHash": "0xc0621853e6b84d641db4683b3358258ecdec87ebfc11d497a64e1c704aaa4fa1",
-      "intentHash": "0x531a463fe5018525daaf80299318dd191d0f71f8efffcf44815f59ce7f880ecb",
-      "planHash": "0x7b8b6f561f344e817a19f6e523054cbca26bae2d67c4de488f836e7c330b8796",
-      "simulationHash": "0x513d551b8dcd6af87b5bd8ca226f90b8518fff257ea8e03bfc92efe109c05375",
+      "nonce": "232232811985110448165814945745150035047",
+      "expiresAt": "1790237338",
+      "policyHash": "0x8ac1971a334ac11567ed5efdbf12d3e7e569623d2139a179aa6c15d543c50beb",
+      "intentHash": "0x2d840c6ab284fcdb7c4677942fed4215223e4789250ead0f0f6cf8db5ed4272d",
+      "planHash": "0x8c891e58108e373644b7f5c5cda867ad9372e8603195a893812ca93e4264da35",
+      "simulationHash": "0xca1ddddc217a2002e36cbe1f3c46038a6c2e9accdcc4759b3cdd37f103673155",
       "adapter": "0xb9faeb0bb29401a1308e0c1287913d94b18ec635",
       "adapterSelector": "0x78cab83a",
       "inputToken": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
       "maxInput": "10000000000000000",
       "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
-      "minOutput": "364231492571185523693864631565",
-      "recipient": "0x0b6f606e71ebedf5e8af3501284014dcda27685d",
-      "actionHash": "0x1ec86d59f4879a4bfbcbf85f548afaf07085c241c685452eb574b5f9b5f02495",
-      "postconditionHash": "0xa4435179e8203c4b53c3d4c1b944ee340b9a3b54908a966c01d9516037661d03",
+      "minOutput": "341283321954688247639078135270",
+      "recipient": "0xb88762bc78ef33e864f1256773d653c78eeb24b0",
+      "actionHash": "0xfbaf2fc5a4bc315b69e6160111ca848c6d31aff660dac9ca8ca3826634a27114",
+      "postconditionHash": "0x440ba0c99fcfda28e0d1f69c00d4664f0f21732888e9dd9ec8cf9f494c871992",
       "commerceContract": "0x0000000000000000000000000000000000000000",
       "commerceJobId": "0"
     }
@@ -271,15 +271,14 @@
       }
     ],
     "accepted": {
-      "executionStatus": "QUEUED",
-      "mandateHash": "0x88b16e03e0ace65b8dd0159ff411c91b70cd0e6cfcc0c3a9c2a1fd37352aba31",
+      "mandateHash": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
       "status": "SIGNED",
-      "taskStatus": "SIGNED"
+      "executionStatus": "QUEUED"
     },
     "note": "each tampered mandate was signed by the real root owner; the API refuses any signature that does not recover over the exact prepared digest"
   },
   "authorizeRefusals": {
-    "control": "the exact mandate returns 0x88b16e03e0ace65b8dd0159ff411c91b70cd0e6cfcc0c3a9c2a1fd37352aba31 from eth_call",
+    "control": "the exact mandate returns 0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36 from eth_call",
     "refusals": [
       {
         "field": "maxInput raised (excess spend)",
@@ -317,20 +316,20 @@
     "note": "eth_call of MandateExecutor.authorize from the bound executor before the real authorization, never broadcast"
   },
   "rootApproval": {
-    "transactionHash": "0x8d0e8d82781b963d7b296a3e94f61681d7652f38dcda11e7b71d006d07cf6bf7",
-    "userOperationHash": "0x2d07a5ae52868319e276195f17e8ae8b3734cd80d51e1c5ba8aadc10c3297278",
+    "transactionHash": "0x325ef2e5a930f8d3008757e9faed8faec86c74cc39627c4764be4f333eed6a2a",
+    "userOperationHash": "0x0cade47309d0d78aad6471141c784ce1be3bd9c0bbe52d8768de42177e1fc136",
     "explorer": null
   },
   "execution": {
     "authorize": {
-      "transactionHash": "0x2825b84557f3a583a8c2b829b3ac46f61d01c21e0fbb2ae6ff8275e5d469f07d",
+      "transactionHash": "0x98e0aae27c1904f770fb6b58978cdb678a1ae844f1839c5ac0201de69ea6376e",
       "explorer": null
     },
     "begin": {
-      "transactionHash": "0x318c85fa9ba8af2b3b16c78cfd0ca18357c58075aaa39013e629a89ea0bd7482",
+      "transactionHash": "0x54af0df6d4ac53386db23f9431548520902d8087db1572c58ab8a3930f961fa1",
       "explorer": null
     },
-    "executionStartedAt": "1790235147",
+    "executionStartedAt": "1790235557",
     "exactAllowanceBeforePerform": "10000000000000000"
   },
   "performRefusals": {
@@ -397,9 +396,9 @@
     "note": "session-signed UserOperations evaluated with eth_call of EntryPoint.handleOps from the executor; each fails account validation before any call"
   },
   "perform": {
-    "transactionHash": "0xf60009b564db110e248920959e79afd161886631c9aac96fce1e5218c346087f",
+    "transactionHash": "0xf2c022554ab4f22d1ba86c4c2997441d1d6caa8214f700c0d6c4672b8f263e01",
     "explorer": null,
-    "userOperationHash": "0x3a94537daa1f8d2581b8cf56d2b20263a6e1763e20e8c6ffceb655a10bb777c5",
+    "userOperationHash": "0xedf1519d2a268b292555e79aa4ffac2a7fea58092d9815f4d837c101f85d3022",
     "userOperationSuccess": true,
     "onchainEvents": [
       "MandateAuthorized",
@@ -411,8 +410,8 @@
   "outcome": {
     "wbnbSpent": "10000000000000000",
     "maxInput": "10000000000000000",
-    "cakeReceived": "367910598556753054236226900571",
-    "minOutput": "364231492571185523693864631565",
+    "cakeReceived": "344730628237058835999068823506",
+    "minOutput": "341283321954688247639078135270",
     "allowanceAfter": "0",
     "mandateExecutorResidualWbnb": "0",
     "mandateExecutorResidualCake": "0"
@@ -420,8 +419,8 @@
   "receipt": {
     "status": "SUCCEEDED",
     "authorityConsumed": true,
-    "verificationHash": "0xda4ca35bc94589295dd0e40a000c5e98b6f16fb6188a6410f64db842396651f6",
-    "onchainVerificationHash": "0xda4ca35bc94589295dd0e40a000c5e98b6f16fb6188a6410f64db842396651f6",
+    "verificationHash": "0xa7707f479dbfd46756e7ad998367366714f78e58bec1a524e9cbdeefb76eee1c",
+    "onchainVerificationHash": "0xa7707f479dbfd46756e7ad998367366714f78e58bec1a524e9cbdeefb76eee1c",
     "execution": {
       "status": "TERMINAL",
       "mandateStatus": "SUCCEEDED",
@@ -432,17 +431,17 @@
     "refusals": [
       {
         "replayed": "exact authorize transaction input",
-        "transactionHash": "0x2825b84557f3a583a8c2b829b3ac46f61d01c21e0fbb2ae6ff8275e5d469f07d",
+        "transactionHash": "0x98e0aae27c1904f770fb6b58978cdb678a1ae844f1839c5ac0201de69ea6376e",
         "refusal": "NonceAlreadyUsed"
       },
       {
         "replayed": "exact begin transaction input",
-        "transactionHash": "0x318c85fa9ba8af2b3b16c78cfd0ca18357c58075aaa39013e629a89ea0bd7482",
+        "transactionHash": "0x54af0df6d4ac53386db23f9431548520902d8087db1572c58ab8a3930f961fa1",
         "refusal": "InvalidTransition"
       },
       {
         "replayed": "exact perform transaction input",
-        "transactionHash": "0xf60009b564db110e248920959e79afd161886631c9aac96fce1e5218c346087f",
+        "transactionHash": "0xf2c022554ab4f22d1ba86c4c2997441d1d6caa8214f700c0d6c4672b8f263e01",
         "refusal": "FailedOp(AA25 invalid account nonce)"
       },
       {
@@ -452,7 +451,7 @@
     ],
     "apiResubmission": {
       "status": 201,
-      "mandateHash": "0x88b16e03e0ace65b8dd0159ff411c91b70cd0e6cfcc0c3a9c2a1fd37352aba31",
+      "mandateHash": "0xf65b318978d02415667f8c9b8e41363778eaaea2caecfa39dff1f7ad7d204c36",
       "executionsForMandate": 1
     },
     "redelivery": "a live loop worker found nothing to lease for 6 s; the executor nonce did not move"
@@ -461,5 +460,5 @@
     "lines": 17,
     "check": "every executor stdout/stderr line is one JSON object and contains neither the executor key (with or without 0x) nor the worker token"
   },
-  "observedAt": "2026-09-24T07:32:43.182Z"
+  "observedAt": "2026-09-24T07:39:34.326Z"
 }

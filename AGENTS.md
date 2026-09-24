@@ -13,7 +13,7 @@ Optimize for a judge-verifiable, security-first product. AI may propose and expl
 
 ## Current gate
 
-The repository is in Phase 4 implementation. Phase 3 is complete through `P3-004`. By explicit user decision on 2026-09-23, `P4-001` (swap adapter) and `P5-001` (stake adapter with a per-account position holder) were completed ahead of order and the production MandateExecutor is deployed on chain 97. `P4-002` is complete; `P4-003` is the current task. Do not start any other later-phase task. Task definitions live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md).
+The repository has completed Phase 4. Phase 3 is complete through `P3-004`. By explicit user decision on 2026-09-23, `P4-001` (swap adapter) and `P5-001` (stake adapter with a per-account position holder) were completed ahead of order and the production MandateExecutor is deployed on chain 97. `P4-003` is complete, proven on a fork and on the labelled `testnet-demo` MandateExecutor (`SC-D-006`). `P5-002` is the next task and starts only when the user opens it. Do not start any other later-phase task. Task definitions live in [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md).
 
 The approved `P7-001` landing shell exists by explicit out-of-order authorization. Do not extend product screens, wallet journeys, CSS, tokens, logos, mockups, or visual specifications until the corresponding build-plan task is opened and the user supplies or approves its direction.
 
