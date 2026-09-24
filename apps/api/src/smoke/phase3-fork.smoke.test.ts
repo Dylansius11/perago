@@ -1,7 +1,6 @@
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
-import { setTimeout as delay } from "node:timers/promises";
+import type { ChildProcess } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
   ADAPTER_EXECUTE_SELECTOR,
@@ -62,6 +61,15 @@ import type { PolicyChainVerifier } from "../services/policies.js";
 import { pinBlock } from "../simulation/context.js";
 import { minimumAfterSlippage, quoteSwap } from "../simulation/swap.js";
 import { runExactPath } from "../simulation/user-operation.js";
+import {
+  ANVIL_KEY,
+  deployUnboundExecutor,
+  forkTransport as transportFor,
+  manifestDeployer,
+  requiredEnv,
+  resetDatabase,
+  startAnvil,
+} from "./fork.js";
 
 /**
  * P3-004 and the Phase 3 smoke. Everything runs through the real HTTP app,
@@ -75,11 +83,7 @@ import { runExactPath } from "../simulation/user-operation.js";
  * production executor.
  */
 
-const required = (name: string) => {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} is required for the Phase 3 smoke`);
-  return value;
-};
+const required = (name: string) => requiredEnv(name, "Phase 3");
 const RPC = required("PERAGO_BSC_TESTNET_RPC");
 const DATABASE_URL = required("TEST_DATABASE_URL");
 const GROQ_KEY = required("PERAGO_GROQ_API_KEY");
@@ -87,20 +91,13 @@ const ANVIL = process.env.ANVIL_BIN || "anvil";
 const FORGE = process.env.FORGE_BIN || "forge";
 const PORT = 8548;
 const FORK_URL = `http://127.0.0.1:${PORT}`;
-/** A fork fetches untouched state from chain 97 on first use, so a deep swap can take a while. */
-const forkTransport = () => http(FORK_URL, { timeout: 180_000 });
-/** Anvil's first well-known development key: public, funded only on the local fork. */
-const ANVIL_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const forkTransport = () => transportFor(FORK_URL);
 const QUOTE_TTL_SECONDS = 120;
 const EVIDENCE_PATH = fileURLToPath(
   new URL(
     "../../../../docs/evidence/bsc-testnet.fork.phase3-smoke.json",
     import.meta.url,
   ),
-);
-const CONTRACTS_DIR = fileURLToPath(
-  new URL("../../../../packages/contracts/", import.meta.url),
 );
 
 const catalog = loadBscTestnetCatalog();
@@ -160,20 +157,6 @@ const wallet = createWalletClient({
 });
 const funder = privateKeyToAccount(ANVIL_KEY);
 const evidence: Record<string, unknown> = {};
-
-async function waitForFork(): Promise<void> {
-  const probe = createPublicClient({ transport: forkTransport() });
-  for (let attempt = 0; attempt < 120; attempt += 1) {
-    try {
-      await probe.getChainId();
-      return;
-    } catch {
-      // Polls an external process we just spawned; there is no event to await.
-      await delay(500);
-    }
-  }
-  throw new Error("the local fork did not start");
-}
 
 /** Sends a transaction as `from` on the fork and waits for its receipt. */
 async function sendAs(
@@ -286,56 +269,19 @@ async function authorizeCall(
 }
 
 beforeAll(async () => {
-  anvil = spawn(
-    ANVIL,
-    ["--fork-url", RPC, "--chain-id", "97", "--port", String(PORT), "--silent"],
-    {
-      stdio: "ignore",
-    },
-  );
-  await waitForFork();
+  anvil = await startAnvil({ anvil: ANVIL, port: PORT, rpc: RPC });
   fork = createPublicClient({ chain: bscTestnet, transport: forkTransport() });
   const forkBlock = await fork.getBlock();
 
   // A MandateExecutor over the production adapters that allows unbound jobs.
-  const created = spawnSync(
-    FORGE,
-    [
-      "create",
-      "src/MandateExecutor.sol:MandateExecutor",
-      "--rpc-url",
-      FORK_URL,
-      "--private-key",
-      ANVIL_KEY,
-      "--broadcast",
-      "--json",
-      "--constructor-args",
-      production.adapters.SWAP.adapter.address,
-      production.adapters.STAKE.adapter.address,
-      "600",
-      "true",
-    ],
-    {
-      cwd: CONTRACTS_DIR,
-      encoding: "utf8",
-      env: { ...process.env, FOUNDRY_DISABLE_NIGHTLY_WARNING: "1" },
-    },
-  );
-  if (created.status !== 0)
-    throw new Error(`forge create failed: ${created.stderr}`);
-  const { deployedTo, transactionHash } = JSON.parse(
-    /\{[\s\S]*\}\s*$/u.exec(created.stdout)?.[0] ?? "{}",
-  ) as { deployedTo: Address; transactionHash: Hash };
-  const executorCode = await fork.getCode({ address: deployedTo });
-  deployment = {
-    ...production,
-    label: `fork-unbound: local fork of chain 97 at block ${forkBlock.number}`,
-    allowUnboundCommerceJobs: true,
-    mandateExecutor: {
-      address: deployedTo.toLowerCase() as Address,
-      codeHash: keccak256(executorCode ?? "0x"),
-    },
-  };
+  const created = await deployUnboundExecutor({
+    executionWindowSeconds: 600n,
+    forge: FORGE,
+    forkUrl: FORK_URL,
+    production,
+  });
+  deployment = created.deployment;
+  const { transactionHash } = created;
 
   // The root owner's real Modular Account V2, deployed through the pinned factory.
   account = deriveSemiModularAccountAddress({
@@ -358,7 +304,7 @@ beforeAll(async () => {
     data: encodeFunctionData({ abi: wbnbAbi, functionName: "deposit" }),
     value: parseEther("0.2"),
   });
-  await sendAs(await deployerAddress(), {
+  await sendAs(await manifestDeployer(), {
     to: CAKE,
     data: encodeFunctionData({
       abi: erc20Abi,
@@ -368,20 +314,7 @@ beforeAll(async () => {
   });
 
   sql = postgres(DATABASE_URL, { max: 2, onnotice: () => {} });
-  await sql.unsafe("drop schema public cascade; create schema public");
-  for (const migration of [
-    "0000_constrained_lifecycle.sql",
-    "0001_wallet_auth_policy_lifecycle.sql",
-    "0002_task_compilation.sql",
-    "0003_mandate_signing.sql",
-  ]) {
-    await sql.unsafe(
-      await readFile(
-        new URL(`../../drizzle/${migration}`, import.meta.url),
-        "utf8",
-      ),
-    );
-  }
+  await resetDatabase(sql);
 
   /** Reads the confirmed policy straight from the fork; there is no bundler here. */
   const forkPolicyVerifier: PolicyChainVerifier = {
@@ -427,6 +360,12 @@ beforeAll(async () => {
       now: () => new Date(),
       sessionTtlMs: 3_600_000,
       uri: "https://api.perago.test",
+    },
+    executionConfig: {
+      client: fork,
+      deployment,
+      leaseSeconds: 30,
+      workerTokenHash: createHash("sha256").update(randomBytes(32)).digest(),
     },
     mandateConfig,
     planner: createGroqPlanner({
@@ -475,19 +414,6 @@ afterAll(async () => {
   anvil?.kill();
   await sql?.end();
 });
-
-async function deployerAddress(): Promise<Address> {
-  const manifest = JSON.parse(
-    await readFile(
-      new URL(
-        "../../../../deployments/bsc-testnet.perago.json",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  ) as { deployer: Address };
-  return manifest.deployer;
-}
 
 describe("Phase 3 smoke on a chain-97 fork", { timeout: 600_000 }, () => {
   it("activates a Wallet Policy registered in MandateExecutor", async () => {
@@ -1008,7 +934,7 @@ describe("Phase 3 smoke on a chain-97 fork", { timeout: 600_000 }, () => {
       transport: http(RPC),
     });
     const block = await pinBlock(live, "finalized");
-    const holder = await deployerAddress();
+    const holder = await manifestDeployer();
     const lower = holder.toLowerCase() as Address;
     const expiresAt = block.timestamp + 1_800n;
     const base = {

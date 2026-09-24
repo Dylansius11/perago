@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests --exclude \"**/*.integration.test.ts\" --exclude \"**/*.smoke.test.ts\"",
-    "test:db": "vitest run --maxWorkers=1 --no-file-parallelism src/db/persistence.integration.test.ts src/auth/wallet-auth.integration.test.ts src/services/policies.integration.test.ts src/app.integration.test.ts",
+    "test:db": "vitest run --maxWorkers=1 --no-file-parallelism src/db/persistence.integration.test.ts src/auth/wallet-auth.integration.test.ts src/services/policies.integration.test.ts src/services/executions.integration.test.ts src/app.integration.test.ts",
     "smoke:phase3": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase3-fork.smoke.test.ts",
+    "smoke:phase4": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase4-executor.smoke.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,5 +18,8 @@
     "postgres": "3.4.9",
     "viem": "2.56.7",
     "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@hono/node-server": "2.1.1"
   }
 }
