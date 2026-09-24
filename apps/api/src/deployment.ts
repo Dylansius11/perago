@@ -5,6 +5,7 @@ import {
   type Hash,
   hashSchema,
   type ProtocolCatalog,
+  peragoDeploymentManifestSchema,
 } from "@perago/sdk";
 
 export type DeployedContract = { address: Address; codeHash: Hash };
@@ -29,19 +30,13 @@ export type PeragoDeployment = {
   chainId: string;
   label: string;
   mandateExecutor: DeployedContract;
+  executionWindowSeconds: bigint;
   allowUnboundCommerceJobs: boolean;
   quoter: Address;
   adapters: { SWAP: AdapterDeployment; STAKE: AdapterDeployment };
 };
 
 type ManifestContract = { address: string; codeHash: string };
-
-type PeragoManifest = {
-  chainId: number;
-  label: string;
-  constructor: { allowUnboundCommerceJobs: boolean };
-  contracts: Record<string, ManifestContract>;
-};
 
 type ProtocolManifest = {
   chainId: number;
@@ -87,7 +82,9 @@ function catalogId(catalog: ProtocolCatalog, kind: "SWAP" | "STAKE"): string {
 export function loadBscTestnetDeployment(
   catalog: ProtocolCatalog,
 ): PeragoDeployment {
-  const perago = readManifest<PeragoManifest>("bsc-testnet.perago.json");
+  const perago = peragoDeploymentManifestSchema.parse(
+    readManifest("bsc-testnet.perago.json"),
+  );
   const protocols = readManifest<ProtocolManifest>(
     "bsc-testnet.protocols.json",
   );
@@ -106,6 +103,7 @@ export function loadBscTestnetDeployment(
     chainId: catalog.chainId,
     label: perago.label,
     mandateExecutor: contract(perago.contracts, "mandateExecutor"),
+    executionWindowSeconds: BigInt(perago.constructor.executionWindowSeconds),
     allowUnboundCommerceJobs: perago.constructor.allowUnboundCommerceJobs,
     quoter: contract(protocols.contracts, "pancakeV3QuoterV2").address,
     adapters: {

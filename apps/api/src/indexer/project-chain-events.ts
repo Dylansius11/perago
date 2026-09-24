@@ -1,3 +1,5 @@
+import { signedMandateDocumentSchema } from "@perago/sdk";
+
 import type { JSONValue, Sql, TransactionSql } from "postgres";
 
 export interface ChainEventInput {
@@ -123,19 +125,6 @@ type ReceiptMaterial = {
   erc8183_job_id: string | null;
 };
 
-function typedDataMessage(value: unknown): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || !("message" in value)) {
-    throw new TypeError(
-      "mandate typed_data.message is required for receipt projection",
-    );
-  }
-  const message = value.message;
-  if (typeof message !== "object" || message === null) {
-    throw new TypeError("mandate typed_data.message must be an object");
-  }
-  return message as Record<string, unknown>;
-}
-
 async function writeReceipt(
   tx: TransactionSql,
   mandateHash: Buffer,
@@ -163,7 +152,9 @@ async function writeReceipt(
     );
   }
 
-  const message = typedDataMessage(material.typed_data);
+  const message = signedMandateDocumentSchema.parse(
+    material.typed_data,
+  ).message;
   const actionHash = decodeHex(
     message.actionHash,
     32,
@@ -261,6 +252,65 @@ async function rebuildMandateProjection(
   }
 }
 
+async function insertConfirmedEvents(
+  tx: TransactionSql,
+  chainId: bigint,
+  events: readonly ChainEventInput[],
+  affectedMandates: Map<string, Buffer>,
+): Promise<number> {
+  let inserted = 0;
+  for (const event of events) {
+    const rows = await tx`
+      insert into chain_events (
+        chain_id, transaction_hash, log_index, block_number, block_hash,
+        contract_address, topic0, topics, data, decoded_name, decoded_args,
+        status, observed_at, confirmed_at
+      ) values (
+        ${chainId.toString()}, ${event.transactionHash}, ${event.logIndex},
+        ${event.blockNumber.toString()}, ${event.blockHash}, ${event.contractAddress},
+        ${event.topic0}, ${tx.json([...event.topics])}, ${event.data}, ${event.decodedName},
+        ${event.decodedArgs === null ? null : tx.json(event.decodedArgs)},
+        'CONFIRMED', ${event.observedAt}, ${event.observedAt}
+      )
+      on conflict (chain_id, transaction_hash, log_index) do nothing
+      returning transaction_hash
+    `;
+    inserted += rows.count;
+    const mandateHash = mandateHashFromArgs(event.decodedArgs);
+    if (mandateHash)
+      affectedMandates.set(mandateHash.toString("hex"), mandateHash);
+  }
+  return inserted;
+}
+
+async function rebuildAffectedMandates(
+  tx: TransactionSql,
+  mandates: Iterable<Buffer>,
+): Promise<void> {
+  for (const mandateHash of mandates)
+    await rebuildMandateProjection(tx, mandateHash);
+}
+
+/**
+ * Events fetched at `finalized` cannot reorg, so this path deliberately writes
+ * no indexer checkpoint.
+ */
+export async function applyFinalizedEvents(
+  tx: TransactionSql,
+  chainId: bigint,
+  events: readonly ChainEventInput[],
+): Promise<{ inserted: number }> {
+  const affectedMandates = new Map<string, Buffer>();
+  const inserted = await insertConfirmedEvents(
+    tx,
+    chainId,
+    events,
+    affectedMandates,
+  );
+  await rebuildAffectedMandates(tx, affectedMandates.values());
+  return { inserted };
+}
+
 async function batchAlreadyCanonical(
   tx: TransactionSql,
   batch: ChainEventBatch,
@@ -348,28 +398,12 @@ export async function applyChainEventBatch(
       }
     }
 
-    let inserted = 0;
-    for (const event of batch.events) {
-      const rows = await tx`
-        insert into chain_events (
-          chain_id, transaction_hash, log_index, block_number, block_hash,
-          contract_address, topic0, topics, data, decoded_name, decoded_args,
-          status, observed_at, confirmed_at
-        ) values (
-          ${batch.chainId.toString()}, ${event.transactionHash}, ${event.logIndex},
-          ${event.blockNumber.toString()}, ${event.blockHash}, ${event.contractAddress},
-          ${event.topic0}, ${tx.json([...event.topics])}, ${event.data}, ${event.decodedName},
-          ${event.decodedArgs === null ? null : tx.json(event.decodedArgs)},
-          'CONFIRMED', ${event.observedAt}, ${event.observedAt}
-        )
-        on conflict (chain_id, transaction_hash, log_index) do nothing
-        returning transaction_hash
-      `;
-      inserted += rows.count;
-      const mandateHash = mandateHashFromArgs(event.decodedArgs);
-      if (mandateHash)
-        affectedMandates.set(mandateHash.toString("hex"), mandateHash);
-    }
+    const inserted = await insertConfirmedEvents(
+      tx,
+      batch.chainId,
+      batch.events,
+      affectedMandates,
+    );
 
     await tx`
       insert into indexer_checkpoints (
@@ -386,9 +420,7 @@ export async function applyChainEventBatch(
         updated_at = excluded.updated_at
     `;
 
-    for (const mandateHash of affectedMandates.values()) {
-      await rebuildMandateProjection(tx, mandateHash);
-    }
+    await rebuildAffectedMandates(tx, affectedMandates.values());
 
     return {
       inserted,

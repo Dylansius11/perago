@@ -14,10 +14,10 @@ if (!databaseUrl) {
 }
 
 const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
-const migrationUrl = new URL(
-  "../../drizzle/0000_constrained_lifecycle.sql",
-  import.meta.url,
-);
+const migrations = [
+  new URL("../../drizzle/0000_constrained_lifecycle.sql", import.meta.url),
+  new URL("../../drizzle/0004_execution_worker.sql", import.meta.url),
+];
 
 const id = (value: number) =>
   `00000000-0000-4000-8000-${value.toString().padStart(12, "0")}`;
@@ -122,13 +122,34 @@ async function seedMandate(
       ${accountAddress}, ${bytes(seed + 13, 20)},
       ${(options.nonce ?? BigInt(seed)).toString()}, 9999999999,
       ${sql.json({
+        primaryType: "TaskMandate",
+        domain: {
+          chainId: "97",
+          verifyingContract: hex(bytes(authoritySeed + 12, 20)),
+        },
         message: {
+          account: hex(accountAddress),
+          rootOwner: hex(rootOwnerAddress),
+          ownerEpoch: "0",
+          executor: hex(bytes(seed + 13, 20)),
+          chainId: "97",
+          nonce: (options.nonce ?? BigInt(seed)).toString(),
+          expiresAt: "9999999999",
           policyHash: hex(policyHash),
           intentHash: hex(intentHash),
           planHash: hex(planHash),
           simulationHash: hex(simulationHash),
+          adapter: hex(adapterAddress),
+          adapterSelector: hex(bytes(authoritySeed + 8, 4)),
+          inputToken: hex(bytes(seed + 20, 20)),
+          maxInput: "1",
+          outputToken: hex(bytes(seed + 21, 20)),
+          minOutput: "1",
+          recipient: hex(accountAddress),
           actionHash: hex(actionHash),
           postconditionHash: hex(postconditionHash),
+          commerceContract: "0x0000000000000000000000000000000000000000",
+          commerceJobId: "0",
         },
       })},
       ${bytes(seed + 14, 65)}, ${options.status ?? "SIGNED"},
@@ -167,7 +188,9 @@ function chainEvent(input: {
 
 beforeAll(async () => {
   await sql.unsafe("drop schema public cascade; create schema public");
-  await sql.unsafe(await readFile(migrationUrl, "utf8"));
+  for (const migration of migrations) {
+    await sql.unsafe(await readFile(migration, "utf8"));
+  }
 });
 
 afterAll(async () => {

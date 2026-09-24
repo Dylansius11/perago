@@ -8,6 +8,7 @@ import type { WalletAuthConfig } from "./auth/wallet-auth.js";
 import { ReasonError } from "./errors.js";
 import type { Planner } from "./planner/provider.js";
 import { createPolicyRoutes } from "./routes/policies.js";
+import { createExecutionRoutes } from "./routes/executions.js";
 import { createTaskRoutes } from "./routes/tasks.js";
 import type { MandateServiceConfig } from "./services/mandates.js";
 import type {
@@ -15,12 +16,14 @@ import type {
   PolicyServiceConfig,
 } from "./services/policies.js";
 import type { TaskServiceConfig } from "./services/tasks.js";
+import type { ExecutionServiceConfig } from "./services/executions.js";
 import { isTransportError } from "./simulation/user-operation.js";
 
 export function createApiApp(input: {
   authConfig: WalletAuthConfig;
   mandateConfig: MandateServiceConfig;
   planner: Planner;
+  executionConfig: ExecutionServiceConfig;
   policyConfig: PolicyServiceConfig;
   policyVerifier: PolicyChainVerifier;
   sql: Sql;
@@ -46,6 +49,10 @@ export function createApiApp(input: {
       sql: input.sql,
       taskConfig: input.taskConfig,
     }),
+  );
+  app.route(
+    "/internal/executions",
+    createExecutionRoutes({ config: input.executionConfig, sql: input.sql }),
   );
 
   app.onError((error, context) => {

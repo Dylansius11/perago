@@ -11,9 +11,10 @@ import {
   hashSimulationResult,
   mandateExecutorAbi,
   mandateSessionPermissionSchema,
-  type ProtocolCatalog,
-  type SimulationResult,
+  signedMandateDocumentSchema,
   simulationResultSchema,
+  type SimulationResult,
+  type ProtocolCatalog,
   submitMandateSignatureRequestSchema,
   type TaskIntent,
   type TaskMandate,
@@ -548,7 +549,8 @@ export type SignedMandateView = {
   taskStatus: "SIGNED";
 };
 
-function revertName(error: unknown): string {
+/** The decoded contract error name of a reverted call, never its raw data. */
+export function revertName(error: unknown): string {
   if (error instanceof BaseError) {
     const reverted = error.walk(
       (cause) => cause instanceof ContractFunctionRevertedError,
@@ -695,7 +697,13 @@ export async function submitMandateSignature(
         ${mandate.chainId}, ${asBuffer(domain.verifyingContract)},
         ${asBuffer(mandate.rootOwner)}, ${asBuffer(mandate.account)},
         ${asBuffer(mandate.executor)}, ${mandate.nonce}, ${mandate.expiresAt},
-        ${tx.json({ domain, mandate, primaryType: "TaskMandate" } as unknown as JSONValue)},
+        ${tx.json(
+          signedMandateDocumentSchema.parse({
+            primaryType: "TaskMandate",
+            domain,
+            message: mandate,
+          }) as unknown as JSONValue,
+        )},
         ${asBuffer(signature)}, 'SIGNED',
         ${result.mandate.commerceJobId === "0" ? null : asBuffer(mandate.commerceContract)},
         ${result.mandate.commerceJobId === "0" ? null : mandate.commerceJobId}

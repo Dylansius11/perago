@@ -33,6 +33,7 @@ const migrations = [
   new URL("../drizzle/0001_wallet_auth_policy_lifecycle.sql", import.meta.url),
   new URL("../drizzle/0002_task_compilation.sql", import.meta.url),
   new URL("../drizzle/0003_mandate_signing.sql", import.meta.url),
+  new URL("../drizzle/0004_execution_worker.sql", import.meta.url),
 ];
 const owner = privateKeyToAccount(
   "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -97,6 +98,12 @@ const app = createApiApp({
     deployment: loadBscTestnetDeployment(catalog),
     now: () => now,
     quoteTtlSeconds: 120,
+  },
+  executionConfig: {
+    client: createPublicClient({ transport: http("http://127.0.0.1:9") }),
+    deployment: loadBscTestnetDeployment(catalog),
+    leaseSeconds: 60,
+    workerTokenHash: Buffer.alloc(32, 1),
   },
   planner,
   policyConfig,
