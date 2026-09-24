@@ -1,10 +1,11 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import type { Address, Hash } from "@perago/sdk";
 import type { Sql } from "postgres";
-import { createPublicClient, http, keccak256 } from "viem";
+import { createPublicClient, createTestClient, http, keccak256 } from "viem";
 
 import type { PeragoDeployment } from "../deployment.js";
 
@@ -38,10 +39,31 @@ export function requiredEnv(name: string, smoke: string): string {
 /** A fork fetches untouched state from chain 97 on first use, so a deep call can take a while. */
 export const forkTransport = (url: string) => http(url, { timeout: 180_000 });
 
+const DEPLOYMENTS_DIR = new URL("../../../../deployments/", import.meta.url);
+
+/** Every address any committed deployment manifest names. */
+function manifestAddresses(): Address[] {
+  const found = new Set<Address>();
+  for (const name of readdirSync(DEPLOYMENTS_DIR)) {
+    if (!name.endsWith(".json")) continue;
+    const text = readFileSync(new URL(name, DEPLOYMENTS_DIR), "utf8");
+    for (const [match] of text.matchAll(/0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/gu)) {
+      found.add(match.toLowerCase() as Address);
+    }
+  }
+  return [...found];
+}
+
 /**
  * Starts anvil forking chain 97. `blockTime` switches from automine to
  * interval mining, and `slotsInAnEpoch: 1` makes anvil's `finalized` tag trail
  * `latest` by two blocks, the depth chain 97 itself shows (SC-D-005).
+ *
+ * Interval mining starts only after every manifest account has been fetched
+ * from chain 97 one at a time. Anvil (1.8.0-nightly and 1.8.3) deadlocks when
+ * a block is mined while several cold accounts are fetched from the fork
+ * upstream in parallel: the whole RPC server stops answering, even
+ * `eth_blockNumber`. See `docs/LESSONS.md` (2026-09-24).
  */
 export async function startAnvil(input: {
   anvil: string;
@@ -59,26 +81,35 @@ export async function startAnvil(input: {
     String(input.port),
     "--silent",
   ];
-  if (input.blockTime !== undefined)
-    args.push("--block-time", String(input.blockTime));
   if (input.slotsInAnEpoch !== undefined) {
     args.push("--slots-in-an-epoch", String(input.slotsInAnEpoch));
   }
   const anvil = spawn(input.anvil, args, { stdio: "ignore" });
-  const probe = createPublicClient({
-    transport: forkTransport(`http://127.0.0.1:${input.port}`),
-  });
-  for (let attempt = 0; attempt < 120; attempt += 1) {
+  const transport = forkTransport(`http://127.0.0.1:${input.port}`);
+  const probe = createPublicClient({ transport });
+  let ready = false;
+  for (let attempt = 0; attempt < 120 && !ready; attempt += 1) {
     try {
       await probe.getChainId();
-      return anvil;
+      ready = true;
     } catch {
       // Polls an external process we just spawned; there is no event to await.
       await delay(500);
     }
   }
-  anvil.kill();
-  throw new Error("the local fork did not start");
+  if (!ready) {
+    anvil.kill();
+    throw new Error("the local fork did not start");
+  }
+  if (input.blockTime !== undefined) {
+    for (const address of manifestAddresses()) {
+      await probe.getCode({ address });
+    }
+    await createTestClient({ mode: "anvil", transport }).setIntervalMining({
+      interval: input.blockTime,
+    });
+  }
+  return anvil;
 }
 
 /**

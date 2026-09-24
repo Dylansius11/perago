@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-24 - A fork that mines while it fetches cold accounts can deadlock
+
+- Observed: the P4-003 and P5-002 fork journeys hung in `beforeAll` until the 600 s hook timeout in four of eight runs, always inside `registerDeploymentAdapters`. A throwaway repro replayed the same setup reads on fresh forks. With `--block-time 1`, or with `evm_mine` sent every second, it stalled within one to eleven rounds on both anvil `1.8.0-nightly` and the pinned `1.8.3`. Each time, the four parallel `eth_getCode` reads of the cold stake contracts never returned, and even `eth_blockNumber` timed out. A 5 s upstream `--timeout` did not help. With automine it passed 12 of 12 rounds. Fetching every manifest account one at a time before `evm_setIntervalMining` also passed 12 of 12 rounds on the nightly build.
+- Root cause: anvil's fork backend deadlocks when block production overlaps several first-time fetches of accounts from the upstream RPC. This is the class reported in foundry-rs/foundry#1688 and #6036. It is a tooling defect, and chain 97 itself is unaffected.
+- Rule: a fork smoke starts anvil in automine, fetches every `deployments/*.json` account one at a time, and only then switches to interval mining (`startAnvil`). A hang in a fork hook is diagnosed by checking whether anvil still answers `eth_blockNumber` before blaming the product code or the database.
+
 ### 2026-09-24 - Prove unchanged chain state before trusting identical outputs across runs
 
 - Observed: the P4-003 fork and live chain-97 swaps, and the P3 fork simulation 25,000 blocks earlier, all reported the same `minOutput` of 364231492571185523693864631565 CAKE; the two swaps also received the same 367910598556753054236226900571 CAKE.
