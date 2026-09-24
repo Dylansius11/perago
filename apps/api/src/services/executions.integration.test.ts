@@ -169,7 +169,7 @@ async function seed(
     maxSlippageBps: "0",
     outcomeUnit: "TOKEN",
     recipient: hex(account),
-    positionHolder: null,
+    position: null,
     balances: {
       input: { before: "1", expectedAfter: "0" },
       outcome: { before: "0", expectedAfter: "1" },

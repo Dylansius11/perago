@@ -1,4 +1,4 @@
-import type { ReasonCode } from "@perago/sdk";
+import type { ReasonCode, SimulationResult } from "@perago/sdk";
 import { describe, expect, it } from "vitest";
 
 import type { ChainSnapshot } from "./context.js";
@@ -23,6 +23,7 @@ const simulated: SimulatedFacts = {
   },
   ownerEpoch: "1",
   policyHash: hash("a"),
+  position: null,
   quoteExpiresAt: "2000000120",
   rootOwner: address("2"),
 };
@@ -46,10 +47,26 @@ function current(overrides: Partial<ChainSnapshot> = {}): ChainSnapshot {
 const fresh: FreshnessInput = {
   canonicalHashAtSimulatedBlock: hash("d"),
   current: current(),
+  currentPosition: null,
   nonceUsed: false,
   policyActive: true,
   simulated,
   wallet: { ownerEpoch: "1", rootOwner: address("2") },
+};
+
+type StakePosition = NonNullable<SimulationResult["position"]>;
+const position: StakePosition = {
+  holder: address("f"),
+  holderDeployed: true,
+  sharesBefore: "700",
+  withdrawFeeBps: "10",
+  withdrawFeePeriodSeconds: "259200",
+  performanceFeeBps: "200",
+};
+const stake: FreshnessInput = {
+  ...fresh,
+  currentPosition: position,
+  simulated: { ...simulated, position },
 };
 
 describe("simulation freshness", () => {
@@ -164,5 +181,33 @@ describe("simulation freshness", () => {
         policyActive: false,
       }),
     ).toEqual(["STALE_BLOCK", "STALE_POLICY", "STALE_NONCE"]);
+  });
+});
+
+describe("stake position freshness", () => {
+  it("keeps a stake whose holder, shares, and pool fees are unchanged", () => {
+    expect(assessFreshness(stake)).toEqual([]);
+  });
+
+  it.each<[string, Partial<StakePosition>]>([
+    ["another holder address", { holder: address("e") }],
+    ["a holder deployed since", { holderDeployed: false }],
+    ["shares that moved since", { sharesBefore: "701" }],
+    ["a changed withdrawal fee", { withdrawFeeBps: "11" }],
+    ["a changed withdrawal fee period", { withdrawFeePeriodSeconds: "1" }],
+    ["a changed performance fee", { performanceFeeBps: "199" }],
+  ])("invalidates %s", (_name, change) => {
+    expect(
+      assessFreshness({
+        ...stake,
+        simulated: { ...simulated, position: { ...position, ...change } },
+      }),
+    ).toEqual(["STALE_POSITION"]);
+  });
+
+  it("never treats a missing current position read as fresh", () => {
+    expect(assessFreshness({ ...stake, currentPosition: null })).toEqual([
+      "STALE_POSITION",
+    ]);
   });
 });

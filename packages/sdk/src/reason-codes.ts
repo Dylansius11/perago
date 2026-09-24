@@ -60,6 +60,10 @@ export const REASON_MESSAGES = {
     "The smart account's owner, owner epoch, code, or implementation changed since the simulation.",
   STALE_CODE:
     "A pinned contract's code changed since the simulation. Simulate again.",
+  STALE_POSITION:
+    "The staking position or the pool's fees changed since the simulation. Simulate again.",
+  POSITION_UNAVAILABLE:
+    "The staking position or pool terms could not be read, so nothing can be signed.",
   STALE_NONCE:
     "The mandate nonce was used or invalidated since the simulation. Simulate again.",
   STALE_ACTION:

@@ -28,7 +28,7 @@ import {
   type SimulationBlockTag,
   verifyDeploymentWiring,
 } from "./context.js";
-import { positionHolderOf, readPoolTerms, stakeAction } from "./stake.js";
+import { readStakePosition, type StakePosition, stakeAction } from "./stake.js";
 import { minimumAfterSlippage, quoteSwap, swapAction } from "./swap.js";
 import {
   type ExactPathOutcome,
@@ -208,6 +208,17 @@ export async function simulatePlan(
       `holds ${inputBalance}; the plan spends ${spend}`,
     );
   }
+  // A stake refuses before any estimate if its position cannot be read.
+  const position =
+    plan.action.kind === "STAKE"
+      ? await readStakePosition({
+          adapter: adapter.adapter.address,
+          blockNumber,
+          client,
+          pool: adapter.protocolTarget.address,
+          recipient: plan.action.recipient,
+        })
+      : null;
 
   const run = (action: SimulationResult["action"]) => {
     const mandate = simulatedMandate({
@@ -287,22 +298,13 @@ export async function simulatePlan(
     observed.inputBalanceBefore - observed.inputBalanceAfter === spend &&
     observed.allowanceAfter === 0n;
 
-  const positionHolder =
-    plan.action.kind === "STAKE"
-      ? await positionHolderOf({
-          adapter: adapter.adapter.address,
-          blockNumber,
-          client,
-          recipient: plan.action.recipient,
-        })
-      : null;
-  const risks = await riskStatements({
+  const risks = riskStatements({
     block,
     environment,
     expiresAt,
     minimum,
     plan,
-    positionHolder,
+    position,
   });
 
   const measured = outcome.kind === "OBSERVED" ? outcome.observation : null;
@@ -363,7 +365,7 @@ export async function simulatePlan(
     maxSlippageBps: plan.action.maxSlippageBps,
     outcomeUnit: plan.action.kind === "SWAP" ? "TOKEN" : "POOL_SHARES",
     recipient: plan.action.recipient,
-    positionHolder,
+    position,
     balances: {
       input: {
         before: (measured?.inputBalanceBefore ?? inputBalance).toString(),
@@ -434,33 +436,27 @@ function failureOf(
   };
 }
 
-async function riskStatements(input: {
+function riskStatements(input: {
   block: PinnedBlock;
   environment: SimulationEnvironment;
   expiresAt: bigint;
   minimum: bigint;
   plan: CompiledPlan;
-  positionHolder: Address | null;
-}): Promise<string[]> {
-  const { block, environment, expiresAt, minimum, plan, positionHolder } =
-    input;
+  position: StakePosition | null;
+}): string[] {
+  const { block, environment, expiresAt, minimum, plan, position } = input;
   const risks = [
     `Authority is one-use and ends at chain time ${expiresAt}; an unexecuted mandate expires without effect.`,
   ];
-  if (plan.action.kind === "SWAP") {
+  if (position) {
     risks.push(
-      `Output is estimated by QuoterV2 at block ${block.number}; the price may move within the ${plan.action.maxSlippageBps} bp bound, and the swap reverts below ${minimum}.`,
+      `The position is held for the recipient by ${position.holder}; only the recipient can withdraw it.`,
+      `The CAKE Pool charges a ${position.withdrawFeeBps} bp withdrawal fee within ${position.withdrawFeePeriodSeconds} seconds of a deposit and a ${position.performanceFeeBps} bp performance fee on yield.`,
+      `Pool shares are estimated from the exact path at block ${block.number}; the stake reverts below ${minimum} shares.`,
     );
   } else {
-    const terms = await readPoolTerms({
-      blockNumber: block.number,
-      client: environment.client,
-      pool: environment.deployment.adapters.STAKE.protocolTarget.address,
-    });
     risks.push(
-      `The position is held for the recipient by ${positionHolder}; only the recipient can withdraw it.`,
-      `The CAKE Pool charges a ${terms.withdrawFeeBps} bp withdrawal fee within ${terms.withdrawFeePeriodSeconds} seconds of a deposit and a ${terms.performanceFeeBps} bp performance fee on yield.`,
-      `Pool shares are estimated from the exact path at block ${block.number}; the stake reverts below ${minimum} shares.`,
+      `Output is estimated by QuoterV2 at block ${block.number}; the price may move within the ${plan.action.maxSlippageBps} bp bound, and the swap reverts below ${minimum}.`,
     );
   }
   if (environment.deployment.allowUnboundCommerceJobs) {

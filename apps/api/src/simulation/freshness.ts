@@ -1,6 +1,16 @@
 import type { Address, Hash, ReasonCode } from "@perago/sdk";
 
 import type { ChainSnapshot } from "./context.js";
+import type { StakePosition } from "./stake.js";
+
+const POSITION_FACTS = [
+  "holder",
+  "holderDeployed",
+  "sharesBefore",
+  "withdrawFeeBps",
+  "withdrawFeePeriodSeconds",
+  "performanceFeeBps",
+] as const satisfies readonly (keyof StakePosition)[];
 
 /** The committed facts a signable simulation must still match. */
 export type SimulatedFacts = {
@@ -9,6 +19,8 @@ export type SimulatedFacts = {
   codeHashes: ChainSnapshot["codeHashes"];
   ownerEpoch: string;
   policyHash: Hash;
+  /** The stake position the simulation read; null for a swap. */
+  position: StakePosition | null;
   quoteExpiresAt: string;
   rootOwner: Address;
 };
@@ -17,6 +29,8 @@ export type FreshnessInput = {
   /** The hash at the simulated height now; null when the node cannot serve it. */
   canonicalHashAtSimulatedBlock: Hash | null;
   current: ChainSnapshot;
+  /** The stake position re-read now; null for a swap. */
+  currentPosition: StakePosition | null;
   nonceUsed: boolean;
   /** The task's Wallet Policy row is still `ACTIVE`. */
   policyActive: boolean;
@@ -63,6 +77,16 @@ export function assessFreshness(input: FreshnessInput): ReasonCode[] {
     current.codeHashes.verifier !== simulated.codeHashes.verifier
   ) {
     reasons.push("STALE_CODE");
+  }
+  // A stake whose position was not re-read (null) never matches.
+  const simulatedPosition = simulated.position;
+  if (
+    simulatedPosition !== null &&
+    POSITION_FACTS.some(
+      (fact) => input.currentPosition?.[fact] !== simulatedPosition[fact],
+    )
+  ) {
+    reasons.push("STALE_POSITION");
   }
   if (input.nonceUsed) reasons.push("STALE_NONCE");
   return reasons;

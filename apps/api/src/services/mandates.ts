@@ -44,6 +44,7 @@ import {
 } from "../simulation/context.js";
 import { assessFreshness } from "../simulation/freshness.js";
 import { simulatePlan } from "../simulation/simulate.js";
+import { readStakePosition } from "../simulation/stake.js";
 import {
   isTransportError,
   runExactPath,
@@ -448,10 +449,11 @@ async function requireFresh(
   const { result, row, simulation } = signable;
   const { client, deployment } = config;
   const block = await pinBlock(client, config.blockTag);
-  const [current, canonical, nonceUsed] = await Promise.all([
+  const adapter = deployment.adapters[result.action.kind];
+  const [current, canonical, nonceUsed, currentPosition] = await Promise.all([
     readChainSnapshot({
       account: result.account,
-      adapter: deployment.adapters[result.action.kind],
+      adapter,
       block,
       client,
       deployment,
@@ -464,10 +466,20 @@ async function requireFresh(
       blockNumber: block.number,
       functionName: "isNonceUsed",
     }),
+    result.action.kind === "STAKE"
+      ? readStakePosition({
+          adapter: adapter.adapter.address,
+          blockNumber: block.number,
+          client,
+          pool: adapter.protocolTarget.address,
+          recipient: result.recipient,
+        })
+      : null,
   ]);
   const reasons = assessFreshness({
     canonicalHashAtSimulatedBlock: canonical,
     current,
+    currentPosition,
     nonceUsed,
     policyActive: row.policy_status === "ACTIVE",
     simulated: {
@@ -482,6 +494,7 @@ async function requireFresh(
       },
       ownerEpoch: result.ownerEpoch,
       policyHash: result.policyHash,
+      position: result.position,
       quoteExpiresAt: result.quoteExpiresAt,
       rootOwner: result.rootOwner,
     },

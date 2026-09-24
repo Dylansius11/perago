@@ -51,6 +51,21 @@ const mandateTermsSchema = z.strictObject({
 });
 
 /**
+ * The stake position a simulation read at its pinned block: the recipient's
+ * `CakeStakePosition` holder, whether it exists yet, its pool shares before the
+ * stake, and the fees the pool charges. Signing refuses once any of these
+ * changes (`STALE_POSITION`) or can no longer be read (`POSITION_UNAVAILABLE`).
+ */
+const stakePositionSchema = z.strictObject({
+  holder: addressSchema,
+  holderDeployed: z.boolean(),
+  sharesBefore: uint256StringSchema,
+  withdrawFeeBps: bpsStringSchema,
+  withdrawFeePeriodSeconds: uint256StringSchema,
+  performanceFeeBps: bpsStringSchema,
+});
+
+/**
  * Deterministic preflight evidence for one exact compiled action at one pinned
  * block (PRD-F-006). A `PASSED` result is signable; `REVERTED` records why the
  * exact path failed. Every value is a chain read or a pure derivation from the
@@ -98,7 +113,8 @@ export const simulationResultSchema = z
     /** `TOKEN` output balance, or `POOL_SHARES` of the recipient's position holder. */
     outcomeUnit: z.enum(["TOKEN", "POOL_SHARES"]),
     recipient: addressSchema,
-    positionHolder: addressSchema.nullable(),
+    /** Null for a swap; the recipient's stake position and pool terms for a stake. */
+    position: stakePositionSchema.nullable(),
     balances: z.strictObject({
       input: amountPairSchema,
       outcome: amountPairSchema,
@@ -171,7 +187,7 @@ export const simulationResultSchema = z
       ) {
         issue("the swap tokens must match the mandate tokens", ["action"]);
       }
-      if (result.outcomeUnit !== "TOKEN" || result.positionHolder !== null) {
+      if (result.outcomeUnit !== "TOKEN" || result.position !== null) {
         issue("a swap outcome is the recipient token balance", ["outcomeUnit"]);
       }
     } else {
@@ -181,11 +197,15 @@ export const simulationResultSchema = z
       ) {
         issue("a stake spends and measures its one asset", ["action"]);
       }
-      if (
-        result.outcomeUnit !== "POOL_SHARES" ||
-        result.positionHolder === null
-      ) {
+      if (result.outcomeUnit !== "POOL_SHARES" || result.position === null) {
         issue("a stake outcome is the holder's pool shares", ["outcomeUnit"]);
+      } else if (
+        result.status === "PASSED" &&
+        result.position.sharesBefore !== result.balances.outcome.before
+      ) {
+        issue("the share baseline is the measured position before", [
+          "position",
+        ]);
       }
     }
 

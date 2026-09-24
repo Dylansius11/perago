@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADAPTER_EXECUTE_SELECTOR,
+  CAKE_POOL_ID,
   encodeSimulatedAction,
+  encodeStakeAction,
   encodeSwapAction,
+  hashStakePostcondition,
   hashSwapPostcondition,
   simulationResultSchema,
   taskMandateFromSimulation,
@@ -70,7 +73,7 @@ function passingSwap() {
     maxSlippageBps: "100",
     outcomeUnit: "TOKEN",
     recipient: account,
-    positionHolder: null,
+    position: null,
     balances: {
       input: { before: "5000", expectedAfter: "4000" },
       outcome: { before: "7", expectedAfter: "1007" },
@@ -79,6 +82,44 @@ function passingSwap() {
     gasUsed: "200000",
     failure: null,
     risks: ["Price can move within the signed slippage bound."],
+  };
+}
+
+const stake = {
+  asset: cake,
+  amount: "1000",
+  minPositionOut: "900",
+  recipient: account,
+  deadline: "2000000600",
+  poolId: CAKE_POOL_ID,
+};
+const holder = `0x${"9".repeat(40)}`;
+
+function passingStake() {
+  return {
+    ...passingSwap(),
+    adapterId: "cake-pool",
+    protocol: "PancakeSwap CAKE Pool",
+    action: { kind: "STAKE", ...stake },
+    actionHash: keccak256(encodeStakeAction(stake)),
+    postconditionHash: hashStakePostcondition(account, CAKE_POOL_ID, "900"),
+    inputToken: cake,
+    outputToken: cake,
+    minOutput: "900",
+    quotedOutput: "910",
+    outcomeUnit: "POOL_SHARES",
+    position: {
+      holder,
+      holderDeployed: true,
+      sharesBefore: "7",
+      withdrawFeeBps: "10",
+      withdrawFeePeriodSeconds: "259200",
+      performanceFeeBps: "200",
+    },
+    balances: {
+      input: { before: "5000", expectedAfter: "4000" },
+      outcome: { before: "7", expectedAfter: "917" },
+    },
   };
 }
 
@@ -189,5 +230,43 @@ describe("SimulationResult", () => {
     expect(() => taskMandateFromSimulation(reverted, hash("f"))).toThrow(
       "only a passing simulation can be signed",
     );
+  });
+});
+
+describe("SimulationResult stake position terms", () => {
+  it("accepts a stake that commits its holder, share baseline, and pool fees", () => {
+    const result = simulationResultSchema.parse(passingStake());
+    expect(result.position).toEqual(passingStake().position);
+    expect(encodeSimulatedAction(result)).toBe(encodeStakeAction(stake));
+  });
+
+  it.each([
+    ["a stake without position terms", { position: null }],
+    [
+      "a share baseline other than the measured outcome before",
+      { position: { ...passingStake().position, sharesBefore: "8" } },
+    ],
+    [
+      "a withdrawal fee above 100%",
+      { position: { ...passingStake().position, withdrawFeeBps: "10001" } },
+    ],
+    [
+      "position terms with an unknown field",
+      { position: { ...passingStake().position, lockDuration: "0" } },
+    ],
+  ])("rejects %s", (_name, override) => {
+    expect(
+      simulationResultSchema.safeParse({ ...passingStake(), ...override })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a swap that carries position terms", () => {
+    expect(
+      simulationResultSchema.safeParse({
+        ...passingSwap(),
+        position: passingStake().position,
+      }).success,
+    ).toBe(false);
   });
 });
