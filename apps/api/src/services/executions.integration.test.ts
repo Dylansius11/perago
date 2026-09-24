@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import {
   encodeSwapAction,
   getTaskMandateTypedData,
@@ -5,18 +6,16 @@ import {
   mandateExecutorAbi,
   signedMandateDocumentSchema,
 } from "@perago/sdk";
+import postgres, { type Sql } from "postgres";
 import { encodeFunctionData, type Hex, keccak256 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-
-import { readFile } from "node:fs/promises";
-import postgres, { type Sql } from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  deferExecution,
   ExecutionConflictError,
   type ExecutionServiceConfig,
   LeaseLostError,
-  deferExecution,
   leaseExecution,
   recordPendingTransaction,
   releaseExecution,

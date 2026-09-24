@@ -225,8 +225,8 @@ Authorization and accepted execution are separate onchain checkpoints. A single 
 4. Contract verifies domain, root signer, smart account, owner epoch, executor, active policy hash, chain, contract, nonce, expiry, adapter, selector, and commitment shape.
 5. Contract consumes the account nonce and records `AUTHORIZED` plus the mandate digest.
 6. When all external preconditions are ready, executor calls `beginExecution(mandateHash)`. The contract records `EXECUTING` and the immutable execution-window deadline before protocol interaction.
-7. After confirmation, executor prepares one UserOperation signed by the scoped executor/session key. The smart account calls the exact token approval (when needed) and `perform(mandate, action, executorProof)` path allowed by its installed modules.
-8. The bundler/paymaster only transports or sponsors the UserOperation; neither can alter calls without invalidating its signature and permission context.
+7. After confirmation, executor prepares one UserOperation signed by the scoped executor/session key. It calls only `perform(mandate, action, executorProof, proofSignature)` through the account's `execute`; the exact `approve(MandateExecutor, maxInput)` was already granted by the root owner's own UserOperation (`D-004`), and the executor checked it before `authorize` and again before `beginExecution`.
+8. The executor submits that UserOperation to the pinned EntryPoint with `handleOps` from its own address and zero UserOperation fees. A bundler or paymaster, when used, only transports or sponsors; neither can alter calls without invalidating the session signature and permission context.
 9. MandateExecutor verifies `msg.sender == signed account`, executor proof, fresh expiry/window, and stored `EXECUTING` state.
 10. An external self-call obtains no more than the signed input, grants the adapter an exact temporary allowance, and calls the fixed adapter entry point.
 11. Adapter constructs protocol calldata from its closed action type and enforces signed economic limits in the protocol call.
@@ -282,11 +282,18 @@ stateDiagram-v2
 
 ```text
 QUEUED -> LEASED -> AUTHORIZING -> AUTHORIZED -> EXECUTING -> VERIFYING -> SETTLING -> TERMINAL
-                 \-> RECONCILING ------------------------------------------^
-                 \-> RETRY_WAIT (transport/confirmation uncertainty only)
+LEASED -> REJECTED               (authorize reverts at a finalized block; no authority was ever granted)
+LEASED | AUTHORIZED -> RETRY_WAIT -> LEASED   (approval, balance, or chain unavailable)
 ```
 
-Worker state is not product truth. Any restart begins with chain reconciliation. Retries are permitted only when transaction inclusion is unknown or before a terminal transition; they reuse identical calldata and transaction intent.
+Worker state is not product truth. Implemented in `P4-002` (`apps/executor/src/{worker,reconcile,chain,transactions,user-operation}.ts`, `apps/api/src/services/executions.ts`):
+
+- The API derives `status` from the mandate projection at the chain's `finalized` block (a verified direct read of MandateExecutor logs, cross-checked against `mandateRecord`) plus the one pending transaction; the worker never writes it. The log read runs in chunks of at most 10 blocks (the chain-97 Alchemy `eth_getLogs` limit) from a forward-only per-mandate cursor in `indexer_checkpoints` (stream `mandate:0x<hash>`), advanced in the same transaction that applies the events. `SETTLING` is unused until Phase 6, and a mandate bound to an ERC-8183 job is not leased before then.
+- Each step starts with `reconcile`, then a fresh `latest` read. The worker signs nothing while a pending transaction is unresolved or while `latest` disagrees with the finalized projection.
+- A transaction's hash and exact signed bytes are persisted through the API, which checks sender, target, function, and arguments, before the bytes are broadcast. A dropped transaction is rebroadcast byte-for-byte; a transaction whose nonce another transaction consumed is retired only once that nonce is finalized, and the step is re-decided from chain state.
+- Authorization and the accepted attempt wait for the exact root approval and balance (`D-004`); a missing precondition parks the job in `RETRY_WAIT` without spending the nonce.
+- At most one UserOperation is ever included per mandate. After inclusion the only remaining step is `finalizeStalledExecution` once the window closes; expiry after authorization is closed with `finalizeExpired`.
+- Leases expire by the database clock; a crashed worker's job is re-leased after its lease and resumes from the persisted state.
 
 ### 6.3 ERC-8183 job state
 
@@ -406,7 +413,7 @@ Minimum alerts for a hosted demo: executor queue age, indexer lag, repeated RPC 
 
 Only externally dependent choices remain open:
 
-1. `D-004`: whether ERC-20 spend for a swap is authorized inside one account-executed call or bounded by the AllowlistModule ERC-20 spend limit; a session key never receives a bare `approve` selector.
+1. `D-004` is closed: the root owner grants the exact per-task allowance in its own UserOperation; a session key never receives an `approve` selector (`SMART-CONTRACT.md` §7).
 2. Fallback public bundler capability, if Alchemy is unavailable.
 3. Independent RPC pair for critical reads. (Confirmation depth is closed by `SC-D-005`: the `finalized` tag.)
 

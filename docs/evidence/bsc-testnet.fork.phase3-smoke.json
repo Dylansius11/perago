@@ -2,8 +2,8 @@
   "label": "fork: every write below is on a local anvil fork of BSC Testnet (chain 97); nothing was broadcast to chain 97",
   "fork": {
     "chainId": 97,
-    "forkedAtBlock": "132701397",
-    "forkedAtBlockHash": "0x679eea23b703ad368a1b5777454634ca20abcc30410fe82af436f4a4d80010c1",
+    "forkedAtBlock": "132837387",
+    "forkedAtBlockHash": "0x5de2b37bd600e4a232df26d18ee8443a4cf17cf612f9b6fcb029257183e1fb92",
     "mandateExecutor": {
       "address": "0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7",
       "codeHash": "0x4096d49a34a4da49501bddb93ac52e9335eefd5ca0bd6ffa8f182f35a38b0bd5"
@@ -16,30 +16,30 @@
       "allowUnboundCommerceJobs": true
     },
     "productionAdaptersAndVerifiers": "deployments/bsc-testnet.perago.json",
-    "account": "0x67d87a745d3955941b0e685d02fc33639879270c",
-    "rootOwner": "0x15e4ec3d575c1bc75c3d22bf90feb764303c4c48",
-    "executorSession": "0x09dc558a8755b68c0a344574c94058aa9ed26c36",
+    "account": "0x47b2375947c286520405a987156888deaa35f469",
+    "rootOwner": "0x963f498f691078bb1c75c05af2d5facf197bc0e7",
+    "executorSession": "0xd77cba0669ac5666460646833b434e0d878d7764",
     "keys": "root owner and session keys were generated for this run and never persisted"
   },
   "policy": {
-    "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
+    "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
     "accountPolicy": {
-      "account": "0x67d87a745d3955941b0e685d02fc33639879270c",
+      "account": "0x47b2375947c286520405a987156888deaa35f469",
       "chainId": "97",
       "ownerEpoch": "1",
-      "permissionHash": "0x80c019762d67ecc704573107b2ceffbedcc47dc944e8b58a4225b4c6afb34b0d",
-      "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
-      "rootOwner": "0x15e4ec3d575c1bc75c3d22bf90feb764303c4c48",
-      "validUntil": "1790335364"
+      "permissionHash": "0x3c747c42559c04f88998c351c52f44c4897714c1a3c7ef8af5a23994849dfb63",
+      "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
+      "rootOwner": "0x963f498f691078bb1c75c05af2d5facf197bc0e7",
+      "validUntil": "1790396557"
     },
-    "setAccountPolicyTransaction": "0x320998b9080544792b2acc53d9d844b4e1fe667bb1ac75ea09734ada67328bc0",
-    "setAccountPolicyBlock": "132701402",
+    "setAccountPolicyTransaction": "0x3fdf8338e18e78cc2d6f6a5d75c3cf139b989f2d56001444234486baa9e18e08",
+    "setAccountPolicyBlock": "132837392",
     "activation": "the impersonated account called setAccountPolicy on the fork, so MandateExecutor itself verified the root signature; the real ERC-4337 activation path is proven live in P3-002"
   },
   "swap": {
     "goal": "Swap 0.01 WBNB for CAKE",
-    "taskId": "d2244d56-a881-49a7-8166-e7847dede96e",
-    "planHash": "0x701b9765ac1dac1985abb415aba9458af7609956666f393ef865c67e07192553",
+    "taskId": "7ef53660-f5c6-4ee0-a54a-add5e448bfb6",
+    "planHash": "0xd0f9d9a4b999a21df065ce5a9c82bf6db5f9b0180747d4a11b173e8c39d755cf",
     "decision": {
       "rules": [
         {
@@ -51,9 +51,9 @@
         },
         {
           "rule": "ACCOUNT",
-          "limit": "0x67d87a745d3955941b0e685d02fc33639879270c",
+          "limit": "0x47b2375947c286520405a987156888deaa35f469",
           "outcome": "PASS",
-          "observed": "0x67d87a745d3955941b0e685d02fc33639879270c",
+          "observed": "0x47b2375947c286520405a987156888deaa35f469",
           "reasonCode": null
         },
         {
@@ -121,9 +121,9 @@
         },
         {
           "rule": "RECIPIENT",
-          "limit": "SELF (0x67d87a745d3955941b0e685d02fc33639879270c)",
+          "limit": "SELF (0x47b2375947c286520405a987156888deaa35f469)",
           "outcome": "PASS",
-          "observed": "0x67d87a745d3955941b0e685d02fc33639879270c",
+          "observed": "0x47b2375947c286520405a987156888deaa35f469",
           "reasonCode": null
         },
         {
@@ -135,29 +135,29 @@
         }
       ],
       "outcome": "PASS",
-      "intentHash": "0x655b3505cdc0730becffceda1782a7660516f7a3f05d8c3408009e37f2b41904",
-      "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
+      "intentHash": "0x8857bf7e72e2edb438133314bc57089b4fd83a660feacf1ca0fd817e3178e7e8",
+      "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
       "schemaVersion": "1",
       "compilerVersion": "perago-compiler/1"
     },
-    "simulationHash": "0x76e91ff82439b25b42e45a38a5f765f3ea64916bbc1047390f542c8e4ec1e91e",
+    "simulationHash": "0x13be4521b7689af66bad733517eea975159fcb1c284bb24ddf877c9dad9e2812",
     "simulation": {
       "schemaVersion": "1",
       "status": "PASSED",
       "chainId": "97",
-      "account": "0x67d87a745d3955941b0e685d02fc33639879270c",
-      "rootOwner": "0x15e4ec3d575c1bc75c3d22bf90feb764303c4c48",
+      "account": "0x47b2375947c286520405a987156888deaa35f469",
+      "rootOwner": "0x963f498f691078bb1c75c05af2d5facf197bc0e7",
       "ownerEpoch": "1",
-      "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
-      "intentHash": "0x655b3505cdc0730becffceda1782a7660516f7a3f05d8c3408009e37f2b41904",
-      "planHash": "0x701b9765ac1dac1985abb415aba9458af7609956666f393ef865c67e07192553",
+      "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
+      "intentHash": "0x8857bf7e72e2edb438133314bc57089b4fd83a660feacf1ca0fd817e3178e7e8",
+      "planHash": "0xd0f9d9a4b999a21df065ce5a9c82bf6db5f9b0180747d4a11b173e8c39d755cf",
       "adapterId": "pancakeswap-v3",
       "block": {
-        "number": "132701402",
-        "hash": "0xcb217401dc2b2d9f859763ee79c18165a0106486b528d6e619e617ce8794c3c3",
-        "timestamp": "1790162565"
+        "number": "132837392",
+        "hash": "0x752a00f31b256d841f3334a589cc8338d7e211b0ca91ccabef3836d1cdd025a2",
+        "timestamp": "1790223763"
       },
-      "quoteExpiresAt": "1790162685",
+      "quoteExpiresAt": "1790223883",
       "contracts": {
         "mandateExecutor": {
           "address": "0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7",
@@ -176,17 +176,17 @@
           "codeHash": "0xb9a158fb57e65ea1fea1f1149e30720ccbc413f65fb1aecfe734c199f132fc14"
         },
         "account": {
-          "address": "0x67d87a745d3955941b0e685d02fc33639879270c",
-          "codeHash": "0xbf5613c5c10ee439d7ce8fecb711c86487155b7b987addaa295230d9bcc6d24f"
+          "address": "0x47b2375947c286520405a987156888deaa35f469",
+          "codeHash": "0x59540909e262e2811900c6d0dc94426762e6dd016b337fd7df40b459d7db54db"
         }
       },
       "accountImplementation": "0x000000000000c5a9089039570dd36455b5c07383",
       "verifierId": "0xfbead236aeac455db559542f356b0fc0b895604e5bc41f03b415e6fbbc822e0a",
       "protocol": "PancakeSwap V3",
       "mandate": {
-        "executor": "0x09dc558a8755b68c0a344574c94058aa9ed26c36",
-        "nonce": "83503508629817675715154067703084164735",
-        "expiresAt": "1790164365",
+        "executor": "0xd77cba0669ac5666460646833b434e0d878d7764",
+        "nonce": "48748686595626571205900178752122604184",
+        "expiresAt": "1790225563",
         "commerceContract": "0x0000000000000000000000000000000000000000",
         "commerceJobId": "0"
       },
@@ -196,12 +196,12 @@
         "poolFee": "500",
         "amountIn": "10000000000000000",
         "minAmountOut": "364231492571185523693864631565",
-        "recipient": "0x67d87a745d3955941b0e685d02fc33639879270c",
-        "deadline": "1790164365",
+        "recipient": "0x47b2375947c286520405a987156888deaa35f469",
+        "deadline": "1790225563",
         "kind": "SWAP"
       },
-      "actionHash": "0x8a32f0d31d520911a5a854bfd075e495cde7dec3e3108e04f49e1a78ee00c409",
-      "postconditionHash": "0xd0d1a8d40e446e0150895fb6666b9221ffcdba974542369b4b0ab447f76ee964",
+      "actionHash": "0xf3dd6bd9e5a95116d6ce3e12216ba3c65dc367b24760bb62545338008b37ffe2",
+      "postconditionHash": "0xea9f05211ab0f369a99cddcd7227bd2a3a0e7a735e1064d1c45f67d198a79920",
       "inputToken": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
       "maxInput": "10000000000000000",
       "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
@@ -209,7 +209,7 @@
       "quotedOutput": "367910598556753054236226900571",
       "maxSlippageBps": "100",
       "outcomeUnit": "TOKEN",
-      "recipient": "0x67d87a745d3955941b0e685d02fc33639879270c",
+      "recipient": "0x47b2375947c286520405a987156888deaa35f469",
       "positionHolder": null,
       "balances": {
         "input": {
@@ -225,39 +225,39 @@
       "gasUsed": "336830",
       "failure": null,
       "risks": [
-        "Authority is one-use and ends at chain time 1790164365; an unexecuted mandate expires without effect.",
-        "Output is estimated by QuoterV2 at block 132701402; the price may move within the 100 bp bound, and the swap reverts below 364231492571185523693864631565.",
-        "MandateExecutor 0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7 accepts mandates without an ERC-8183 job (fork-unbound: local fork of chain 97 at block 132701397); no agent payment is bound to this outcome."
+        "Authority is one-use and ends at chain time 1790225563; an unexecuted mandate expires without effect.",
+        "Output is estimated by QuoterV2 at block 132837392; the price may move within the 100 bp bound, and the swap reverts below 364231492571185523693864631565.",
+        "MandateExecutor 0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7 accepts mandates without an ERC-8183 job (fork-unbound: local fork of chain 97 at block 132837388); no agent payment is bound to this outcome."
       ]
     },
     "mandate": {
-      "account": "0x67d87a745d3955941b0e685d02fc33639879270c",
-      "rootOwner": "0x15e4ec3d575c1bc75c3d22bf90feb764303c4c48",
+      "account": "0x47b2375947c286520405a987156888deaa35f469",
+      "rootOwner": "0x963f498f691078bb1c75c05af2d5facf197bc0e7",
       "ownerEpoch": "1",
-      "executor": "0x09dc558a8755b68c0a344574c94058aa9ed26c36",
+      "executor": "0xd77cba0669ac5666460646833b434e0d878d7764",
       "chainId": "97",
-      "nonce": "83503508629817675715154067703084164735",
-      "expiresAt": "1790164365",
-      "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
-      "intentHash": "0x655b3505cdc0730becffceda1782a7660516f7a3f05d8c3408009e37f2b41904",
-      "planHash": "0x701b9765ac1dac1985abb415aba9458af7609956666f393ef865c67e07192553",
-      "simulationHash": "0x76e91ff82439b25b42e45a38a5f765f3ea64916bbc1047390f542c8e4ec1e91e",
+      "nonce": "48748686595626571205900178752122604184",
+      "expiresAt": "1790225563",
+      "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
+      "intentHash": "0x8857bf7e72e2edb438133314bc57089b4fd83a660feacf1ca0fd817e3178e7e8",
+      "planHash": "0xd0f9d9a4b999a21df065ce5a9c82bf6db5f9b0180747d4a11b173e8c39d755cf",
+      "simulationHash": "0x13be4521b7689af66bad733517eea975159fcb1c284bb24ddf877c9dad9e2812",
       "adapter": "0xb9faeb0bb29401a1308e0c1287913d94b18ec635",
       "adapterSelector": "0x78cab83a",
       "inputToken": "0xae13d989dac2f0debff460ac112a837c89baa7cd",
       "maxInput": "10000000000000000",
       "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
       "minOutput": "364231492571185523693864631565",
-      "recipient": "0x67d87a745d3955941b0e685d02fc33639879270c",
-      "actionHash": "0x8a32f0d31d520911a5a854bfd075e495cde7dec3e3108e04f49e1a78ee00c409",
-      "postconditionHash": "0xd0d1a8d40e446e0150895fb6666b9221ffcdba974542369b4b0ab447f76ee964",
+      "recipient": "0x47b2375947c286520405a987156888deaa35f469",
+      "actionHash": "0xf3dd6bd9e5a95116d6ce3e12216ba3c65dc367b24760bb62545338008b37ffe2",
+      "postconditionHash": "0xea9f05211ab0f369a99cddcd7227bd2a3a0e7a735e1064d1c45f67d198a79920",
       "commerceContract": "0x0000000000000000000000000000000000000000",
       "commerceJobId": "0"
     },
     "digest": {
-      "api": "0x4d477325a467ebcb4c66788a0005a2b743ddd1e5be0d4d86f21f82113d0d7028",
-      "sdk": "0x4d477325a467ebcb4c66788a0005a2b743ddd1e5be0d4d86f21f82113d0d7028",
-      "mandateExecutorHashMandate": "0x4d477325a467ebcb4c66788a0005a2b743ddd1e5be0d4d86f21f82113d0d7028"
+      "api": "0xcc8fa7b81531b1b8576c3272f82b86c4ddb1d18f0f1cb6091b0824379cf214b8",
+      "sdk": "0xcc8fa7b81531b1b8576c3272f82b86c4ddb1d18f0f1cb6091b0824379cf214b8",
+      "mandateExecutorHashMandate": "0xcc8fa7b81531b1b8576c3272f82b86c4ddb1d18f0f1cb6091b0824379cf214b8"
     }
   },
   "signing": {
@@ -385,22 +385,22 @@
     ],
     "accepted": {
       "executionStatus": "QUEUED",
-      "mandateHash": "0x4d477325a467ebcb4c66788a0005a2b743ddd1e5be0d4d86f21f82113d0d7028",
+      "mandateHash": "0xcc8fa7b81531b1b8576c3272f82b86c4ddb1d18f0f1cb6091b0824379cf214b8",
       "status": "SIGNED",
       "taskStatus": "SIGNED"
     },
     "idempotentReplay": {
       "executionStatus": "QUEUED",
-      "mandateHash": "0x4d477325a467ebcb4c66788a0005a2b743ddd1e5be0d4d86f21f82113d0d7028",
+      "mandateHash": "0xcc8fa7b81531b1b8576c3272f82b86c4ddb1d18f0f1cb6091b0824379cf214b8",
       "status": "SIGNED",
       "taskStatus": "SIGNED"
     },
-    "mandateExecutorAuthorizeCall": "0x4d477325a467ebcb4c66788a0005a2b743ddd1e5be0d4d86f21f82113d0d7028",
+    "mandateExecutorAuthorizeCall": "0xcc8fa7b81531b1b8576c3272f82b86c4ddb1d18f0f1cb6091b0824379cf214b8",
     "note": "authorize was evaluated with eth_call from the bound executor; P3-004 submits nothing onchain"
   },
   "stake": {
     "goal": "Stake 1 CAKE",
-    "taskId": "a24f0c60-6754-4c64-8318-8a39bc88fd97",
+    "taskId": "9e0d7b0a-d7e1-4fcf-b6dd-c35e00bb8ce5",
     "decision": {
       "rules": [
         {
@@ -412,9 +412,9 @@
         },
         {
           "rule": "ACCOUNT",
-          "limit": "0x67d87a745d3955941b0e685d02fc33639879270c",
+          "limit": "0x47b2375947c286520405a987156888deaa35f469",
           "outcome": "PASS",
-          "observed": "0x67d87a745d3955941b0e685d02fc33639879270c",
+          "observed": "0x47b2375947c286520405a987156888deaa35f469",
           "reasonCode": null
         },
         {
@@ -482,9 +482,9 @@
         },
         {
           "rule": "RECIPIENT",
-          "limit": "SELF (0x67d87a745d3955941b0e685d02fc33639879270c)",
+          "limit": "SELF (0x47b2375947c286520405a987156888deaa35f469)",
           "outcome": "PASS",
-          "observed": "0x67d87a745d3955941b0e685d02fc33639879270c",
+          "observed": "0x47b2375947c286520405a987156888deaa35f469",
           "reasonCode": null
         },
         {
@@ -496,29 +496,29 @@
         }
       ],
       "outcome": "PASS",
-      "intentHash": "0xf79fb775969e9d480d9cc78b8f0bc6cc3cd111fa5df3a8335f4751a0d16e1c82",
-      "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
+      "intentHash": "0x51add063674a4c2acd4835e6d20351616cb105563cbc37af5236d82ae53de346",
+      "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
       "schemaVersion": "1",
       "compilerVersion": "perago-compiler/1"
     },
-    "simulationHash": "0xba29e14f17d9bca1a2233800b439aa00c502b62274aa0b8d9f276ed23bad19ca",
+    "simulationHash": "0x9c5f218c7dc2a996461465d68d9d68d3b7afa1e7de0ce07a4e7d40abfa917d65",
     "simulation": {
       "schemaVersion": "1",
       "status": "PASSED",
       "chainId": "97",
-      "account": "0x67d87a745d3955941b0e685d02fc33639879270c",
-      "rootOwner": "0x15e4ec3d575c1bc75c3d22bf90feb764303c4c48",
+      "account": "0x47b2375947c286520405a987156888deaa35f469",
+      "rootOwner": "0x963f498f691078bb1c75c05af2d5facf197bc0e7",
       "ownerEpoch": "1",
-      "policyHash": "0x90d2884a714c629ac618dc810d29f7f6e59085f8c97682da293d2a17953f8094",
-      "intentHash": "0xf79fb775969e9d480d9cc78b8f0bc6cc3cd111fa5df3a8335f4751a0d16e1c82",
-      "planHash": "0xd2a13e32428dc919cc9cb049211ed07e131235c9ca70f8a2bbfde6520e9e5c8b",
+      "policyHash": "0x89ee3b055a19b4d376d34f210a7a789f908bfa608e2eab96433131482953a9c6",
+      "intentHash": "0x51add063674a4c2acd4835e6d20351616cb105563cbc37af5236d82ae53de346",
+      "planHash": "0x03c941096a3aacdf38c6cecba0727c251b32818f716f98d74c2b1af34d6f460e",
       "adapterId": "cake-pool",
       "block": {
-        "number": "132701402",
-        "hash": "0xcb217401dc2b2d9f859763ee79c18165a0106486b528d6e619e617ce8794c3c3",
-        "timestamp": "1790162565"
+        "number": "132837392",
+        "hash": "0x752a00f31b256d841f3334a589cc8338d7e211b0ca91ccabef3836d1cdd025a2",
+        "timestamp": "1790223763"
       },
-      "quoteExpiresAt": "1790162685",
+      "quoteExpiresAt": "1790223883",
       "contracts": {
         "mandateExecutor": {
           "address": "0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7",
@@ -537,40 +537,40 @@
           "codeHash": "0x05e4b2dafbea502af223316e347c2dffb5971e1dfc99ab2199787a8e222b4f8e"
         },
         "account": {
-          "address": "0x67d87a745d3955941b0e685d02fc33639879270c",
-          "codeHash": "0xbf5613c5c10ee439d7ce8fecb711c86487155b7b987addaa295230d9bcc6d24f"
+          "address": "0x47b2375947c286520405a987156888deaa35f469",
+          "codeHash": "0x59540909e262e2811900c6d0dc94426762e6dd016b337fd7df40b459d7db54db"
         }
       },
       "accountImplementation": "0x000000000000c5a9089039570dd36455b5c07383",
       "verifierId": "0xd8ce74e2c1240ebb14c5f7c5bf2306196238a65f1fc065f58bfb965b060320e9",
       "protocol": "PancakeSwap CAKE Pool",
       "mandate": {
-        "executor": "0x09dc558a8755b68c0a344574c94058aa9ed26c36",
-        "nonce": "149005604384615600954854080693866379271",
-        "expiresAt": "1790164365",
+        "executor": "0xd77cba0669ac5666460646833b434e0d878d7764",
+        "nonce": "262459267551975427938276730724871443834",
+        "expiresAt": "1790225563",
         "commerceContract": "0x0000000000000000000000000000000000000000",
         "commerceJobId": "0"
       },
       "action": {
         "asset": "0xfa60d973f7642b748046464e165a65b7323b0dee",
         "amount": "1000000000000000000",
-        "minPositionOut": "24028704213",
-        "recipient": "0x67d87a745d3955941b0e685d02fc33639879270c",
-        "deadline": "1790164365",
+        "minPositionOut": "24028703970",
+        "recipient": "0x47b2375947c286520405a987156888deaa35f469",
+        "deadline": "1790225563",
         "poolId": "0xa6902dcdf9185809eb31d8d3711eb92e531124d8e8c028c19962dca62ad2a905",
         "kind": "STAKE"
       },
-      "actionHash": "0xdb29867ff71f38ee6e977b9d148fb46959f194bd73a3f874c4ff11ae5a2f1f16",
-      "postconditionHash": "0x03da75c8d879440a5bdb18743ae2dd6dbb98cf72455c91fc0ddb0d0fab7624ff",
+      "actionHash": "0x0a032165782f91842835d8a915c7e62722ac3ece853b8dea642e24948899f63d",
+      "postconditionHash": "0xd2fd980b9a754bbd3f4308e740ef3ab3db4bc4dea1af8dabb4bea9f00d4b68ef",
       "inputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
       "maxInput": "1000000000000000000",
       "outputToken": "0xfa60d973f7642b748046464e165a65b7323b0dee",
-      "minOutput": "24028704213",
-      "quotedOutput": "24271418397",
+      "minOutput": "24028703970",
+      "quotedOutput": "24271418152",
       "maxSlippageBps": "100",
       "outcomeUnit": "POOL_SHARES",
-      "recipient": "0x67d87a745d3955941b0e685d02fc33639879270c",
-      "positionHolder": "0x1e37943a2a2b756cb06f4bf50fcfd8da37ebaafd",
+      "recipient": "0x47b2375947c286520405a987156888deaa35f469",
+      "positionHolder": "0x86d992e7d69988c97a3bf0dba5e484d315b7818c",
       "balances": {
         "input": {
           "before": "10000000000000000000",
@@ -578,21 +578,21 @@
         },
         "outcome": {
           "before": "0",
-          "expectedAfter": "24271418397"
+          "expectedAfter": "24271418152"
         }
       },
       "allowanceAfter": "0",
       "gasUsed": "955331",
       "failure": null,
       "risks": [
-        "Authority is one-use and ends at chain time 1790164365; an unexecuted mandate expires without effect.",
-        "The position is held for the recipient by 0x1e37943a2a2b756cb06f4bf50fcfd8da37ebaafd; only the recipient can withdraw it.",
+        "Authority is one-use and ends at chain time 1790225563; an unexecuted mandate expires without effect.",
+        "The position is held for the recipient by 0x86d992e7d69988c97a3bf0dba5e484d315b7818c; only the recipient can withdraw it.",
         "The CAKE Pool charges a 10 bp withdrawal fee within 259200 seconds of a deposit and a 200 bp performance fee on yield.",
-        "Pool shares are estimated from the exact path at block 132701402; the stake reverts below 24028704213 shares.",
-        "MandateExecutor 0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7 accepts mandates without an ERC-8183 job (fork-unbound: local fork of chain 97 at block 132701397); no agent payment is bound to this outcome."
+        "Pool shares are estimated from the exact path at block 132837392; the stake reverts below 24028703970 shares.",
+        "MandateExecutor 0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7 accepts mandates without an ERC-8183 job (fork-unbound: local fork of chain 97 at block 132837388); no agent payment is bound to this outcome."
       ]
     },
-    "mandateHash": "0x0f49fa596a1ae9b64b8564ece56d3a29fa0a67a613d7fd38773e7a7fabb74dfd"
+    "mandateHash": "0x270eb2d0cb94168a955a7c5cbf73a70f7a7d0cee1e715a09635a9a57d940bd32"
   },
   "dailyCap": {
     "policy": "WBNB 0.05 per task, 0.08 rolling daily cap",
@@ -633,7 +633,7 @@
     {
       "fact": "price moved past the signed minimum",
       "code": "STALE_ACTION",
-      "detail": "at block 132701410 the signed action recorded FAILED"
+      "detail": "at block 132837400 the signed action recorded FAILED"
     },
     {
       "fact": "root owner changed onchain",
@@ -644,9 +644,9 @@
   "chain97ExactPath": {
     "label": "testnet, read-only eth_call on chain 97 with state overrides; nothing was broadcast",
     "block": {
-      "number": "132701527",
-      "hash": "0xf53e95814610b74f38c667db8db7edc1ab0736802471044b9e31d97a82319320",
-      "timestamp": "1790162612"
+      "number": "132837510",
+      "hash": "0x078cd9500b79c2b05a536f866740c0edd1426b16c40fe7d5cf2953e189b800cb",
+      "timestamp": "1790223806"
     },
     "mandateExecutor": "0xc6184fb3e12f4c79b50f37175f3229d91664ec66",
     "account": "0x2e42e0fb693765715014934282b9a7d3cf0c3818",
@@ -663,7 +663,7 @@
         "outcomeAfter": "26270",
         "outcomeBefore": "0",
         "status": "SUCCEEDED",
-        "verificationHash": "0x3787f3b8245555385764e498d4e8ba07ad00ed2799ad5e65eb77d2e7e5e0f83c"
+        "verificationHash": "0xb5d70596377b9889c91565b2f72895067c2043c66d054fa7a2ff2451557b55df"
       }
     },
     "stakeCake": {
@@ -673,10 +673,10 @@
         "gasUsed": "409387",
         "inputBalanceAfter": "232632494297771052163712956430",
         "inputBalanceBefore": "232632494298771052163712956430",
-        "outcomeAfter": "24271418397",
+        "outcomeAfter": "24271418152",
         "outcomeBefore": "0",
         "status": "SUCCEEDED",
-        "verificationHash": "0x3b94029b1569d89887df7548a3342223614df1891af9c979c3ae3e254c93ff0b"
+        "verificationHash": "0x967f7fa48164b9cfb4b220ef9de1a0c520b63d50d119e6849675168a10f222cd"
       }
     }
   }

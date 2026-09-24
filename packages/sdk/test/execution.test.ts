@@ -50,9 +50,9 @@ const accountAbi = parseAbi([
 describe("signed mandate document", () => {
   it("rebuilds the exact digest the root owner signed", () => {
     const parsed = signedMandateDocumentSchema.parse(document);
-    expect(hashTypedData(getTaskMandateTypedData(parsed.message, parsed.domain))).toBe(
-      hashTypedData(getTaskMandateTypedData(mandate, document.domain)),
-    );
+    expect(
+      hashTypedData(getTaskMandateTypedData(parsed.message, parsed.domain)),
+    ).toBe(hashTypedData(getTaskMandateTypedData(mandate, document.domain)));
   });
 
   it("rejects a message whose chain differs from its domain", () => {
@@ -76,8 +76,10 @@ describe("pending transaction", () => {
   it("binds a UserOperation hash to PERFORM and nothing else", () => {
     expect(pendingTransactionSchema.safeParse(pending).success).toBe(true);
     expect(
-      pendingTransactionSchema.safeParse({ ...pending, userOperationHash: null })
-        .success,
+      pendingTransactionSchema.safeParse({
+        ...pending,
+        userOperationHash: null,
+      }).success,
     ).toBe(false);
     expect(
       pendingTransactionSchema.safeParse({ ...pending, kind: "AUTHORIZE" })

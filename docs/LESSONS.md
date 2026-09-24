@@ -4,6 +4,30 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-24 - Read logs in bounded ranges from a persisted cursor, and never across a fork point
+
+- Observed: the executor's finalized reconciliation called `eth_getLogs` from the simulation block to `finalized`, and the chain-97 Alchemy endpoint rejected every range wider than 10 blocks. A local anvil fork failed the same way, and it also returned intermittent upstream 503s for ranges that included the fork block.
+- Root cause: anvil serves blocks at or below its fork point from the upstream RPC, so a fork inherits the provider's range limit and availability. A scan that restarts from its origin grows with chain age.
+- Rule: scan logs in chunks of at most 10 blocks, and advance a forward-only `indexer_checkpoints` cursor in the same database transaction that applies the events. Fork smokes read only blocks after the fork point.
+
+### 2026-09-24 - Never make a well-known key a `handleOps` beneficiary on a fork
+
+- Observed: in the Phase 4 fork smoke, the first root UserOperation relayed by anvil's first dev key succeeded, and every later one failed with `Insufficient funds`, even after `anvil_setBalance` to 100 BNB.
+- Root cause: on chain 97 that key (`0xf39F…2266`) carries an EIP-7702 delegation (`eth_getCode` returns `0xef0100…`). `EntryPoint.handleOps` calls its beneficiary, which runs the delegate's code, and the code drains the balance.
+- Rule: fork relayers, beneficiaries, and funders are freshly generated keys funded with `anvil_setBalance`. Before a smoke trusts any public address, check `eth_getCode`.
+
+### 2026-09-24 - Persist the signed bytes, not just the intent, before broadcast
+
+- Observed: a crash can land between signing and broadcast, a node can drop a transaction, and another transaction can consume the executor nonce. A worker that re-derives its transaction after a restart can send a second, different transaction for the same stage.
+- Root cause: when only the intent is recorded durably, recovery has to guess whether the original transaction is still live.
+- Rule: persist the transaction hash and exact raw bytes through the API before broadcast. Rebroadcast the same bytes while the nonce is open. Retire a hash only once its nonce is finalized under another transaction. Sign nothing new while one transaction is unresolved.
+
+### 2026-09-24 - Node type stripping needs `erasableSyntaxOnly`
+
+- Observed: the executor typechecked cleanly, then crashed at start under Node 24 with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` on constructor parameter properties.
+- Root cause: Node strips types but cannot transform TypeScript-only runtime syntax: parameter properties, enums, and namespaces.
+- Rule: any package that Node runs from `.ts` source sets `"erasableSyntaxOnly": true`, so `tsc` rejects that syntax before the first run.
+
 ### 2026-09-23 - Simulate the exact onchain path with `eth_call` state overrides, not `eth_simulateV1`
 
 - Observed: Alchemy's chain-97 endpoint serves `eth_simulateV1`, but a local anvil fork answers every request with `Required data unavailable`, so a simulator built on it could never be proven on the fork.

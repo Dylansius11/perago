@@ -58,8 +58,8 @@ The MVP emits immutable receipts from MandateExecutor and pins exactly two adapt
 ### Selected path
 
 - **Account:** Alchemy Modular Account V2 controlled by a self-custodial external root EOA.
-- **Transport:** ERC-4337 UserOperations through a BNB Testnet-supported bundler; optional gas sponsorship through a capped paymaster policy.
-- **Executor permission:** non-root validation scoped to the smart account's execution function, MandateExecutor target/selectors, approved token approval selectors, token/spend limits, gas limit, and expiry.
+- **Transport:** ERC-4337 UserOperations. The executor submits its own session-signed `perform` UserOperation to the pinned EntryPoint with `handleOps` from its bound executor address, with zero UserOperation fees so the account pays nothing and the executor pays the outer transaction (`P4-002`). A third-party bundler or paymaster is an optional transport only.
+- **Executor permission:** non-root validation scoped to the smart account's `execute` function, the one MandateExecutor target, the `perform` selector, a native spend cap, and an expiry. The session holds no token `approve` authority.
 - **Task authority:** root-owner EIP-712 Task Mandate verified independently by MandateExecutor.
 
 ### Why session/account policy is insufficient alone
@@ -302,7 +302,7 @@ The adapter maps `poolId` to one deployment-pinned staking target. It never trea
 ## 7. ERC-20 and fund handling
 
 1. MVP actions use ERC-20 inputs; native BNB is wrapped before task creation.
-2. The smart-account UserOperation grants MandateExecutor exactly `maxInput` immediately before `perform` in the same batch where account permissions permit it.
+2. **`D-004`, resolved by user decision on 2026-09-23:** when the root owner signs a Task Mandate, the same owner also submits one root UserOperation calling `approve(MandateExecutor, maxInput)` on the input token. The session never approves. The executor authorizes and begins only after reading an allowance of at least `maxInput` and a balance of at least `maxInput`, so a missing approval never consumes the nonce or the accepted attempt. If a mandate never runs, at most its exact allowance to MandateExecutor remains; MandateExecutor can pull it only for another root-signed, authorized, executing mandate of the same account.
 3. MandateExecutor pulls at most `maxInput` into its execution subcall.
 4. It grants the approved adapter exactly the required amount with a zero-first/force-approve pattern compatible with the pinned token.
 5. It clears the adapter allowance to zero before the subcall returns success.
@@ -522,7 +522,7 @@ The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or misma
 | Executor/session key compromise | Exact account modules plus root-signed mandate and execution proof | Attacker can execute already signed/authorized tasks within bounds; revoke permission/account policy. |
 | Bundler/paymaster manipulation | Signed UserOperation/calls; simulation; onchain checks | Censorship or delay; owner-funded fallback, expiry. |
 | Malicious adapter | Immutable minimal adapters, source audit, code-hash binding, verifier state reads | Protocol-approved adapter bug; fork/fuzz/invariant tests and pause new policy offchain. |
-| Approval theft | Exact same-batch account approval, exact adapter approval, zero cleanup, atomic subcall | Nonstandard token behavior excluded. |
+| Approval theft | Exact per-task root approval to MandateExecutor only, no session `approve`, exact adapter approval, zero cleanup, atomic subcall | Nonstandard token behavior excluded; an unexecuted mandate leaves its exact allowance usable only by another root-signed mandate. |
 | Reentrancy | Outer non-reentrancy, checks before effects, immutable targets, no arbitrary callbacks | Protocol callback complexity; adversarial token/adapter tests. |
 | Oracle/quote manipulation | Direct protocol quote, signed min output, pinned block/freshness, enforce inside call | MEV within signed slippage; user-visible risk. |
 | Simulation drift | Block/code hashes, quote deadline, policy/account freshness, min result | Favorable state changes permitted only if bounds still hold. |

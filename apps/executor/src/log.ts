@@ -8,7 +8,7 @@ export type Logger = {
 
 const REDACTED = "[REDACTED]";
 
-function escape(value: string): string {
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
@@ -38,7 +38,7 @@ export function createLogger(
       secret.startsWith("0x") ? [secret, secret.slice(2)] : [secret],
     )
     .sort((left, right) => right.length - left.length)
-    .map((secret) => new RegExp(escape(secret), "giu"));
+    .map((secret) => new RegExp(escapeRegExp(secret), "giu"));
 
   function emit(level: LogLevel, event: string, fields = {}) {
     let line = JSON.stringify(

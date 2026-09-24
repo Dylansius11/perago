@@ -165,7 +165,9 @@ Use separate Node.js process entry points under `apps/executor`:
 
 They may deploy in one service with separate commands for the demo but remain separately runnable. Use Postgres row leases and `FOR UPDATE SKIP LOCKED`; do not add Redis, BullMQ, Kafka, Temporal, or a workflow engine for one worker and low volume.
 
-The executor uses Viem and Alchemy's supported smart-account APIs. It never imports browser connector code, receives a root private key, or treats a provider response as final before chain reconciliation.
+Implemented in `P4-002`: the worker is `pnpm --filter @perago/executor start` (`src/main.ts`, `--once` for a single step). It runs from TypeScript source under Node type stripping, so the package sets `erasableSyntaxOnly`. The database stays behind the API: the lease, pending-transaction, reconcile, retire, defer, and release operations are internal API routes under `/internal/executions`, authenticated by a worker bearer token whose SHA-256 the API holds; the lease queries use `FOR UPDATE SKIP LOCKED` inside the API. The worker's secrets are `PERAGO_EXECUTOR_KEY` (the executor/session key) and `PERAGO_WORKER_TOKEN`, both from the deployment secret store; its logs are one JSON object per line with every secret, including the RPC URL, redacted. `PERAGO_EXECUTOR_HEALTH_PORT` serves `/healthz` and `/readyz` (chain id, MandateExecutor code hash against the manifest, executor gas balance, and API reachability). The worker reads Perago addresses only from a validated `deployments/*.perago.json` manifest (`PERAGO_DEPLOYMENT_MANIFEST`). The indexer process is not built yet; until it is, the API projects a mandate from a verified direct read of finalized MandateExecutor logs on each reconcile.
+
+The executor uses Viem for every chain call and submits its session UserOperation to the pinned EntryPoint itself (`handleOps` with zero UserOperation fees). It never imports browser connector code, receives a root private key, or treats a provider response as final before chain reconciliation at the `finalized` tag.
 
 ## 7. Database
 

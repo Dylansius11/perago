@@ -1,9 +1,9 @@
 import {
   buildUserOperation,
   buildUserOperationNonceKey,
+  type ExecutionJob,
   encodeHandleOps,
   encodeSessionPerformCallData,
-  type ExecutionJob,
   executionProofSchema,
   getExecutionProofTypedData,
   type Hash,

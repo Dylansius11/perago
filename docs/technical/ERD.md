@@ -74,9 +74,13 @@ The stable product states from the PRD are `SIGNED`, `AUTHORIZED`, `EXECUTING`, 
 
 ### `execution_status`
 
-`QUEUED | LEASED | AUTHORIZING | AUTHORIZED | EXECUTING | VERIFYING | SETTLING | RETRY_WAIT | TERMINAL`
+`QUEUED | LEASED | AUTHORIZING | AUTHORIZED | EXECUTING | VERIFYING | SETTLING | RETRY_WAIT | TERMINAL | REJECTED`
 
-This is operational state only. Chain-derived mandate and receipt status wins.
+This is operational state only. Chain-derived mandate and receipt status wins. `REJECTED` (migration `0004`) ends a job whose mandate `authorize` reverts at a finalized block, so the mandate never gained authority. `RETRY_WAIT` parks a job only on a precondition the chain may still satisfy (`APPROVAL_MISSING`, `INPUT_BALANCE_SHORT`, `CHAIN_UNAVAILABLE`).
+
+### `execution_transaction_kind`
+
+`AUTHORIZE | BEGIN | PERFORM | FINALIZE_EXPIRED | FINALIZE_STALLED` (migration `0004`): the only transactions the executor key sends, each to one fixed function.
 
 ### `verification_status`
 
@@ -283,7 +287,7 @@ One signed authorization and its chain-derived lifecycle projection.
 | `executor_address` | bytea | not null; executor/session public key bound by mandate |
 | `nonce` | numeric(78,0) | not null |
 | `expires_at_chain_seconds` | numeric(78,0) | not null |
-| `typed_data` | jsonb | exact versioned EIP-712 payload |
+| `typed_data` | jsonb | the signed document `{ primaryType: "TaskMandate", domain, message }` validated by SDK `signedMandateDocumentSchema`; rebuilds the exact digest |
 | `signature` | bytea | root-owner signature; public authorization data, access logged |
 | `status` | `mandate_status` | not null |
 | `erc8183_contract` | bytea | nullable only when payment disabled for a local test |
@@ -317,11 +321,18 @@ Operational record for the single allowed mandate attempt.
 | `lease_owner` | text | nullable; opaque worker instance ID |
 | `lease_expires_at` | timestamptz | nullable |
 | `submission_attempts` | integer | nonnegative; infrastructure submissions, not business attempts |
-| `authorize_tx_hash` | bytea | nullable |
-| `execute_user_operation_hash` | bytea | nullable; ERC-4337 UserOperation identifier |
-| `execute_tx_hash` | bytea | nullable until included |
-| `settlement_tx_hash` | bytea | nullable |
-| `last_error_code` | text | nullable; stable and redacted |
+| `authorize_tx_hash` | bytea | nullable; write-once, set only when a successful `authorize` is finalized |
+| `begin_tx_hash` | bytea | nullable; write-once, successful `beginExecution` at finality (migration `0004`) |
+| `execute_user_operation_hash` | bytea | nullable; write-once ERC-4337 UserOperation identifier, set with `execute_tx_hash` when the UserOperation is included at finality |
+| `execute_tx_hash` | bytea | nullable until included; write-once |
+| `finalize_tx_hash` | bytea | nullable; write-once `finalizeExpired` or `finalizeStalledExecution` at finality (migration `0004`) |
+| `settlement_tx_hash` | bytea | nullable; write-once |
+| `pending_transaction_kind` | `execution_transaction_kind` | nullable; `AUTHORIZE`, `BEGIN`, `PERFORM`, `FINALIZE_EXPIRED`, or `FINALIZE_STALLED` (migration `0004`) |
+| `pending_transaction_hash` | bytea | nullable; the one in-flight transaction, persisted before broadcast |
+| `pending_raw_transaction` | bytea | nullable; its exact signed bytes, rebroadcast unchanged if dropped |
+| `pending_user_operation_hash` | bytea | nullable; set if and only if the pending kind is `PERFORM` |
+| `last_error_code` | text | nullable; stable SDK reason code |
+| `last_error_detail` | text | nullable, at most 200 characters; decoded contract error name only (migration `0004`) |
 | `next_retry_at` | timestamptz | nullable |
 | `created_at` | timestamptz | not null |
 | `updated_at` | timestamptz | not null |
@@ -329,10 +340,13 @@ Operational record for the single allowed mandate attempt.
 Constraints:
 
 - one row per mandate;
-- active lease requires owner and future expiry;
+- active lease requires owner and future expiry, measured by the database clock;
 - retries reuse identical signed payload/action and reconcile chain/UserOperation status first;
-- `TERMINAL` requires matching mandate terminal state, not just a worker decision.
-- a row is inserted only as `QUEUED` with no lease and zero submission attempts, and only for a `SIGNED` mandate (trigger `execution_insert_queue`, migration `0003`).
+- the worker never writes `status`: the API derives it from the mandate projection at the chain's `finalized` block and the pending transaction (`services/executions.ts`);
+- `TERMINAL` requires matching mandate terminal state and no pending transaction, not just a worker decision; `REJECTED` (migration `0004`) requires a `SIGNED` mandate that was never authorized, no pending transaction, and an error code, and is set only when `authorize` reverts at a finalized block;
+- a finished (`TERMINAL` or `REJECTED`) row is immutable; the stage hashes are write-once; a pending transaction must be cleared (confirmed, or retired once its nonce is finalized under another transaction) before another is recorded; `submission_attempts` grows by exactly one per recorded pending transaction (trigger `execution_progress`, migration `0004`);
+- a row is inserted only as `QUEUED` with no lease and zero submission attempts, and only for a `SIGNED` mandate (trigger `execution_insert_queue`, migration `0003`);
+- a mandate bound to an ERC-8183 job is never leased until settlement exists (Phase 6).
 
 Detailed transport attempts may be stored in a bounded JSON audit field or structured logs; a separate table is added only if production diagnosis requires it.
 
@@ -421,7 +435,7 @@ Rows are never deleted during normal reconciliation. An event may move `OBSERVED
 | Column | Type | Constraints / meaning |
 | --- | --- | --- |
 | `chain_id` | bigint | composite PK |
-| `stream_name` | text | composite PK; identifies contract set/ABI version |
+| `stream_name` | text | composite PK; identifies contract set/ABI version, or `mandate:0x<hash>` for the executor's forward-only finalized scan of one mandate (`P4-002`) |
 | `next_block_number` | bigint | not null |
 | `last_canonical_block_hash` | bytea | 32 bytes, not null |
 | `confirmation_depth` | integer | positive |

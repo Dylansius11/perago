@@ -38,9 +38,7 @@
       "account": "0x6d36733cb765cf7e4d1a43ca317b6dfdbed21db3",
       "entityId": 1,
       "nativeSpendLimit": "0",
-      "selectors": [
-        "0xe756397f"
-      ],
+      "selectors": ["0xe756397f"],
       "sessionSigner": "0x32F8Dc550606B4Efe82E38A495fb69930627D093",
       "target": "0x7b331c59e5f9139923a06ea0b06cea36ce9cf5d7",
       "validAfter": "1790223135",
@@ -272,10 +270,7 @@
       "last_error_code": null,
       "last_error_detail": null
     },
-    "onchainEvents": [
-      "MandateAuthorized",
-      "MandateRevoked"
-    ]
+    "onchainEvents": ["MandateAuthorized", "MandateRevoked"]
   },
   "rejectedBeforeAuthorization": {
     "mandateHash": "0x0b858aeca7da7f5e5cdb32de16ec8ffd0bd1d08e7b697fb16be283096666df74",
@@ -343,19 +338,12 @@
         "last_error_code": null,
         "last_error_detail": null
       },
-      "onchainEvents": [
-        "MandateAuthorized",
-        "MandateExpired"
-      ]
+      "onchainEvents": ["MandateAuthorized", "MandateExpired"]
     },
     "sigkill": {
       "killedWhileInFlight": "FINALIZE_EXPIRED",
-      "killedWorkerSubmissions": [
-        "FINALIZE_EXPIRED"
-      ],
-      "restartedWorkerSubmissions": [
-        "FINALIZE_STALLED"
-      ],
+      "killedWorkerSubmissions": ["FINALIZE_EXPIRED"],
+      "restartedWorkerSubmissions": ["FINALIZE_STALLED"],
       "note": "the worker was SIGKILLed after persisting an in-flight finalize; the restarted worker reconciled it and sent no second finalize"
     }
   },
