@@ -51,6 +51,13 @@ export {
   wrapExecuteUserOp,
 } from "./account/modular-account.js";
 export {
+  buildUserOperation,
+  encodeHandleOps,
+  encodeSessionPerformCallData,
+  hashUserOperation,
+  PERAGO_USER_OPERATION_GAS,
+} from "./account/user-operation.js";
+export {
   CAKE_POOL_ID,
   encodeStakeAction,
   encodeSwapAction,
@@ -70,6 +77,29 @@ export {
   walletChallengeVerificationSchema,
   walletSessionSchema,
 } from "./api/auth.js";
+export {
+  type DeferExecutionRequest,
+  deferExecutionRequestSchema,
+  deferralCodeSchema,
+  type ExecutionJob,
+  type ExecutionStatus,
+  type ExecutionTransactionKind,
+  executionJobResponseSchema,
+  executionJobSchema,
+  executionStatusSchema,
+  executionTransactionKindSchema,
+  leaseExecutionResponseSchema,
+  type MandateProjectionStatus,
+  mandateProjectionStatusSchema,
+  type PendingTransaction,
+  pendingTransactionSchema,
+  type RecordPendingTransactionRequest,
+  rawTransactionSchema,
+  recordPendingTransactionRequestSchema,
+  retireReplacedTransactionRequestSchema,
+  workerIdSchema,
+  workerRequestSchema,
+} from "./api/executions.js";
 export {
   type SubmitMandateSignatureRequest,
   submitMandateSignatureRequestSchema,
@@ -91,6 +121,10 @@ export {
   createTaskRequestSchema,
 } from "./api/tasks.js";
 export { canonicalJson } from "./canonical-json.js";
+export {
+  type PeragoDeploymentManifest,
+  peragoDeploymentManifestSchema,
+} from "./deployment.js";
 export {
   type CompiledPlan,
   compiledPlanSchema,
@@ -157,6 +191,9 @@ export {
   executionProofTypes,
   getExecutionProofTypedData,
   getTaskMandateTypedData,
+  mandateDomainSchema,
+  type SignedMandateDocument,
+  signedMandateDocumentSchema,
   type TaskMandateDomain,
   taskMandateTypeString,
   taskMandateTypes,

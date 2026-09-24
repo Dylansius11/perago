@@ -70,6 +70,12 @@ export const REASON_MESSAGES = {
     "MandateExecutor would reject this signed mandate at the current block.",
   CHAIN_UNAVAILABLE:
     "The chain could not be read, so nothing changed. Retry shortly.",
+  APPROVAL_MISSING:
+    "The smart account has not approved MandateExecutor for this task's exact input yet.",
+  INPUT_BALANCE_SHORT:
+    "The smart account holds less than this task's signed input.",
+  TRANSACTION_REVERTED:
+    "An execution transaction was included but reverted; the chain state decides the next step.",
 } as const;
 
 export type ReasonCode = keyof typeof REASON_MESSAGES;

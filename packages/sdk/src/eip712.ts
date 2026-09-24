@@ -37,12 +37,31 @@ export const taskMandateTypes = {
   ],
 } as const;
 
-const mandateDomainSchema = z.strictObject({
+export const mandateDomainSchema = z.strictObject({
   chainId: uint256StringSchema,
   verifyingContract: addressSchema,
 });
 
 export type TaskMandateDomain = z.infer<typeof mandateDomainSchema>;
+
+/**
+ * The stored form of a signed Task Mandate: the exact EIP-712 domain and
+ * message the root owner signed, as canonical strings. `getTaskMandateTypedData`
+ * rebuilds the signable payload from it, so a stored document can always be
+ * re-verified against its signature and digest.
+ */
+export const signedMandateDocumentSchema = z
+  .strictObject({
+    primaryType: z.literal("TaskMandate"),
+    domain: mandateDomainSchema,
+    message: taskMandateSchema,
+  })
+  .refine(
+    (document) => document.message.chainId === document.domain.chainId,
+    "mandate chainId must match the EIP-712 domain",
+  );
+
+export type SignedMandateDocument = z.infer<typeof signedMandateDocumentSchema>;
 
 function asMessage(mandate: TaskMandate) {
   return {
