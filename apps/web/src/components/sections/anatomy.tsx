@@ -9,27 +9,27 @@ import { Caption } from "@/components/primitives";
  */
 
 const BINDINGS: Array<[string, string, string]> = [
-  ["owner", "0x2E42…c381", "your key, your account"],
+  ["rootOwner", "0x2E42…c381", "your key, your account"],
   ["account", "0x2863…57E2", "ERC-4337 smart account"],
-  ["executor", "0x9dC0…b2a4", "allowlisted worker"],
-  ["chain", "97 testnet", "chain id bound in EIP-712"],
-  ["nonce", "0007", "consumed once, forever"],
-  ["expiry", "2026-09-19 12:00Z", "authority ends with the clock"],
+  ["executor", "0x9dC0…b2a4", "the one scoped session signer"],
+  ["chainId", "97", "BSC Testnet, bound in the EIP-712 domain"],
+  ["nonce", "one draw", "consumed at authorize, forever"],
+  ["expiresAt", "+30 min", "authority ends with the clock"],
 ];
 
 const BOUNDS: Array<[string, string]> = [
-  ["asset in", "0.05 BNB max"],
-  ["asset out", "USDT, min out 29.80"],
-  ["recipient", "SELF"],
-  ["protocol", "PancakeSwap V3"],
-  ["slippage", "100 bps"],
-  ["postcondition", "minOut verified onchain"],
+  ["inputToken", "WBNB"],
+  ["maxInput", "0.01 WBNB"],
+  ["outputToken", "CAKE"],
+  ["minOutput", "simulated, then bound"],
+  ["recipient", "your smart account"],
+  ["adapter", "PancakeSwap V3, pinned"],
 ];
 
 export function Anatomy() {
   return (
     <section className="border-b border-ruleinvert bg-paper">
-      <div className="grid md:grid-cols-12">
+      <div className="grid grid-cols-1 md:grid-cols-12">
         <div className="px-6 py-16 md:col-span-7 md:px-10">
           <RiseIn>
             <h2 className="max-w-[18ch] text-4xl font-semibold tracking-[-0.03em] md:text-6xl">
@@ -90,16 +90,16 @@ export function Anatomy() {
               fields this page does, because both render one schema.
             </p>
             <div className="mt-8 font-mono text-[13px] leading-loose text-paper/70">
-              <div className="text-phos">PeragoTaskMandate(</div>
-              <div className="pl-4">owner, account, executor,</div>
-              <div className="pl-4">chainId, nonce, expiry,</div>
-              <div className="pl-4">policyHash, planHash,</div>
-              <div className="pl-4">simulationHash, actionHash,</div>
-              <div className="pl-4">postconditionHash, jobBinding,</div>
-              <div className="pl-4">assetIn, assetOut,</div>
-              <div className="pl-4">maxInput, minOutput,</div>
-              <div className="pl-4">recipient, adapter, selector,</div>
-              <div className="pl-4">window, ownerEpoch, version</div>
+              <div className="text-phos">TaskMandate(</div>
+              <div className="pl-4">account, rootOwner, ownerEpoch,</div>
+              <div className="pl-4">executor, chainId, nonce, expiresAt,</div>
+              <div className="pl-4">policyHash, intentHash, planHash,</div>
+              <div className="pl-4">simulationHash, adapter,</div>
+              <div className="pl-4">adapterSelector, inputToken,</div>
+              <div className="pl-4">maxInput, outputToken, minOutput,</div>
+              <div className="pl-4">recipient, actionHash,</div>
+              <div className="pl-4">postconditionHash,</div>
+              <div className="pl-4">commerceContract, commerceJobId</div>
               <div className="text-phos">)</div>
             </div>
             <div className="mt-10 border-t border-ruleinvert pt-6">

@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - Keep motion markup stable across server and client
+
+- Observed: reduced-motion browser screenshots left 30 entrance elements in their hidden server-rendered state and React reported a hydration mismatch between `motion` markup and plain `<div>` branches.
+- Root cause: `useReducedMotion` selected different element attributes during server rendering and client hydration, so React did not repair the inline hidden styles.
+- Rule: render the same motion elements on server and client, then use a reduced-motion CSS media query to expose content and suppress visual movement even before hydration.
+
 ### 2026-09-27 - Check Windows reserved ports before reusing a disposable database container
 
 - Observed: Docker could not restart `perago-test-db` on `127.0.0.1:55432` with `bind: An attempt was made to access a socket in a way forbidden by its access permissions`; no TCP listener owned the port, but `netsh interface ipv4 show excludedportrange protocol=tcp` reported reserved range `55377–55476`. An integration command still reached `55432` after `.env` changed, because an inherited process variable took precedence over Node's env-file.

@@ -41,6 +41,14 @@
   --color-statuspending: #fbbf24;
   --color-statusfail: #f87171;
 
+  /*
+   * The same three states darkened for text on paper, where the terminal
+   * values measure below 2:1. Each clears AA for small text on paper.
+   */
+  --color-ok-ink: #0e7a4c;
+  --color-pending-ink: #a15c07;
+  --color-fail-ink: #b91c1c;
+
   /* Radius: zero. The grid is the system; nothing is rounded. */
 
   /* Motion. Named once, reused everywhere. */
@@ -49,6 +57,8 @@
 
   --animate-blink: blink 1.06s steps(2, start) infinite;
   --animate-marquee: marquee 36s linear infinite;
+  /* In-flight indicator: a short signal bar crossing its track. */
+  --animate-scan: scan 1.4s var(--ease-inout-vivid) infinite;
 
   @keyframes blink {
     50% {
@@ -59,6 +69,15 @@
   @keyframes marquee {
     to {
       transform: translateX(-50%);
+    }
+  }
+
+  @keyframes scan {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(400%);
     }
   }
 }
@@ -95,6 +114,13 @@
 
   .pressable:active {
     transform: none;
+  }
+
+  [data-reveal] {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    clip-path: none !important;
   }
 }
 

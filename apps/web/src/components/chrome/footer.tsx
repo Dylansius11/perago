@@ -7,10 +7,11 @@ import { Wordmark } from "@/components/brand/wordmark";
  */
 
 const NAV = [
-  ["Mandate", "#mandate"],
-  ["Execution", "#execution"],
-  ["Evidence", "#evidence"],
-  ["Access", "#access"],
+  ["Mandate", "/#mandate"],
+  ["Failure", "/#execution"],
+  ["Receipt", "/#evidence"],
+  ["Faucet", "/faucet"],
+  ["Console", "/app"],
 ] as const;
 
 export function SiteFooter() {
@@ -38,7 +39,7 @@ export function SiteFooter() {
 
         <div className="mt-14 flex flex-col gap-2 border-t border-ruleinvert pt-6 font-mono text-[11px] uppercase tracking-[0.16em] text-paper/45 md:flex-row md:items-center md:justify-between">
           <span>&copy; 2026 Perago</span>
-          <span>BSC Testnet &middot; Phase 2</span>
+          <span>BSC Testnet &middot; Chain 97</span>
         </div>
       </div>
     </footer>

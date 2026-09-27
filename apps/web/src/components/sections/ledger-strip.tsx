@@ -11,11 +11,11 @@ const FACTS: Array<[string, string]> = [
   ["SPEND", "max input, on mandate"],
   ["ROUTING", "allowlisted adapters"],
   ["CALLDATA", "compiled, never free-form"],
-  ["RECIPIENT", "self, unless you widen it"],
+  ["RECIPIENT", "your own smart account only"],
   ["EXPIRY", "authority dies with the clock"],
   ["POSTCONDITION", "deterministic verifier"],
   ["REPLAY", "consumed at authorize"],
-  ["SESSION", "transport only, no keys"],
+  ["SESSION", "perform only, no root authority"],
   ["RECEIPT", "public, onchain"],
 ];
 

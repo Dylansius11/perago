@@ -34,13 +34,13 @@ export function Receipt() {
             </h2>
           </RiseIn>
 
-          <div className="mt-14 grid gap-10 md:grid-cols-12">
+          <div className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-12">
             {/* The receipt specimen */}
             <Unveil className="md:col-span-7">
               <div className="border border-ruleinvert bg-panel">
                 <div className="flex items-center justify-between border-b border-ruleinvert px-6 py-4">
                   <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/50">
-                    Receipt 0007
+                    ExecutionReceipt
                   </span>
                   <span className="flex items-center gap-2 font-mono text-[11px] text-statusok">
                     <span
@@ -52,21 +52,21 @@ export function Receipt() {
                 </div>
                 <dl className="divide-y divide-ruleinvert font-mono text-[13px]">
                   {[
-                    ["mandate", "nonce 0007, consumed"],
-                    ["userOperation", "0x9d7f…e2f1"],
-                    ["block", "47,218,559"],
-                    ["adapter", "pancakeswap.v3"],
-                    ["in", "0.05 BNB (measured)"],
-                    ["out", "29.92 USDT (measured)"],
-                    ["verifier", "postcondition PASS"],
-                    ["payment", "settled on verification"],
+                    ["mandateHash", "0x7c33…41aa"],
+                    ["authorityConsumed", "true"],
+                    ["transactions.userOperation", "0x9d7f…e2f1"],
+                    ["terminal.blockNumber", "71,204,131"],
+                    ["verification.status", "PASSED"],
+                    ["terminalReasonCode", "ONCHAIN_SUCCEEDED"],
+                    ["settlement.status", "CONFIRMED"],
+                    ["settlement.amount", "paid after the verdict"],
                   ].map(([k, v]) => (
                     <div
                       key={k}
                       className="flex items-baseline justify-between gap-6 px-6 py-3 transition-colors duration-200 ease-out-vivid hover:bg-paper/[0.04]"
                     >
-                      <dt className="text-paper/50">{k}</dt>
-                      <dd className="text-right text-paper/85">{v}</dd>
+                      <dt className="min-w-0 truncate text-paper/50">{k}</dt>
+                      <dd className="shrink-0 text-right text-paper/85">{v}</dd>
                     </div>
                   ))}
                 </dl>

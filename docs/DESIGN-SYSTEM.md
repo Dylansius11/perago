@@ -110,11 +110,11 @@ Two libraries, two lanes.
 | --- | --- |
 | Hero headline | Three lines, each masked in `overflow-hidden`, translating from `112%` to `0%` over 950ms with a 110ms stagger |
 | Section entrance | `RiseIn` (750ms, `y: 26` to `0`, `blur(6px)` to `0`) or `Unveil` (850ms, `clip-path` inset reveal). Fires once per element at `-12%` viewport margin |
-| Lifecycle sequence | The hero terminal replays the seven phases at 360ms cadence, holds on `AUTHORITY ENDED`, then resets |
+| Lifecycle sequence | The hero log replays seven phases, with 420ms for each RUN state and 200ms to settle, then holds the verified outcome before resetting |
 | Marquee | 36s linear, duplicated track translating `-50%`, paused on hover |
 | Status squares | `animate-blink` at 1.06s, `steps(2, start)` |
 
-**Reduced motion.** `useReducedMotion` returns the static markup: no entrance transform, no sequence replay, no marquee (`motion-safe:` prefixes), no active press scale. The content is identical, only the movement is absent.
+**Reduced motion.** Server and client render the same entrance markup; a CSS media query forces every `[data-reveal]` element visible and removes its transform, blur, and clip. This also prevents hidden server-rendered content when hydration is delayed. `useReducedMotion` disables the hero log replay after hydration. The marquee uses `motion-safe:` and active press scale is disabled. The content is identical, only the movement is absent.
 
 **No JavaScript.** Entrance animations ship their start state inline, so the layout carries a `noscript` rule that resets `opacity`, `transform`, `clip-path`, and `filter` on every `[data-reveal]` element. Verified: the page renders 5,378 characters of visible text with scripting disabled.
 
@@ -176,10 +176,9 @@ The PNG wordmark is white, so it disappears on paper. The header and footer ther
 
 ## 11. Verification record
 
-- `pnpm --filter @perago/web build` compiles and prerenders `/` and `/_not-found`; `tsc --noEmit` is clean.
+- `pnpm --filter @perago/web build` compiled and prerendered `/`, `/app`, and `/faucet`; `pnpm run check` completed the workspace typecheck and tests.
 - Rendered with scripting disabled: content visible, no hidden sections.
-- No horizontal overflow at the development window width; the marquee clips its own track.
-- `prefers-reduced-motion` path reviewed in code: every animation has a static fallback.
+- Desktop and mobile browser captures at 1440px and 390px found no horizontal overflow. Reduced-motion captures exposed all 30 landing reveal elements without hydration errors after the stable-markup cutover.
 
 ## 12. Changing this system
 

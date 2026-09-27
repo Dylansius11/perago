@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 
 /*
@@ -24,14 +24,6 @@ export function RiseIn({
   delay?: number;
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-  if (reduced) {
-    return (
-      <div className={className} data-reveal>
-        {children}
-      </div>
-    );
-  }
   return (
     <motion.div
       className={className}
@@ -55,14 +47,6 @@ export function Unveil({
   delay?: number;
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-  if (reduced) {
-    return (
-      <div className={className} data-reveal>
-        {children}
-      </div>
-    );
-  }
   return (
     <motion.div
       className={className}
