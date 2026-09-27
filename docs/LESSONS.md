@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-27 - Expired escrow needs its own permissionless recovery call
+
+- Observed: the reviewed `OutcomeEvaluator.reject` checks `job.expiredAt > block.timestamp`, so it cannot refund an otherwise valid bound job after its deadline; the official APEX kernel exposes `claimRefund(jobId)` for funded/submitted jobs after that boundary. An existing chain-97 protocol probe recorded permissionless expiry refund for job `1260`.
+- Root cause: deterministic evaluator rejection and permissionless kernel expiry are distinct transitions. Waiting for evaluator rejection after the deadline strands the worker in `REFUNDING` and leaves a successful-but-unpaid job indefinitely pending.
+- Rule: pin the exact APEX kernel and job identity, submit only `claimRefund(jobId)` after expiry, and mark a successful mandate `UNPAID` only once the kernel's `Expired` status is finalized; never confuse escrow recovery with verified provider payment.
+
 ### 2026-09-27 - Recheck mutable escrow economics inside the settlement transaction
 
 - Observed: chain-97 APEX had `platformFeeBP = 0` at block `133413598`, but a unit test changing it to 100 bp showed that `OutcomeEvaluator.settle` would otherwise release less than the job budget to the provider.

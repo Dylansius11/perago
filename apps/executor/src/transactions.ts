@@ -1,10 +1,12 @@
 import {
+  apexCommerceAbi,
   type ExecutionJob,
   type ExecutionTransactionKind,
   getTaskMandateTypedData,
   type Hash,
   MODULAR_ACCOUNT_V2_ADDRESSES,
   mandateExecutorAbi,
+  outcomeEvaluatorAbi,
 } from "@perago/sdk";
 import {
   type Address,
@@ -85,6 +87,37 @@ async function stageCall(input: {
         to,
         userOperationHash: null,
       };
+    case "SETTLE":
+    case "REJECT_JOB":
+    case "CLAIM_REFUND": {
+      const settlement = deployment.settlement;
+      if (
+        !settlement ||
+        job.document.message.commerceJobId === "0" ||
+        job.document.message.commerceContract !== settlement.commerce.address
+      )
+        throw new Error("commerce settlement is not pinned for this mandate");
+      if (kind === "CLAIM_REFUND") {
+        return {
+          data: encodeFunctionData({
+            abi: apexCommerceAbi,
+            args: [BigInt(job.document.message.commerceJobId)],
+            functionName: "claimRefund",
+          }),
+          to: settlement.commerce.address,
+          userOperationHash: null,
+        };
+      }
+      return {
+        data: encodeFunctionData({
+          abi: outcomeEvaluatorAbi,
+          args: [BigInt(job.document.message.commerceJobId), job.mandateHash],
+          functionName: kind === "SETTLE" ? "settle" : "reject",
+        }),
+        to: settlement.evaluator.address,
+        userOperationHash: null,
+      };
+    }
     case "PERFORM": {
       const built = await buildPerformUserOperation({
         client: input.client,

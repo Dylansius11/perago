@@ -1,3 +1,4 @@
+import { simulateTaskRequestSchema } from "@perago/sdk";
 import { Hono } from "hono";
 import type { Sql } from "postgres";
 
@@ -77,6 +78,7 @@ export function createTaskRoutes(input: {
       input.sql,
       context.get("wallet"),
       context.req.param("taskId"),
+      simulateTaskRequestSchema.parse(await context.req.json()),
       input.mandateConfig,
     );
     return context.json(view, 201);

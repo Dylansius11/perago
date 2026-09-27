@@ -39,7 +39,9 @@ export const REASON_MESSAGES = {
   ACCOUNT_NOT_REGISTERED:
     "The smart account's owner, owner epoch, or active policy is not registered with this MandateExecutor.",
   COMMERCE_BINDING_REQUIRED:
-    "This MandateExecutor requires an ERC-8183 job for every mandate, and Perago cannot create one yet.",
+    "This MandateExecutor requires a submitted, funded ERC-8183 job. Provide its job ID before simulation.",
+  COMMERCE_JOB_INVALID:
+    "The chosen commerce job no longer matches the reviewed settlement deployment or signed execution window.",
   DEPLOYMENT_MISMATCH:
     "A pinned contract's onchain code or wiring does not match the reviewed deployment manifest.",
   SESSION_EXPIRES_FIRST:

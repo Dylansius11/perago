@@ -6,6 +6,8 @@ import {
   hashSchema,
   type ProtocolCatalog,
   peragoDeploymentManifestSchema,
+  resolveSettlementDeployment,
+  type SettlementDeployment,
 } from "@perago/sdk";
 
 export type DeployedContract = { address: Address; codeHash: Hash };
@@ -32,6 +34,7 @@ export type PeragoDeployment = {
   mandateExecutor: DeployedContract;
   executionWindowSeconds: bigint;
   allowUnboundCommerceJobs: boolean;
+  settlement?: SettlementDeployment | null;
   quoter: Address;
   adapters: { SWAP: AdapterDeployment; STAKE: AdapterDeployment };
 };
@@ -103,6 +106,7 @@ export function loadDeployment(
     mandateExecutor: contract(perago.contracts, "mandateExecutor"),
     executionWindowSeconds: BigInt(perago.constructor.executionWindowSeconds),
     allowUnboundCommerceJobs: perago.constructor.allowUnboundCommerceJobs,
+    settlement: resolveSettlementDeployment(perago, protocols),
     quoter: contract(protocols.contracts, "pancakeV3QuoterV2").address,
     adapters: {
       SWAP: {

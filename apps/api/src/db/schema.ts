@@ -61,6 +61,7 @@ export const executionStatus = pgEnum("execution_status", [
   "EXECUTING",
   "VERIFYING",
   "SETTLING",
+  "REFUNDING",
   "RETRY_WAIT",
   "TERMINAL",
   "REJECTED",
@@ -71,6 +72,9 @@ export const executionTransactionKind = pgEnum("execution_transaction_kind", [
   "PERFORM",
   "FINALIZE_EXPIRED",
   "FINALIZE_STALLED",
+  "SETTLE",
+  "REJECT_JOB",
+  "CLAIM_REFUND",
 ]);
 export const verificationStatus = pgEnum("verification_status", [
   "PASSED",

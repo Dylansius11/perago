@@ -32,6 +32,18 @@ export type ChainView = {
   allowance: bigint;
   balance: bigint;
   executorNonce: bigint;
+  commerce: null | {
+    status:
+      | "Open"
+      | "Funded"
+      | "Submitted"
+      | "Completed"
+      | "Rejected"
+      | "Expired";
+    valid: boolean;
+    refundable: boolean;
+    expiredAt: bigint;
+  };
   /** The persisted in-flight transaction, located on the chain. */
   pending: null | {
     nonce: bigint;
@@ -48,7 +60,7 @@ export type Decision =
   | { kind: "SUBMIT"; transaction: ExecutionTransactionKind }
   | {
       kind: "DEFER";
-      code: "APPROVAL_MISSING" | "INPUT_BALANCE_SHORT";
+      code: "APPROVAL_MISSING" | "INPUT_BALANCE_SHORT" | "COMMERCE_JOB_INVALID";
     };
 
 const PROJECTION_OF_RECORD: Record<
@@ -112,6 +124,9 @@ export function decide(
     return { kind: "WAIT", reason: "latest chain state is ahead of finality" };
   }
 
+  const commerce = chain.commerce;
+  if (job.document.message.commerceJobId !== "0" && !commerce)
+    throw new Error("bound job has no commerce chain observation");
   const expiresAt = BigInt(job.document.message.expiresAt);
   switch (job.mandateStatus) {
     case "SIGNED": {
@@ -121,6 +136,8 @@ export function decide(
           reason: "expired unauthorized; awaiting rejection",
         };
       }
+      if (commerce && (!commerce.valid || commerce.status !== "Submitted"))
+        return { kind: "DEFER", code: "COMMERCE_JOB_INVALID" };
       return (
         fundsDeferral(job, chain) ?? {
           kind: "SUBMIT",
@@ -132,6 +149,8 @@ export function decide(
       if (chain.timestamp >= expiresAt) {
         return { kind: "SUBMIT", transaction: "FINALIZE_EXPIRED" };
       }
+      if (commerce && (!commerce.valid || commerce.status !== "Submitted"))
+        return { kind: "DEFER", code: "COMMERCE_JOB_INVALID" };
       return (
         fundsDeferral(job, chain) ?? { kind: "SUBMIT", transaction: "BEGIN" }
       );
@@ -143,6 +162,8 @@ export function decide(
       ) {
         return { kind: "SUBMIT", transaction: "FINALIZE_STALLED" };
       }
+      if (commerce && (!commerce.valid || commerce.status !== "Submitted"))
+        return { kind: "WAIT", reason: "commerce job cannot accept execution" };
       if (job.transactions.userOperation !== null) {
         return {
           kind: "WAIT",
@@ -153,6 +174,40 @@ export function decide(
         return { kind: "WAIT", reason: "mandate expired mid-window" };
       }
       return { kind: "SUBMIT", transaction: "PERFORM" };
+    }
+    case "SUCCEEDED": {
+      if (
+        commerce?.refundable &&
+        (commerce.status === "Submitted" || commerce.status === "Funded") &&
+        chain.timestamp >= commerce.expiredAt
+      )
+        return { kind: "SUBMIT", transaction: "CLAIM_REFUND" };
+      if (
+        !commerce ||
+        !commerce.valid ||
+        commerce.status !== "Submitted" ||
+        chain.timestamp >= commerce.expiredAt
+      )
+        return { kind: "WAIT", reason: "payment cannot yet be submitted" };
+      return { kind: "SUBMIT", transaction: "SETTLE" };
+    }
+    case "FAILED":
+    case "REVOKED":
+    case "EXPIRED": {
+      if (
+        commerce?.refundable &&
+        (commerce.status === "Submitted" || commerce.status === "Funded") &&
+        chain.timestamp >= commerce.expiredAt
+      )
+        return { kind: "SUBMIT", transaction: "CLAIM_REFUND" };
+      if (
+        !commerce ||
+        !commerce.valid ||
+        (commerce.status !== "Submitted" && commerce.status !== "Funded") ||
+        chain.timestamp >= commerce.expiredAt
+      )
+        return { kind: "WAIT", reason: "refund cannot yet be submitted" };
+      return { kind: "SUBMIT", transaction: "REJECT_JOB" };
     }
     default:
       return { kind: "WAIT", reason: "terminal projection awaits the API" };
@@ -184,10 +239,15 @@ export function assertDrivableJob(
       "the stored mandate does not hash to the job's mandate hash",
     keccak256(job.action) !== message.actionHash &&
       "the action bytes are not the signed action",
-    (message.commerceJobId !== "0" ||
-      message.commerceContract !==
-        "0x0000000000000000000000000000000000000000") &&
-      "ERC-8183 settlement is not performed by this worker",
+    message.commerceJobId !== "0" &&
+      (!deployment.settlement ||
+        message.commerceContract !== deployment.settlement.commerce.address) &&
+      "ERC-8183 settlement is not pinned for this worker",
+    message.commerceJobId === "0" &&
+      (message.commerceContract !==
+        "0x0000000000000000000000000000000000000000" ||
+        deployment.allowUnboundCommerceJobs === false) &&
+      "ERC-8183 job required by this deployment",
   ].filter((problem): problem is string => typeof problem === "string");
   if (problems.length > 0) {
     throw new Error(`refusing job ${job.mandateHash}: ${problems.join("; ")}`);

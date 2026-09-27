@@ -83,6 +83,7 @@ function chainWith(overrides: Partial<ChainView> = {}): ChainView {
     allowance: MAX_INPUT,
     balance: MAX_INPUT,
     executorNonce: 5n,
+    commerce: null,
     pending: null,
     ...overrides,
   };
@@ -299,6 +300,115 @@ describe("decide", () => {
       ).toBe("WAIT");
     });
   });
+  describe("bound commerce outcome", () => {
+    const bound = {
+      ...message,
+      commerceContract: mandateExecutor,
+      commerceJobId: "4",
+    };
+    const signed = {
+      document: { primaryType: "TaskMandate", domain, message: bound },
+      mandateHash: hashTypedData(getTaskMandateTypedData(bound, domain)),
+    };
+    const submitted = {
+      status: "Submitted" as const,
+      valid: true,
+      refundable: true,
+      expiredAt: EXPIRES_AT + 2_000n,
+    };
+
+    it("requests payment only after finalized verified mandate success", () => {
+      expect(
+        decide(
+          jobWith({
+            ...signed,
+            mandateStatus: "SUCCEEDED",
+            status: "SETTLING",
+          }),
+          chainWith({
+            record: { status: "SUCCEEDED", executionStartedAt: STARTED_AT },
+            commerce: submitted,
+          }),
+          WINDOW,
+        ),
+      ).toEqual({ kind: "SUBMIT", transaction: "SETTLE" });
+      expect(
+        decide(
+          jobWith({
+            ...signed,
+            mandateStatus: "SUCCEEDED",
+            status: "SETTLING",
+          }),
+          chainWith({
+            record: { status: "AUTHORIZED", executionStartedAt: 0n },
+            commerce: submitted,
+          }),
+          WINDOW,
+        ).kind,
+      ).toBe("WAIT");
+    });
+
+    it("routes terminal failure only to refund and never to payment", () => {
+      expect(
+        decide(
+          jobWith({ ...signed, mandateStatus: "FAILED", status: "REFUNDING" }),
+          chainWith({
+            record: { status: "FAILED", executionStartedAt: STARTED_AT },
+            commerce: submitted,
+          }),
+          WINDOW,
+        ),
+      ).toEqual({ kind: "SUBMIT", transaction: "REJECT_JOB" });
+    });
+
+    it("claims the exact expired escrow without ever reporting payment", () => {
+      const expired = {
+        ...submitted,
+        valid: false,
+        refundable: true,
+        expiredAt: EXPIRES_AT - 1n,
+      };
+      for (const mandateStatus of ["SUCCEEDED", "FAILED"] as const) {
+        const job = jobWith({
+          ...signed,
+          mandateStatus,
+          status: mandateStatus === "SUCCEEDED" ? "SETTLING" : "REFUNDING",
+        });
+        const record = {
+          status: mandateStatus,
+          executionStartedAt: STARTED_AT,
+        };
+        expect(
+          decide(
+            job,
+            chainWith({ record, timestamp: EXPIRES_AT, commerce: expired }),
+            WINDOW,
+          ),
+        ).toEqual({ kind: "SUBMIT", transaction: "CLAIM_REFUND" });
+        expect(
+          decide(
+            job,
+            chainWith({
+              record,
+              timestamp: EXPIRES_AT,
+              commerce: { ...expired, refundable: false },
+            }),
+            WINDOW,
+          ).kind,
+        ).toBe("WAIT");
+        expect(
+          decide(
+            job,
+            chainWith({
+              record,
+              commerce: { ...submitted, status: "Completed" },
+            }),
+            WINDOW,
+          ).kind,
+        ).toBe("WAIT");
+      }
+    });
+  });
 });
 
 describe("assertDrivableJob", () => {
@@ -356,5 +466,39 @@ describe("assertDrivableJob", () => {
     expect(() => assertDrivableJob(job, deployment, executor)).toThrow(
       /ERC-8183/u,
     );
+    const pinned = {
+      ...deployment,
+      settlement: {
+        evaluator: { address: executor, codeHash: hash },
+        commerce: {
+          address: mandateExecutor,
+          codeHash: hash,
+          implementation: executor,
+          implementationCodeHash: hash,
+        },
+        paymentToken: {
+          address: executor,
+          codeHash: hash,
+          implementation: executor,
+          implementationCodeHash: hash,
+        },
+        hook: { address: executor, codeHash: hash },
+        provider: executor,
+      },
+    };
+    expect(() => assertDrivableJob(job, pinned, executor)).not.toThrow();
+    expect(() =>
+      assertDrivableJob(
+        job,
+        {
+          ...pinned,
+          settlement: {
+            ...pinned.settlement,
+            commerce: { ...pinned.settlement.commerce, address: executor },
+          },
+        },
+        executor,
+      ),
+    ).toThrow(/ERC-8183/u);
   });
 });

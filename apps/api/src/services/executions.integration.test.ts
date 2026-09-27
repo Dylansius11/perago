@@ -1,13 +1,21 @@
 import { readFile } from "node:fs/promises";
 import {
+  apexCommerceAbi,
   encodeSwapAction,
   getTaskMandateTypedData,
   hashSwapPostcondition,
   mandateExecutorAbi,
+  outcomeEvaluatorAbi,
   signedMandateDocumentSchema,
 } from "@perago/sdk";
 import postgres, { type Sql } from "postgres";
-import { encodeFunctionData, type Hex, keccak256 } from "viem";
+import {
+  encodeFunctionData,
+  type Hex,
+  keccak256,
+  type PublicClient,
+  toHex,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -17,6 +25,7 @@ import {
   type ExecutionServiceConfig,
   LeaseLostError,
   leaseExecution,
+  reconcileExecution,
   recordPendingTransaction,
   releaseExecution,
 } from "./executions.js";
@@ -38,6 +47,7 @@ const migrations = [
   new URL("../../drizzle/0003_mandate_signing.sql", import.meta.url),
   new URL("../../drizzle/0004_execution_worker.sql", import.meta.url),
   new URL("../../drizzle/0005_chain_event_reorg_versions.sql", import.meta.url),
+  new URL("../../drizzle/0006_commerce_settlement.sql", import.meta.url),
 ];
 const bytes = (value: number, size: number) => Buffer.alloc(size, value);
 const id = (value: number) =>
@@ -156,8 +166,10 @@ async function seed(
       executor: hex(executor),
       nonce: String(value),
       expiresAt: "9999999999",
-      commerceContract: "0x0000000000000000000000000000000000000000",
-      commerceJobId: "0",
+      commerceContract: bound
+        ? hex(bytes(value + 26, 20))
+        : "0x0000000000000000000000000000000000000000",
+      commerceJobId: bound ? String(value) : "0",
     },
     action: { kind: "SWAP", ...action },
     actionHash,
@@ -220,8 +232,10 @@ async function seed(
       recipient: hex(account),
       actionHash,
       postconditionHash,
-      commerceContract: "0x0000000000000000000000000000000000000000",
-      commerceJobId: "0",
+      commerceContract: bound
+        ? hex(bytes(value + 26, 20))
+        : "0x0000000000000000000000000000000000000000",
+      commerceJobId: bound ? String(value) : "0",
     },
   };
   await db`
@@ -276,6 +290,22 @@ describe("P4-002 execution queue", () => {
       config,
     );
     expect((await leaseExecution(sql, "other", config)).job).toBeNull();
+  });
+
+  it("leases a bound mandate only to a worker configured for its pinned commerce kernel", async () => {
+    const bound = await seed(sql, 8, true);
+    await sql`update executions set next_retry_at = now() + interval '1 hour' where mandate_hash <> ${bound.mandateHash} and status not in ('TERMINAL', 'REJECTED')`;
+    const allowed = {
+      ...config,
+      deployment: {
+        ...config.deployment,
+        settlement: { commerce: { address: hex(bytes(34, 20)) } },
+      },
+    } as ExecutionServiceConfig;
+    expect(
+      (await leaseExecution(sql, "worker-bound", allowed)).job?.mandateHash,
+    ).toBe(hex(bound.mandateHash));
+    expect((await leaseExecution(sql, "duplicate", allowed)).job).toBeNull();
   });
 
   it("enforces durable progress and unique execution identity", async () => {
@@ -429,5 +459,343 @@ describe("P4-002 execution queue", () => {
       select submission_attempts from executions where mandate_hash = ${mandateHash}
     `;
     expect(attempts?.submission_attempts).toBe(1);
+  });
+  it("accepts only a bound successful mandate's exact evaluator settlement, once", async () => {
+    const signer = privateKeyToAccount(`0x${"9".repeat(64)}`);
+    const { mandateHash } = await seed(
+      sql,
+      9,
+      true,
+      Buffer.from(signer.address.slice(2), "hex"),
+    );
+    const key = hex(mandateHash);
+    const evaluator = hex(bytes(81, 20));
+    const boundConfig = {
+      ...config,
+      deployment: {
+        ...config.deployment,
+        settlement: {
+          commerce: { address: hex(bytes(35, 20)) },
+          evaluator: { address: evaluator },
+        },
+      },
+    } as ExecutionServiceConfig;
+    await sql`
+      update mandates set status = 'SUCCEEDED',
+        terminal_tx_hash = ${bytes(82, 32)}, terminal_reason_code = 'VERIFIED',
+        terminal_at = now() where mandate_hash = ${mandateHash}
+    `;
+    await sql`update executions set next_retry_at = now() + interval '1 hour' where mandate_hash <> ${mandateHash} and status not in ('TERMINAL', 'REJECTED')`;
+    expect(
+      (await leaseExecution(sql, "worker-settle", boundConfig)).job
+        ?.mandateHash,
+    ).toBe(key);
+    const [boundRow] = await sql<
+      {
+        erc8183_contract: Buffer;
+        erc8183_job_id: string;
+        typed_data: {
+          message: { commerceContract: string; commerceJobId: string };
+        };
+      }[]
+    >`
+      select erc8183_contract, erc8183_job_id::text, typed_data from mandates where mandate_hash = ${mandateHash}
+    `;
+    expect(boundRow?.typed_data.message.commerceContract).toBe(
+      hex(bytes(35, 20)),
+    );
+    expect(boundRow?.erc8183_contract).toEqual(bytes(35, 20));
+    expect(boundRow?.erc8183_job_id).toBe("9");
+    const sign = (data: Hex, to: Hex) =>
+      signer.signTransaction({
+        chainId: 97,
+        data,
+        gas: 500_000n,
+        maxFeePerGas: 1n,
+        maxPriorityFeePerGas: 1n,
+        nonce: 0,
+        to,
+        type: "eip1559",
+      });
+    const settle = (jobId: bigint, hash: Hex) =>
+      encodeFunctionData({
+        abi: outcomeEvaluatorAbi,
+        functionName: "settle",
+        args: [jobId, hash],
+      });
+    const submit = (rawTransaction: Hex) =>
+      recordPendingTransaction(
+        sql,
+        key,
+        {
+          kind: "SETTLE",
+          rawTransaction,
+          userOperationHash: null,
+          workerId: "worker-settle",
+        },
+        boundConfig,
+      );
+    for (const raw of [
+      await sign(settle(9n, key), deployment.mandateExecutor.address),
+      await sign(settle(10n, key), evaluator),
+      await sign(settle(9n, hex(bytes(83, 32))), evaluator),
+      await sign(
+        encodeFunctionData({
+          abi: outcomeEvaluatorAbi,
+          functionName: "reject",
+          args: [9n, key],
+        }),
+        evaluator,
+      ),
+    ])
+      await expect(submit(raw)).rejects.toBeInstanceOf(ExecutionConflictError);
+    const exact = await sign(settle(9n, key), evaluator);
+    expect((await submit(exact)).job.pending?.transactionHash).toBe(
+      keccak256(exact),
+    );
+    expect((await submit(exact)).job.pending?.transactionHash).toBe(
+      keccak256(exact),
+    );
+  });
+  it("permits a bound failure refund but never its payout", async () => {
+    const signer = privateKeyToAccount(`0x${"a".repeat(64)}`);
+    const { mandateHash } = await seed(
+      sql,
+      10,
+      true,
+      Buffer.from(signer.address.slice(2), "hex"),
+    );
+    const key = hex(mandateHash);
+    const evaluator = hex(bytes(84, 20));
+    const boundConfig = {
+      ...config,
+      deployment: {
+        ...config.deployment,
+        settlement: {
+          commerce: { address: hex(bytes(36, 20)) },
+          evaluator: { address: evaluator },
+        },
+      },
+    } as ExecutionServiceConfig;
+    await sql`update mandates set status = 'FAILED', terminal_tx_hash = ${bytes(85, 32)}, terminal_reason_code = 'VERIFIER_FAILED', terminal_at = now() where mandate_hash = ${mandateHash}`;
+    await sql`update executions set next_retry_at = now() + interval '1 hour' where mandate_hash <> ${mandateHash} and status not in ('TERMINAL', 'REJECTED')`;
+    expect(
+      (await leaseExecution(sql, "worker-refund", boundConfig)).job
+        ?.mandateHash,
+    ).toBe(key);
+    const sign = (functionName: "settle" | "reject") =>
+      signer.signTransaction({
+        chainId: 97,
+        data: encodeFunctionData({
+          abi: outcomeEvaluatorAbi,
+          functionName,
+          args: [10n, key],
+        }),
+        gas: 500_000n,
+        maxFeePerGas: 1n,
+        maxPriorityFeePerGas: 1n,
+        nonce: 0,
+        to: evaluator,
+        type: "eip1559",
+      });
+    await expect(
+      recordPendingTransaction(
+        sql,
+        key,
+        {
+          kind: "SETTLE",
+          rawTransaction: await sign("settle"),
+          userOperationHash: null,
+          workerId: "worker-refund",
+        },
+        boundConfig,
+      ),
+    ).rejects.toBeInstanceOf(ExecutionConflictError);
+    const rawTransaction = await sign("reject");
+    expect(
+      (
+        await recordPendingTransaction(
+          sql,
+          key,
+          {
+            kind: "REJECT_JOB",
+            rawTransaction,
+            userOperationHash: null,
+            workerId: "worker-refund",
+          },
+          boundConfig,
+        )
+      ).job,
+    ).toMatchObject({ status: "REFUNDING", pending: { kind: "REJECT_JOB" } });
+  });
+  it("persists only a bound permissionless refund call after a terminal mandate", async () => {
+    const signer = privateKeyToAccount(`0x${"b".repeat(64)}`);
+    const { mandateHash } = await seed(
+      sql,
+      11,
+      true,
+      Buffer.from(signer.address.slice(2), "hex"),
+    );
+    const key = hex(mandateHash);
+    const commerce = hex(bytes(37, 20));
+    const boundConfig = {
+      ...config,
+      deployment: {
+        ...config.deployment,
+        settlement: {
+          commerce: { address: commerce },
+          evaluator: { address: hex(bytes(84, 20)) },
+        },
+      },
+    } as ExecutionServiceConfig;
+    await sql`update mandates set status = 'SUCCEEDED', terminal_tx_hash = ${bytes(87, 32)}, terminal_reason_code = 'VERIFIED', terminal_at = now() where mandate_hash = ${mandateHash}`;
+    await sql`update executions set next_retry_at = now() + interval '1 hour' where mandate_hash <> ${mandateHash} and status not in ('TERMINAL', 'REJECTED')`;
+    expect(
+      (await leaseExecution(sql, "worker-expire", boundConfig)).job
+        ?.mandateHash,
+    ).toBe(key);
+    const call = (jobId: bigint) =>
+      encodeFunctionData({
+        abi: apexCommerceAbi,
+        functionName: "claimRefund",
+        args: [jobId],
+      });
+    const sign = (jobId: bigint, to = commerce) =>
+      signer.signTransaction({
+        chainId: 97,
+        data: call(jobId),
+        gas: 500_000n,
+        maxFeePerGas: 1n,
+        maxPriorityFeePerGas: 1n,
+        nonce: 0,
+        to,
+        type: "eip1559",
+      });
+    const submit = (rawTransaction: Hex) =>
+      recordPendingTransaction(
+        sql,
+        key,
+        {
+          kind: "CLAIM_REFUND",
+          rawTransaction,
+          userOperationHash: null,
+          workerId: "worker-expire",
+        },
+        boundConfig,
+      );
+    await expect(submit(await sign(12n))).rejects.toBeInstanceOf(
+      ExecutionConflictError,
+    );
+    await expect(
+      submit(await sign(11n, deployment.mandateExecutor.address)),
+    ).rejects.toBeInstanceOf(ExecutionConflictError);
+    const exact = await sign(11n);
+    expect((await submit(exact)).job).toMatchObject({
+      status: "REFUNDING",
+      pending: { transactionHash: keccak256(exact) },
+    });
+  });
+  it("keeps a verified outcome payment-pending across retries, then marks refunded expiry unpaid", async () => {
+    const { mandateHash } = await seed(sql, 12, true);
+    const key = hex(mandateHash);
+    const codeHash = keccak256("0x6000");
+    const addr = (value: number) => hex(bytes(value, 20));
+    const settlement = {
+      commerce: {
+        address: addr(38),
+        codeHash,
+        implementation: addr(70),
+        implementationCodeHash: codeHash,
+      },
+      evaluator: { address: addr(71), codeHash },
+      paymentToken: {
+        address: addr(72),
+        codeHash,
+        implementation: addr(73),
+        implementationCodeHash: codeHash,
+      },
+      hook: { address: addr(74), codeHash },
+      provider: addr(75),
+    };
+    let jobStatus = 2;
+    const chain = {
+      getBlock: async () => ({ number: 100n, hash: hex(bytes(76, 32)) }),
+      getLogs: async () => [],
+      getCode: async () => "0x6000",
+      getStorageAt: async ({ address }: { address: string }) =>
+        toHex(
+          BigInt(
+            address === settlement.commerce.address
+              ? settlement.commerce.implementation
+              : settlement.paymentToken.implementation,
+          ),
+          { size: 32 },
+        ),
+      readContract: async ({ functionName }: { functionName: string }) => {
+        switch (functionName) {
+          case "mandateRecord":
+            return {
+              status: 3,
+              verificationHash: key,
+              failureReasonHash: hex(bytes(0, 32)),
+            };
+          case "settled":
+            return false;
+          case "executor":
+            return deployment.mandateExecutor.address;
+          case "commerce":
+            return settlement.commerce.address;
+          case "provider":
+            return settlement.provider;
+          case "hook":
+            return settlement.hook.address;
+          case "paymentToken":
+            return settlement.paymentToken.address;
+          case "jobPaymentToken":
+            return settlement.paymentToken.address;
+          case "getJob":
+            return {
+              id: 12n,
+              client: addr(13),
+              provider: settlement.provider,
+              evaluator: settlement.evaluator.address,
+              hook: settlement.hook.address,
+              budget: 10n,
+              status: jobStatus,
+            };
+          default:
+            throw new Error(`unexpected chain read ${functionName}`);
+        }
+      },
+    } as unknown as PublicClient;
+    const boundConfig = {
+      ...config,
+      client: chain,
+      deployment: { ...config.deployment, settlement },
+    } as ExecutionServiceConfig;
+    await sql`update mandates set status = 'SUCCEEDED', terminal_tx_hash = ${bytes(77, 32)}, terminal_reason_code = 'VERIFIED', terminal_at = now() where mandate_hash = ${mandateHash}`;
+    await sql`update executions set next_retry_at = now() + interval '1 hour' where mandate_hash <> ${mandateHash} and status not in ('TERMINAL', 'REJECTED')`;
+    expect(
+      (await leaseExecution(sql, "worker-outage", boundConfig)).job
+        ?.mandateHash,
+    ).toBe(key);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expect(
+        (await reconcileExecution(sql, key, "worker-outage", boundConfig)).job,
+      ).toMatchObject({
+        mandateStatus: "SUCCEEDED",
+        status: "SETTLING",
+        pending: null,
+      });
+    }
+    jobStatus = 5;
+    expect(
+      (await reconcileExecution(sql, key, "worker-outage", boundConfig)).job
+        .status,
+    ).toBe("TERMINAL");
+    const [row] = await sql<{ settlement_tx_hash: Buffer | null }[]>`
+      select settlement_tx_hash from executions where mandate_hash = ${mandateHash}
+    `;
+    expect(row?.settlement_tx_hash).toBeNull();
   });
 });

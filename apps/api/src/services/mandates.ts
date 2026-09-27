@@ -12,6 +12,7 @@ import {
   mandateExecutorAbi,
   mandateSessionPermissionSchema,
   type ProtocolCatalog,
+  type SimulateTaskRequest,
   type SimulationResult,
   signedMandateDocumentSchema,
   simulationResultSchema,
@@ -302,6 +303,7 @@ export async function simulateTask(
   sql: Sql,
   identity: WalletIdentity,
   taskId: string,
+  request: SimulateTaskRequest,
   config: MandateServiceConfig,
 ): Promise<SimulationView> {
   const row = await loadTaskContext(sql, identity, taskId);
@@ -330,6 +332,10 @@ export async function simulateTask(
     },
     {
       executor: permission.sessionSigner,
+      commerceJobId:
+        request.commerceJobId === undefined
+          ? null
+          : BigInt(request.commerceJobId),
       nonce: BigInt(`0x${randomBytes(16).toString("hex")}`),
       ownerEpoch: row.owner_epoch,
       plan,

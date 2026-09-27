@@ -10,7 +10,24 @@ import {
   mandateExecutorAbi,
   pendingTransactionSchema,
   signedMandateDocumentSchema,
+  simulateTaskRequestSchema,
 } from "../src/index.js";
+
+describe("authenticated job binding request", () => {
+  it("accepts a positive onchain job ID and rejects empty or unrelated fields", () => {
+    expect(simulateTaskRequestSchema.parse({ commerceJobId: "7" })).toEqual({
+      commerceJobId: "7",
+    });
+    expect(simulateTaskRequestSchema.parse({})).toEqual({});
+    expect(
+      simulateTaskRequestSchema.safeParse({ commerceJobId: "0" }).success,
+    ).toBe(false);
+    expect(
+      simulateTaskRequestSchema.safeParse({ commerceJobId: "7", verdict: true })
+        .success,
+    ).toBe(false);
+  });
+});
 
 const hash = `0x${"aa".repeat(32)}`;
 const executor = "0x9999999999999999999999999999999999999999";

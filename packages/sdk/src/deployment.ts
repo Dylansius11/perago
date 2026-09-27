@@ -10,6 +10,10 @@ const pinnedContractSchema = z.object({
   address: addressSchema,
   codeHash: hashSchema,
 });
+const liveAddress = addressSchema.refine(
+  (value) => value !== "0x0000000000000000000000000000000000000000",
+  "a deployed contract must not be zero",
+);
 
 /**
  * A `deployments/*.perago.json` manifest: the only source of Perago contract
@@ -36,11 +40,8 @@ export const peragoDeploymentManifestSchema = z.object({
   /** Absent until the immutable evaluator is actually deployed and pinned. */
   settlement: z
     .strictObject({
-      evaluator: pinnedContractSchema,
-      provider: addressSchema.refine(
-        (value) => value !== "0x0000000000000000000000000000000000000000",
-        "settlement provider must not be zero",
-      ),
+      evaluator: pinnedContractSchema.extend({ address: liveAddress }),
+      provider: liveAddress,
     })
     .optional(),
 });
@@ -48,10 +49,6 @@ export const peragoDeploymentManifestSchema = z.object({
 export type PeragoDeploymentManifest = z.infer<
   typeof peragoDeploymentManifestSchema
 >;
-const liveAddress = addressSchema.refine(
-  (value) => value !== "0x0000000000000000000000000000000000000000",
-  "a deployed contract must not be zero",
-);
 const liveContract = pinnedContractSchema.extend({ address: liveAddress });
 const proxy = liveContract.extend({
   erc1967Implementation: liveAddress,

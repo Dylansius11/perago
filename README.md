@@ -51,7 +51,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-The SDK owns domain/account/action types, the evaluator ABI, and the public receipt schema; the API and worker reconcile against onchain mandate status and verification commitments. `P6-002` proves manual, receipt-bound settlement on a fork; `P6-003` must automate and index finalized live settlement.
+The SDK owns domain/account/action types, the evaluator ABI, and the public receipt schema; the API and worker reconcile against onchain mandate status and verification commitments. `P6-002` proves manual, receipt-bound settlement on a fork; `P6-003` automates it and indexes finalized payment evidence on a fork first. Live evaluator deployment and hosted proof belong to `P8-001`.
 
 ## Documentation
 

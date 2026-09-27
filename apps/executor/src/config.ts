@@ -7,6 +7,8 @@ import {
   type Address,
   type Hash,
   peragoDeploymentManifestSchema,
+  resolveSettlementDeployment,
+  type SettlementDeployment,
   workerIdSchema,
 } from "@perago/sdk";
 import type { Hex } from "viem";
@@ -20,6 +22,8 @@ export type ExecutorDeployment = {
   mandateExecutor: Address;
   mandateExecutorCodeHash: Hash;
   executionWindowSeconds: bigint;
+  allowUnboundCommerceJobs?: boolean;
+  settlement?: SettlementDeployment | null;
 };
 
 export type ExecutorConfig = {
@@ -69,6 +73,18 @@ export function loadDeployment(manifestPath: string): ExecutorDeployment {
     mandateExecutor: manifest.contracts.mandateExecutor.address,
     mandateExecutorCodeHash: manifest.contracts.mandateExecutor.codeHash,
     executionWindowSeconds: BigInt(manifest.constructor.executionWindowSeconds),
+    allowUnboundCommerceJobs: manifest.constructor.allowUnboundCommerceJobs,
+    settlement: resolveSettlementDeployment(
+      manifest,
+      manifest.settlement
+        ? JSON.parse(
+            readFileSync(
+              resolve(REPOSITORY_ROOT, manifest.protocolManifest),
+              "utf8",
+            ),
+          )
+        : null,
+    ),
   };
 }
 

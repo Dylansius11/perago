@@ -57,6 +57,18 @@ describe("peragoDeploymentManifestSchema", () => {
         },
       }).success,
     ).toBe(false);
+    expect(
+      peragoDeploymentManifestSchema.safeParse({
+        ...production,
+        settlement: {
+          ...settlement,
+          evaluator: {
+            ...settlement.evaluator,
+            address: "0x0000000000000000000000000000000000000000",
+          },
+        },
+      }).success,
+    ).toBe(false);
   });
 
   it("pins the evaluator and deployed proxy implementations or rejects drift", () => {

@@ -1,3 +1,4 @@
+export { apexCommerceAbi } from "./abi/apex.js";
 export {
   cakeStakeAdapterAbi,
   cakeStakePositionAbi,
@@ -120,8 +121,17 @@ export {
 export {
   type CreateTaskRequest,
   createTaskRequestSchema,
+  type SimulateTaskRequest,
+  simulateTaskRequestSchema,
 } from "./api/tasks.js";
 export { canonicalJson } from "./canonical-json.js";
+export {
+  assertCommerceJobIdentity,
+  assertSubmittedCommerceJob,
+  type CommerceJob,
+  CommerceJobMismatchError,
+  type CommerceJobPreflight,
+} from "./commerce-job.js";
 export {
   type PeragoDeploymentManifest,
   peragoDeploymentManifestSchema,

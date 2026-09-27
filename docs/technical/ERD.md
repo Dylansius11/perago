@@ -326,8 +326,8 @@ Operational record for the single allowed mandate attempt.
 | `execute_user_operation_hash` | bytea | nullable; write-once ERC-4337 UserOperation identifier, set with `execute_tx_hash` when the UserOperation is included at finality |
 | `execute_tx_hash` | bytea | nullable until included; write-once |
 | `finalize_tx_hash` | bytea | nullable; write-once `finalizeExpired` or `finalizeStalledExecution` at finality (migration `0004`) |
-| `settlement_tx_hash` | bytea | nullable; write-once |
-| `pending_transaction_kind` | `execution_transaction_kind` | nullable; `AUTHORIZE`, `BEGIN`, `PERFORM`, `FINALIZE_EXPIRED`, or `FINALIZE_STALLED` (migration `0004`) |
+| `settlement_tx_hash` | bytea | nullable; write-once only from finalized evaluator + APEX completion/payment proof, never a worker-submitted hash |
+| `pending_transaction_kind` | `execution_transaction_kind` | nullable; `AUTHORIZE`, `BEGIN`, `PERFORM`, `FINALIZE_EXPIRED`, `FINALIZE_STALLED` (`0004`), `SETTLE`, `REJECT_JOB`, or `CLAIM_REFUND` (`0006`) |
 | `pending_transaction_hash` | bytea | nullable; the one in-flight transaction, persisted before broadcast |
 | `pending_raw_transaction` | bytea | nullable; its exact signed bytes, rebroadcast unchanged if dropped |
 | `pending_user_operation_hash` | bytea | nullable; set if and only if the pending kind is `PERFORM` |
@@ -346,7 +346,7 @@ Constraints:
 - `TERMINAL` requires matching mandate terminal state and no pending transaction, not just a worker decision; `REJECTED` (migration `0004`) requires a `SIGNED` mandate that was never authorized, no pending transaction, and an error code, and is set only when `authorize` reverts at a finalized block;
 - a finished (`TERMINAL` or `REJECTED`) row is immutable; the stage hashes are write-once; a pending transaction must be cleared (confirmed, or retired once its nonce is finalized under another transaction) before another is recorded; `submission_attempts` grows by exactly one per recorded pending transaction (trigger `execution_progress`, migration `0004`);
 - a row is inserted only as `QUEUED` with no lease and zero submission attempts, and only for a `SIGNED` mandate (trigger `execution_insert_queue`, migration `0003`);
-- a mandate bound to an ERC-8183 job is never leased until settlement exists (Phase 6).
+- A mandate bound to an ERC-8183 job is leased only when an evaluator deployment and upstream implementation/code pins are configured. A successful bound execution stays `SETTLING` until confirmed payment or finalized unpaid expiry/rejection; terminal non-success stays `REFUNDING` until a finalized rejection/expiry. The pending `CLAIM_REFUND` stage is also `REFUNDING` for a successful mandate whose payment window elapsed.
 
 Detailed transport attempts may be stored in a bounded JSON audit field or structured logs; a separate table is added only if production diagnosis requires it.
 
@@ -405,6 +405,7 @@ Constraints:
 - `SUCCEEDED` requires a nonzero onchain `verificationHash` from the terminal event; the projector rejects zero, and the public route compares both success and failure commitments against the finalized MandateExecutor record. A separately populated `PASSED` verification-result row is not required unless measured evidence can be independently reconstructed;
 - non-success cannot have a settlement transaction that completed payment; a bound non-success job is public `INELIGIBLE`, not `PENDING`, and an unpinned settlement log never upgrades a bound success from `PENDING`;
 - public terminal status and commitments reconcile to confirmed contract logs and immutable signed fields. The worker-recorded UserOperation hash is returned only with its matching terminal transaction and remains independently checkable from the EntryPoint event.
+- `settlement_tx_hash` is projected from a finalized matching evaluator event plus the same transaction's APEX completion/payment logs and a finalized job/mandate read; a worker's submitted hash alone is never sufficient. Replay after a receipt rebuild reapplies only retained canonical events. Public `CONFIRMED` contains that exact transaction/block/log identity and provider/token/budget; a successful bound job in terminal upstream `Rejected` or `Expired` is public unpaid, not pending.
 
 ### 5.11 `chain_events`
 

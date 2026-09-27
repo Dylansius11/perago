@@ -193,7 +193,8 @@ The evaluator also reads `platformFeeBP` inside `settle` and refuses a nonzero v
 - If no compatible deterministic evaluator can be installed, do not claim APEX settlement; deploy a clearly identified Perago test instance or mark settlement blocked.
 - If upgrade/admin state changes after simulation, stop new jobs and invalidate the deployment manifest.
 - If settlement is temporarily unavailable after Perago success, keep the successful receipt and retry the identical eligible call after reconciliation.
-- If the job expires/rejects first, payment remains unavailable even if execution later reports success; executor must check job deadline before beginning.
+- If the bound job expires before payment, the worker may call only the pinned kernel's permissionless `claimRefund(jobId)` after rechecking the exact job identity; APEX returns funded/submitted escrow to its client and moves the job to `Expired`. This is not payment or a new mandate attempt; a finalized successful mandate becomes public `UNPAID`. The reviewed upstream implementation is [AgenticCommerceUpgradeable.sol](https://github.com/bnb-chain/apex-contracts/blob/main/contracts/AgenticCommerceUpgradeable.sol); existing chain-97 permissionless expiry evidence is `docs/evidence/bsc-testnet.protocol-live.json` job `1260` (`verified` for that deployment, not a live Perago evaluator).
+- If the job is rejected before settlement, payment remains unavailable even if execution later reports success; pre-terminal worker submissions require the submitted job and expiry headroom.
 
 ## 7. ERC-8004 decision
 
