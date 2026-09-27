@@ -82,10 +82,9 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     env.PERAGO_AUTH_URI ?? DEFAULT_AUTH_URI,
     "PERAGO_AUTH_URI",
   );
-  const webOrigin = validUrl(
-    env.PERAGO_WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
-    "PERAGO_WEB_ORIGIN",
-  );
+  const webOrigin = new URL(
+    validUrl(env.PERAGO_WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN, "PERAGO_WEB_ORIGIN"),
+  ).origin;
   return {
     authUri,
     databaseUrl: required(env, "PERAGO_DATABASE_URL"),

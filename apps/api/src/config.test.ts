@@ -32,6 +32,9 @@ describe("loadApiConfig", () => {
       loadApiConfig({ ...required, PERAGO_INTENT_ENCRYPTION_KEY: "not-hex" }),
     ).toThrow("PERAGO_INTENT_ENCRYPTION_KEY must be a 32-byte hex key");
   });
+  it("retains the browser origin without a URL path for CORS", () => {
+    expect(loadApiConfig(required).webOrigin).toBe("http://localhost:3000");
+  });
 
   it("refuses deployment manifests outside BSC Testnet", async () => {
     const directory = await mkdtemp(join(tmpdir(), "perago-api-config-"));
