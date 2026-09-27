@@ -5,12 +5,15 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 import {MandateExecutor} from "./MandateExecutor.sol";
 import {IACP} from "./interfaces/IACP.sol";
+import {IPeragoVerifier} from "./interfaces/IPeragoVerifier.sol";
 import {PeragoTypes} from "./types/PeragoTypes.sol";
 
 /// @notice Releases APEX escrow only for a one-use, onchain-verified Task Mandate.
 /// @dev No owner, upgrade, operator, or discretionary verdict. APEX is an upgradeable
 /// external dependency: deployment and every submission must check its implementation.
 contract OutcomeEvaluator is ReentrancyGuard {
+    bytes32 private constant SWAP_VERIFIER_ID = keccak256("perago.verifier.swap.v1");
+    bytes32 private constant STAKE_VERIFIER_ID = keccak256("perago.verifier.stake.v1");
     MandateExecutor public immutable executor;
     IACP public immutable commerce;
     address public immutable provider;
@@ -78,9 +81,16 @@ contract OutcomeEvaluator is ReentrancyGuard {
             mandateHash == bytes32(0) || receipt.commerceContract != address(commerce) || receipt.commerceJobId != jobId
                 || receipt.account == address(0) || receipt.adapter == address(0) || receipt.verifier == address(0)
                 || executor.commerceJobBinding(address(commerce), jobId) != mandateHash
-                || !((receipt.adapter == executor.swapAdapter() && receipt.verifier == executor.swapVerifier())
-                    || (receipt.adapter == executor.stakeAdapter() && receipt.verifier == executor.stakeVerifier()))
         ) revert SettlementNotEligible();
+        bytes32 expectedVerifierId;
+        if (receipt.adapter == executor.swapAdapter() && receipt.verifier == executor.swapVerifier()) {
+            expectedVerifierId = SWAP_VERIFIER_ID;
+        } else if (receipt.adapter == executor.stakeAdapter() && receipt.verifier == executor.stakeVerifier()) {
+            expectedVerifierId = STAKE_VERIFIER_ID;
+        } else {
+            revert SettlementNotEligible();
+        }
+        if (IPeragoVerifier(receipt.verifier).verifierId() != expectedVerifierId) revert SettlementNotEligible();
     }
 
     function _job(uint256 jobId, address account) private view returns (IACP.Job memory job) {

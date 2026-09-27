@@ -4,6 +4,7 @@ export {
   mandateExecutorAbi,
   mandateSimulationHarnessAbi,
   mandateSimulationHarnessRuntime,
+  outcomeEvaluatorAbi,
   pancakeV3SwapAdapterAbi,
   peragoAcpHookAbi,
   peragoAdapterAbi,

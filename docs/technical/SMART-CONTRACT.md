@@ -1,6 +1,6 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** `MandateExecutor`, the pinned swap/stake adapters and verifiers, and their invariant/fork suites are implemented. `OutcomeEvaluator` implements receipt-bound completion and terminal-failure rejection; its APEX fork and deployment evidence are tracked under `P6-002` in the build plan.
+**Status:** `MandateExecutor`, the pinned swap/stake adapters and verifiers, and their invariant/fork suites are implemented. `OutcomeEvaluator` implements receipt-bound completion and terminal-failure rejection, proven with the real APEX kernel on a chain-97 fork (`P6-002`); it is not deployed on chain 97.
 **Requirements:** [`../PRD.md`](../PRD.md)
 **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
@@ -578,7 +578,7 @@ The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or misma
 
 The implemented `P2-003` handler models the root owner, smart account, executor, attacker, pinned adapters, and pinned verifiers. Its 17 explicit actions configure policy, authorize, begin, perform, revoke, expire, duplicate/reorder calls, advance time, and mutate protocol outcomes. `MandateExecutorInvariant.t.sol` asserts the 12 safety properties plus the named-caller boundary after every sequence; it passed 1,000 runs × 100 calls locally on 2026-09-20.
 
-The commerce property proves that one ERC-8183 job can bind one mandate and that one mandate can emit one terminal receipt. `P6-002`/`P6-003` will extend the handler with `OutcomeEvaluator` and settlement actions; actual evaluator-driven ERC-8183 settlement is not claimed by `P2-003`.
+The original commerce property proves that one ERC-8183 job can bind one mandate and that one mandate can emit one terminal receipt. `P6-002` adds evaluator unit/fuzz coverage and real-kernel fork paths for completion, rejection, and permissionless refund ([evidence](../evidence/bsc-testnet.fork.phase6-evaluator.json)); it does not add evaluator actions to the original P2 handler, nor claim a live payment. `P6-003` owns automated settlement and finality-aware projection.
 
 ### Fork/testnet tests
 

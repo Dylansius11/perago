@@ -2295,6 +2295,211 @@ export const mandateExecutorAbi = [
   },
 ] as const;
 
+/** Completes or rejects only the matching verified ERC-8183 job. */
+export const outcomeEvaluatorAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      {
+        name: "executor_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "commerce_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "provider_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "hook_",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "paymentToken_",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "commerce",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract IACP",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "executor",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract MandateExecutor",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "hook",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "paymentToken",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "provider",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "reject",
+    inputs: [
+      {
+        name: "jobId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "settle",
+    inputs: [
+      {
+        name: "jobId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "settled",
+    inputs: [
+      {
+        name: "commerceContract",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "jobId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [
+      {
+        name: "paid",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "CommerceJobSettled",
+    inputs: [
+      {
+        name: "commerceContract",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "jobId",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+      {
+        name: "mandateHash",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "error",
+    name: "AlreadySettled",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidDeploymentPair",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ReentrancyGuardReentrantCall",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "SettlementNotEligible",
+    inputs: [],
+  },
+] as const;
+
 /** Pinned-pool exact-input swap adapter; its errors are mapped reason codes. */
 export const pancakeV3SwapAdapterAbi = [
   {

@@ -35,6 +35,11 @@ const EXPORTS = [
       "Authority boundary: account registration, mandate authorization, and terminal state.",
   },
   {
+    artifact: "OutcomeEvaluator.sol/OutcomeEvaluator.json",
+    exportName: "outcomeEvaluatorAbi",
+    summary: "Completes or rejects only the matching verified ERC-8183 job.",
+  },
+  {
     artifact: "PancakeV3SwapAdapter.sol/PancakeV3SwapAdapter.json",
     exportName: "pancakeV3SwapAdapterAbi",
     summary:

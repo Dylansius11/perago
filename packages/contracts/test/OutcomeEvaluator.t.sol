@@ -141,6 +141,16 @@ contract OutcomeEvaluatorTest is Test {
         evaluator.settle(JOB_ID, hash);
     }
 
+    function testFuzz_aDifferentJobIdCannotUseThisSuccess(uint256 unrelatedJobId) public {
+        vm.assume(unrelatedJobId != JOB_ID);
+        bytes32 hash = _authorized();
+        _perform(hash, false);
+        vm.expectRevert(OutcomeEvaluator.SettlementNotEligible.selector);
+        evaluator.settle(unrelatedJobId, hash);
+        assertEq(payment.balanceOf(PROVIDER), 0);
+        assertFalse(evaluator.settled(address(escrow), unrelatedJobId));
+    }
+
     function test_failedVerifierCannotReleaseEscrow() public {
         bytes32 hash = _authorized();
         _perform(hash, true);
@@ -179,6 +189,13 @@ contract OutcomeEvaluatorTest is Test {
         vm.expectRevert(OutcomeEvaluator.SettlementNotEligible.selector);
         evaluator.reject(JOB_ID, hash);
         assertEq(payment.balanceOf(ACCOUNT), 0);
+    }
+
+    function test_refusesReceiptWhenThePinnedVerifierIdentityChanges() public {
+        bytes32 hash = _authorized();
+        _perform(hash, false);
+        vm.mockCall(address(verifier), abi.encodeWithSignature("verifierId()"), abi.encode(bytes32(0)));
+        _refuses(hash);
     }
 
     function test_unverifiedSuccessCommitmentCannotPay() public {
