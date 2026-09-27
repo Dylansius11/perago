@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-27 - Check Windows reserved ports before reusing a disposable database container
+
+- Observed: Docker could not restart `perago-test-db` on `127.0.0.1:55432` with `bind: An attempt was made to access a socket in a way forbidden by its access permissions`; no TCP listener owned the port, but `netsh interface ipv4 show excludedportrange protocol=tcp` reported reserved range `55377–55476`. An integration command still reached `55432` after `.env` changed, because an inherited process variable took precedence over Node's env-file.
+- Root cause: Docker's existing host-port binding fell inside a Windows TCP exclusion, while the test process inherited a stale `TEST_DATABASE_URL` from its parent shell.
+- Rule: choose an unreserved host port (for this workstation, `56432`), remap a disposable container without erasing its named volume, and update or clear any exported `TEST_DATABASE_URL` as well as local `.env`; never change a hosted database connection to work around a local port conflict.
+
 ### 2026-09-27 - Do not gate an expired escrow refund on payout economics
 
 - Observed: changing APEX `platformFeeBP` to 100 made the worker report `refundable: false` for a matching expired Submitted job, even though `claimRefund(jobId)` has no platform-fee precondition; a focused regression reproduced the refusal.
