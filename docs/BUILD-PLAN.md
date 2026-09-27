@@ -1,6 +1,6 @@
 # Perago Build Plan
 
-**Status:** Phase 1 accepted on 2026-09-19 and open in [PR #5](https://github.com/Dylansius11/perago/pull/5); Phases 2–5 complete on `dev`. By explicit user decision on 2026-09-23, `P4-001` and `P5-001` were built ahead of order and the production MandateExecutor deployed on chain 97. `P4-003` and `P5-002` have fork and live chain-97 execution evidence on the labelled `testnet-demo` executor (`SC-D-006`). `P6-001` closed on 2026-09-24 with fork evidence for the public receipt and local PostgreSQL replay/reorg proof. `P6-002` is next and starts only when the user opens it. `P7-000`/`P7-001` were authorized and completed out of order (2026-09-19/20).
+**Status:** Phase 1 accepted on 2026-09-19 and open in [PR #5](https://github.com/Dylansius11/perago/pull/5); Phases 2–5 complete on `dev`. By explicit user decision on 2026-09-23, `P4-001` and `P5-001` were built ahead of order and the production MandateExecutor deployed on chain 97. `P4-003` and `P5-002` have fork and live chain-97 execution evidence on the labelled `testnet-demo` executor (`SC-D-006`). `P6-001` closed on 2026-09-24 with fork evidence for the public receipt and local PostgreSQL replay/reorg proof. `P6-002` closed on 2026-09-27 with deterministic evaluator unit/fuzz and APEX fork evidence, plus live read-only proxy preflight; no evaluator deployment or live Perago payment was claimed. `P6-003` is next only when the user opens it. `P7-000`/`P7-001` were authorized and completed out of order (2026-09-19/20).
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
@@ -36,7 +36,7 @@ Check a task only after its acceptance criteria and verification evidence pass. 
   - [x] `P5-002` Add staking compiler/simulation/executor path
 - [ ] **Phase 6 — receipts and ERC-8183 settlement**
   - [x] `P6-001` Implement receipt indexing and public query
-  - [ ] `P6-002` Implement deterministic ERC-8183 evaluator
+  - [x] `P6-002` Implement deterministic ERC-8183 evaluator
   - [ ] `P6-003` Automate settlement without changing truth
 - [ ] **Phase 7 — fresh web client**
   - [x] `P7-000` Scaffold the web toolchain without design
@@ -327,7 +327,10 @@ This record tracks live work without marking a task complete before all of its a
 - **Files/symbols:** `OutcomeEvaluator.sol`; pinned APEX/ERC-8183 interface; settlement tests and deployment script.
 - **Acceptance:** only a matching `SUCCEEDED` receipt completes once; failed/revoked/expired/unverified/mismatched/already-settled jobs fail; upstream refund/expiry path remains available; proxy/admin assumptions checked.
 - **Verification:** unit/fuzz plus full real/fork complete, reject, and refund lifecycles.
+
 - **Commit:** `feat(contracts): bind payment to verified outcomes`.
+
+**`P6-002` evidence (complete, 2026-09-27):** `OutcomeEvaluator` reads the MandateExecutor record, one-to-one job binding, and immutable verifier identity, then checks the APEX job's client, pinned provider/evaluator/hook/payment token, nonzero budget, state, and deadline. Onchain fee rechecking prevents a changed upstream fee from short-paying the provider. `forge test --match-contract OutcomeEvaluatorTest` passed 13 deterministic tests plus a 256-run job-ID fuzz property with the real executor and a local escrow double. `node --env-file-if-exists=../../.env script/forge-env.mjs test --match-contract OutcomeEvaluatorForkTest -vv` passed three real-kernel fork lifecycles (verified swap completion, failed swap rejection, permissionless expiry refund) on chain 97 at block `132658000`, with locally seeded United Stables ([evidence](evidence/bsc-testnet.fork.phase6-evaluator.json)). Read-only live preflight at block `133413598` matched pinned proxy/implementation/runtime hashes, executor pairs, zero fee, and unpaused state. The upstream owner remains upgrade-capable, so preflight repeats before new jobs/submissions. The deployment script requires an explicit `PERAGO_SETTLEMENT_PROVIDER` and was not broadcast; live payment and finality-aware automation belong to `P6-003`.
 
 ### `P6-003` Automate settlement without changing truth
 

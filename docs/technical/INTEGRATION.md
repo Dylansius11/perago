@@ -184,6 +184,10 @@ Four findings decided the integration shape:
 
 `D-003` is resolved: Perago settles on the official APEX kernel with its own hook and its own evaluator, using the pinned payment token. The lifecycle is proven on chain 97 — completion, evaluator rejection refund, and permissionless expiry refund — with transaction hashes recorded in [`../BUILD-PLAN.md`](../BUILD-PLAN.md) and the full report in [`../evidence/bsc-testnet.protocol-live.json`](../evidence/bsc-testnet.protocol-live.json).
 
+**`P6-002` evaluator evidence (fork + live read-only preflight, 2026-09-27):** [`bsc-testnet.fork.phase6-evaluator.json`](../evidence/bsc-testnet.fork.phase6-evaluator.json) records the chain-97 fork at block `132658000` with the official APEX proxy, Perago hook, real Pancake swap, evaluator completion/refund/rejection, and fork-only seeded United Stables (`U`). A read-only live preflight at block `133413598` confirmed the pinned APEX/payment-token proxy and implementation hashes, hook and MandateExecutor runtime hashes, executor pairs, unpaused state, and zero platform fee. The upstream proxy owner `0x1611E27BE13feb93242Bf57914872eA63f9E64DC` has contract code but its governance/signers were not established; it can upgrade the kernel or change fees. Rerun `pnpm --filter @perago/contracts preflight:evaluator` immediately before deploying or submitting jobs. No OutcomeEvaluator has been broadcast; no live deterministic Perago payment is claimed. `PERAGO_SETTLEMENT_PROVIDER` is an explicit payee decision, not inferred from a session signer.
+
+The evaluator also reads `platformFeeBP` inside `settle` and refuses a nonzero value so an owner-initiated fee change after preflight cannot short-pay the provider. This does not make the upgradeable upstream proxy immutable; an upgrade can change even the meaning of the getter, and operational preflight remains mandatory.
+
 ### Failure behavior
 
 - If no compatible deterministic evaluator can be installed, do not claim APEX settlement; deploy a clearly identified Perago test instance or mark settlement blocked.

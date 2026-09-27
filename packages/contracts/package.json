@@ -5,6 +5,8 @@
   "scripts": {
     "test:fork": "node --env-file-if-exists=../../.env script/forge-env.mjs test --match-path test/fork/*",
     "deploy:testnet": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployPerago.s.sol --rpc-url bsc_testnet --broadcast --slow",
-    "deploy:testnet-demo": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployDemoExecutor.s.sol --rpc-url bsc_testnet --broadcast --slow"
+    "deploy:testnet-demo": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployDemoExecutor.s.sol --rpc-url bsc_testnet --broadcast --slow",
+    "preflight:evaluator": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployOutcomeEvaluator.s.sol --sig \"check()\" --rpc-url bsc_testnet",
+    "deploy:testnet-evaluator": "node --env-file-if-exists=../../.env script/forge-env.mjs script script/DeployOutcomeEvaluator.s.sol --rpc-url bsc_testnet --broadcast --slow"
   }
 }

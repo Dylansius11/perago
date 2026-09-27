@@ -244,9 +244,9 @@ A pre-authorization validation revert is not an execution attempt and does not c
    - swap: recipient output balance delta is at least signed `minOutput`, input spent is no more than `maxInput`, and the route/adapter commitment matches;
    - stake: recipient position or receipt-token delta is at least signed `minPositionOut`, input spent is no more than `maxInput`, and the staking target matches.
 4. MandateExecutor emits one terminal `ExecutionReceiptRecorded` event with the verification commitment and evidence hashes.
-5. If an ERC-8183 job is bound, `OutcomeEvaluator.settle(jobId, mandateHash)` checks the job binding, mandate `SUCCEEDED` state, verifier ID, and unused settlement flag.
-6. OutcomeEvaluator calls the configured ERC-8183 completion path. Failed, expired, revoked, mismatched, or already-settled receipts revert.
-7. Indexer projects the receipt from confirmed terminal events. `GET /receipts/:mandateHash` needs no wallet session: it scans that mandate from its persisted finalized cursor in ranges of at most 10 blocks, checks status and verification/failure commitments against MandateExecutor's finalized record, repairs a missing receipt from canonical retained logs, and returns only public commitments, transaction/block evidence, and explorer links derived from the chain definition. Before the evaluator's deployment/event source is pinned and indexed in `P6-002`/`P6-003`, a bound success is `PENDING` and a bound non-success is `INELIGIBLE`; a stored settlement hash or unrelated log never becomes a paid claim. A chain outage fails the read instead of returning a stale success.
+5. If an ERC-8183 job is bound, `OutcomeEvaluator.settle(jobId, mandateHash)` checks the executor's job binding and pinned adapter/verifier identity, requires a verified `SUCCEEDED` receipt, and checks the APEX client's account, pinned payment recipient, evaluator, hook, payment token, zero current fee, state, and deadline before its one-use completion.
+6. A terminal `FAILED`, `REVOKED`, or `EXPIRED` mandate may call `OutcomeEvaluator.reject` to refund a funded/submitted job before its deadline. APEX `claimRefund` after the deadline remains permissionless and independent of Perago. No caller-supplied verdict can cause payment.
+7. Indexer projects the receipt from confirmed terminal events. `GET /receipts/:mandateHash` needs no wallet session: it scans that mandate from its persisted finalized cursor in ranges of at most 10 blocks, checks status and verification/failure commitments against MandateExecutor's finalized record, repairs a missing receipt from canonical retained logs, and returns only public commitments, transaction/block evidence, and explorer links derived from the chain definition. Until the evaluator is deployed and `P6-003` pins and indexes its finalized APEX settlement event source, a bound success is `PENDING` and a bound non-success is `INELIGIBLE`; a stored settlement hash or unrelated log never becomes a paid claim. A chain outage fails the read instead of returning a stale success.
 
 The executor cannot provide a boolean that causes payment. The evaluator derives eligibility from contract state.
 
@@ -297,7 +297,7 @@ Worker state is not product truth. Implemented in `P4-002` (`apps/executor/src/{
 
 ### 6.3 ERC-8183 job state
 
-Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitted`, then `Completed`, `Rejected`, or `Expired`. Perago does not redefine this state machine. A mandate stores its bound `jobId` and commerce contract; the OutcomeEvaluator may complete only a submitted matching job after mandate success. Refund and expiry safety remain available under the chosen ERC-8183 implementation.
+Perago follows the draft standard's canonical states: `Open`, `Funded`, `Submitted`, then `Completed`, `Rejected`, or `Expired`. Perago does not redefine this state machine. A mandate stores its bound `jobId` and commerce contract; the OutcomeEvaluator may complete only a submitted matching job after mandate success, or reject an already terminal non-success while funded/submitted. Upstream APEX expiry and refund safety remain available without evaluator cooperation.
 
 ## 7. Idempotency, replay, and consistency
 

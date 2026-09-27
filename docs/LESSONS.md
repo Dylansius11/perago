@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-27 - Recheck mutable escrow economics inside the settlement transaction
+
+- Observed: chain-97 APEX had `platformFeeBP = 0` at block `133413598`, but a unit test changing it to 100 bp showed that `OutcomeEvaluator.settle` would otherwise release less than the job budget to the provider.
+- Root cause: the upstream escrow proxy has an owner capable of changing its fee after deployment or an offchain preflight; a pinned proxy address does not pin its mutable economics.
+- Rule: read the current fee inside the evaluator's payment transaction and refuse any unexpected value; recheck upstream implementation, admin, and code hashes before accepting new jobs, and leave permissionless expiry refunds available.
+
 ### 2026-09-24 - Serialize destructive database suites and fork journeys
 
 - Observed: a combined fork smoke passed swap 9/9, then stake failed 6/12 after a concurrently launched database integration test executed `drop schema public cascade; create schema public` against the same `TEST_DATABASE_URL`. The stake worker stopped progressing at BEGIN, and its authenticated API session returned `AUTH_INVALID`.

@@ -1,6 +1,6 @@
 # Perago Smart-Contract and Security Specification
 
-**Status:** `MandateExecutor` authorization, accepted-attempt, atomic failure boundaries, and the stateful invariant suite are implemented and locally verified (`P2-001`–`P2-003`); the two production adapters, the two production verifiers, and `OutcomeEvaluator` remain specified and unimplemented
+**Status:** `MandateExecutor`, the pinned swap/stake adapters and verifiers, and their invariant/fork suites are implemented. `OutcomeEvaluator` implements receipt-bound completion and terminal-failure rejection, proven with the real APEX kernel on a chain-97 fork (`P6-002`); it is not deployed on chain 97.
 **Requirements:** [`../PRD.md`](../PRD.md)
 **Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Integrations:** [`INTEGRATION.md`](INTEGRATION.md)
@@ -502,13 +502,13 @@ Before mandate authorization:
 
 `OutcomeEvaluator.settle(jobId, mandateHash)`:
 
-1. resolves the immutable job binding;
-2. requires MandateExecutor receipt `SUCCEEDED` and verification hash nonzero;
-3. matches account, adapter/verifier, action/postcondition, commerce contract, and job ID;
-4. requires job not previously settled;
-5. marks the local settlement guard before external interaction;
-6. calls the pinned ERC-8183 `complete` path with a reason commitment derived from the receipt;
-7. emits `CommerceJobSettled`.
+1. checks the executor's one-to-one commerce binding and stored immutable adapter/verifier pair; the stored digest binds the 22 root-signed mandate fields, including action and postcondition commitments;
+2. requires a `SUCCEEDED` record with a nonzero verification hash and no failure commitment;
+3. reads the configured APEX job and checks its ID, smart-account client, deployment-pinned payment recipient, evaluator, inert hook, nonzero budget, pinned per-job payment token, `Submitted` status, and unexpired deadline; it rechecks `platformFeeBP == 0` onchain so a later fee change cannot silently short-pay the provider;
+4. marks the local settlement guard before the external call (a reverted completion rolls the guard back);
+5. calls the pinned APEX `complete` with `keccak256(abi.encode(mandateHash, verificationHash))` as reason and emits `CommerceJobSettled`.
+
+`OutcomeEvaluator.reject(jobId, mandateHash)` checks the same binding and job identity but requires a terminal `FAILED`, `REVOKED`, or `EXPIRED` mandate with zero verification commitment and an APEX job still `Funded` or `Submitted`. It calls the kernel's evaluator-only `reject`, returning escrow to the client. APEX `claimRefund` remains permissionless after job expiry, independent of the evaluator; neither evaluator function can redirect payment. The APEX proxy is upgradeable by its upstream owner, so the deployment/pre-submission process must recheck the pinned implementation and admin state; a Solidity immutable proxy address alone cannot freeze its implementation.
 
 The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or mismatched receipts. ERC-8183 refund/reject/expiry behavior remains available under the selected implementation; Perago must not install a hook that blocks the standard's non-hookable refund safety path.
 
@@ -578,7 +578,7 @@ The evaluator cannot settle `FAILED`, `REVOKED`, `EXPIRED`, unverified, or misma
 
 The implemented `P2-003` handler models the root owner, smart account, executor, attacker, pinned adapters, and pinned verifiers. Its 17 explicit actions configure policy, authorize, begin, perform, revoke, expire, duplicate/reorder calls, advance time, and mutate protocol outcomes. `MandateExecutorInvariant.t.sol` asserts the 12 safety properties plus the named-caller boundary after every sequence; it passed 1,000 runs × 100 calls locally on 2026-09-20.
 
-The commerce property proves that one ERC-8183 job can bind one mandate and that one mandate can emit one terminal receipt. `P6-002`/`P6-003` will extend the handler with `OutcomeEvaluator` and settlement actions; actual evaluator-driven ERC-8183 settlement is not claimed by `P2-003`.
+The original commerce property proves that one ERC-8183 job can bind one mandate and that one mandate can emit one terminal receipt. `P6-002` adds evaluator unit/fuzz coverage and real-kernel fork paths for completion, rejection, and permissionless refund ([evidence](../evidence/bsc-testnet.fork.phase6-evaluator.json)); it does not add evaluator actions to the original P2 handler, nor claim a live payment. `P6-003` owns automated settlement and finality-aware projection.
 
 ### Fork/testnet tests
 
