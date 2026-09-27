@@ -11,6 +11,7 @@ import {
 import postgres, { type Sql } from "postgres";
 import {
   encodeFunctionData,
+  getAddress,
   type Hex,
   keccak256,
   type PublicClient,
@@ -462,9 +463,13 @@ describe("P4-002 execution queue", () => {
   });
   it("accepts only a bound successful mandate's exact evaluator settlement, once", async () => {
     const signer = privateKeyToAccount(`0x${"9".repeat(64)}`);
+    const seedValue = 134; // Produces a checksummed address containing letters.
+    const commerceAddress = hex(bytes(seedValue + 26, 20));
+    const checksummedCommerce = getAddress(commerceAddress);
+    expect(checksummedCommerce).not.toBe(commerceAddress);
     const { mandateHash } = await seed(
       sql,
-      9,
+      seedValue,
       true,
       Buffer.from(signer.address.slice(2), "hex"),
     );
@@ -475,7 +480,7 @@ describe("P4-002 execution queue", () => {
       deployment: {
         ...config.deployment,
         settlement: {
-          commerce: { address: hex(bytes(35, 20)) },
+          commerce: { address: checksummedCommerce },
           evaluator: { address: evaluator },
         },
       },
@@ -501,11 +506,9 @@ describe("P4-002 execution queue", () => {
     >`
       select erc8183_contract, erc8183_job_id::text, typed_data from mandates where mandate_hash = ${mandateHash}
     `;
-    expect(boundRow?.typed_data.message.commerceContract).toBe(
-      hex(bytes(35, 20)),
-    );
-    expect(boundRow?.erc8183_contract).toEqual(bytes(35, 20));
-    expect(boundRow?.erc8183_job_id).toBe("9");
+    expect(boundRow?.typed_data.message.commerceContract).toBe(commerceAddress);
+    expect(boundRow?.erc8183_contract).toEqual(bytes(seedValue + 26, 20));
+    expect(boundRow?.erc8183_job_id).toBe(String(seedValue));
     const sign = (data: Hex, to: Hex) =>
       signer.signTransaction({
         chainId: 97,
@@ -536,20 +539,23 @@ describe("P4-002 execution queue", () => {
         boundConfig,
       );
     for (const raw of [
-      await sign(settle(9n, key), deployment.mandateExecutor.address),
-      await sign(settle(10n, key), evaluator),
-      await sign(settle(9n, hex(bytes(83, 32))), evaluator),
+      await sign(
+        settle(BigInt(seedValue), key),
+        deployment.mandateExecutor.address,
+      ),
+      await sign(settle(BigInt(seedValue + 1), key), evaluator),
+      await sign(settle(BigInt(seedValue), hex(bytes(83, 32))), evaluator),
       await sign(
         encodeFunctionData({
           abi: outcomeEvaluatorAbi,
           functionName: "reject",
-          args: [9n, key],
+          args: [BigInt(seedValue), key],
         }),
         evaluator,
       ),
     ])
       await expect(submit(raw)).rejects.toBeInstanceOf(ExecutionConflictError);
-    const exact = await sign(settle(9n, key), evaluator);
+    const exact = await sign(settle(BigInt(seedValue), key), evaluator);
     expect((await submit(exact)).job.pending?.transactionHash).toBe(
       keccak256(exact),
     );

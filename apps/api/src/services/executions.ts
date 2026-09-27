@@ -713,7 +713,7 @@ async function assertStageTransaction(
           deployment.settlement.commerce.address,
         ) ||
         control.commerce_job_id !== String(message.commerceJobId) ||
-        message.commerceContract !== deployment.settlement.commerce.address)
+        !same(message.commerceContract, deployment.settlement.commerce.address))
     )
       problems.push("commerce binding");
     if (!transaction.to || !target || !same(transaction.to, target))
