@@ -327,7 +327,10 @@ This record tracks live work without marking a task complete before all of its a
 - **Files/symbols:** `OutcomeEvaluator.sol`; pinned APEX/ERC-8183 interface; settlement tests and deployment script.
 - **Acceptance:** only a matching `SUCCEEDED` receipt completes once; failed/revoked/expired/unverified/mismatched/already-settled jobs fail; upstream refund/expiry path remains available; proxy/admin assumptions checked.
 - **Verification:** unit/fuzz plus full real/fork complete, reject, and refund lifecycles.
+
 - **Commit:** `feat(contracts): bind payment to verified outcomes`.
+
+**`P6-002` in progress:** `OutcomeEvaluator` reads the real MandateExecutor record and job binding, pins the APEX proxy, payment recipient, hook, and payment token, then allows one successful completion or terminal-failure rejection. Foundry `forge test --match-contract OutcomeEvaluatorTest` passed 11 unit tests on 2026-09-24; these use a local escrow double but real MandateExecutor signatures, state transitions, and verifier outcome. The task remains unchecked until a real-kernel fork covers completion/rejection/refund, proxy/admin state is rechecked, and deployment evidence is resolved.
 
 ### `P6-003` Automate settlement without changing truth
 
