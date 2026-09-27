@@ -103,6 +103,20 @@ export {
   workerRequestSchema,
 } from "./api/executions.js";
 export {
+  type CreateFaucetClaimRequest,
+  createFaucetClaimRequestSchema,
+  type FaucetClaim,
+  type FaucetClaimResponse,
+  type FaucetClaimStatus,
+  type FaucetRefusal,
+  type FaucetStatus,
+  faucetClaimResponseSchema,
+  faucetClaimSchema,
+  faucetClaimStatusSchema,
+  faucetRefusalSchema,
+  faucetStatusSchema,
+} from "./api/faucet.js";
+export {
   type SubmitMandateSignatureRequest,
   submitMandateSignatureRequestSchema,
 } from "./api/mandates.js";
@@ -119,11 +133,39 @@ export {
   preparePolicyTransitionRequestSchema,
 } from "./api/policies.js";
 export {
+  type MandatePrepared,
+  mandateAcceptedSchema,
+  mandatePreparedSchema,
+  type PolicyTransitionPrepared,
+  policyTransitionConfirmedSchema,
+  policyTransitionPreparedSchema,
+  simulationCreatedSchema,
+  type TaskCompiled,
+  taskCompiledSchema,
+  type WalletChallengeResponse,
+  walletChallengeResponseSchema,
+  walletPolicyCreatedSchema,
+} from "./api/responses.js";
+export {
   type CreateTaskRequest,
   createTaskRequestSchema,
   type SimulateTaskRequest,
   simulateTaskRequestSchema,
 } from "./api/tasks.js";
+export {
+  type PolicyView,
+  type PublicConfig,
+  policyListResponseSchema,
+  policyViewSchema,
+  publicConfigSchema,
+  type TaskDetail,
+  type TaskSummary,
+  taskDetailSchema,
+  taskListResponseSchema,
+  taskSummarySchema,
+  type WalletSessionView,
+  walletSessionViewSchema,
+} from "./api/views.js";
 export { canonicalJson } from "./canonical-json.js";
 export {
   assertCommerceJobIdentity,
