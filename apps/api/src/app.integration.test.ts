@@ -3,6 +3,11 @@ import {
   deriveSemiModularAccountAddress,
   getAccountPolicyTypedData,
   hashTaskIntent,
+  policyListResponseSchema,
+  publicConfigSchema,
+  taskDetailSchema,
+  taskListResponseSchema,
+  walletSessionViewSchema,
 } from "@perago/sdk";
 import postgres from "postgres";
 import { createPublicClient, http } from "viem";
@@ -19,6 +24,7 @@ import type {
   PolicyServiceConfig,
 } from "./services/policies.js";
 import type { TaskServiceConfig } from "./services/tasks.js";
+import { listPolicies } from "./services/views.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -112,6 +118,33 @@ const app = createApiApp({
   policyVerifier: verifier,
   sql,
   taskConfig,
+  publicConfig: {
+    adapters: [
+      {
+        adapter: "0x3333333333333333333333333333333333333333",
+        id: "pancakeswap-v3",
+        kind: "SWAP",
+        protocol: "PancakeSwap V3",
+      },
+      {
+        adapter: "0x4444444444444444444444444444444444444444",
+        id: "cake-pool",
+        kind: "STAKE",
+        protocol: "PancakeSwap CAKE Pool",
+      },
+    ],
+    chainId: "97",
+    deploymentLabel: "test",
+    executionWindowSeconds: "600",
+    explorer: null,
+    faucet: { enabled: false },
+    mandateExecutor,
+    performSelector: "0x12345678",
+    quoteTtlSeconds: 120,
+    sessionSigner: "0x5555555555555555555555555555555555555555",
+    tokens: catalog.tokens,
+    venue: "fork",
+  },
 });
 let authorization = "";
 
@@ -429,5 +462,121 @@ describe("P3-002 API route smoke", () => {
     await expect(
       sql`update tasks set policy_decision = '{}'::jsonb where id = ${passing.taskId}`,
     ).rejects.toThrow(/compilation is immutable/u);
+  });
+});
+
+describe("P7 owner read routes", () => {
+  it("returns only session-owned views, typed config, and exact CORS", async () => {
+    const configResponse = await app.request("/config");
+    expect(configResponse.status).toBe(200);
+    expect(publicConfigSchema.parse(await configResponse.json())).toMatchObject(
+      {
+        chainId: "97",
+        faucet: { enabled: false },
+        venue: "fork",
+      },
+    );
+    expect((await app.request("/health")).status).toBe(200);
+
+    const sessionResponse = await app.request("/auth/session", {
+      headers: { authorization },
+    });
+    expect(sessionResponse.status).toBe(200);
+    const session = walletSessionViewSchema.parse(await sessionResponse.json());
+    expect(session).toMatchObject({
+      account: account.toLowerCase(),
+      rootOwner: owner.address.toLowerCase(),
+    });
+    await expect(listPolicies(sql, session)).resolves.toMatchObject({
+      policies: [{ status: "ACTIVE" }],
+    });
+
+    const policiesResponse = await app.request("/policies", {
+      headers: { authorization },
+    });
+    expect(policiesResponse.status, await policiesResponse.clone().text()).toBe(
+      200,
+    );
+    expect(
+      policyListResponseSchema.parse(await policiesResponse.json()).policies,
+    ).toHaveLength(1);
+
+    const tasksResponse = await app.request("/tasks?limit=20", {
+      headers: { authorization },
+    });
+    expect(tasksResponse.status).toBe(200);
+    const tasks = taskListResponseSchema.parse(
+      await tasksResponse.json(),
+    ).tasks;
+    expect(tasks).toHaveLength(3);
+    const task = tasks.find((entry) => entry.status === "REJECTED_POLICY");
+    if (!task) throw new Error("expected the rejected test task");
+
+    const detailResponse = await app.request(`/tasks/${task.taskId}`, {
+      headers: { authorization },
+    });
+    expect(detailResponse.status).toBe(200);
+    expect(taskDetailSchema.parse(await detailResponse.json()).goal).toBe(
+      "Swap 0.6 WBNB for CAKE",
+    );
+
+    const other = privateKeyToAccount(
+      "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    );
+    const otherAccount = deriveSemiModularAccountAddress({
+      owner: other.address,
+    });
+    const challengeResponse = await app.request("/auth/challenges", {
+      body: JSON.stringify({
+        account: otherAccount,
+        chainId: "97",
+        rootOwner: other.address,
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const challenge = (await challengeResponse.json()) as {
+      challengeId: string;
+      message: string;
+    };
+    const otherSessionResponse = await app.request("/auth/sessions", {
+      body: JSON.stringify({
+        challengeId: challenge.challengeId,
+        signature: await other.signMessage({ message: challenge.message }),
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const otherSession = (await otherSessionResponse.json()) as {
+      token: string;
+    };
+    expect(
+      (
+        await app.request(`/tasks/${task.taskId}`, {
+          headers: { authorization: `Bearer ${otherSession.token}` },
+        })
+      ).status,
+    ).toBe(404);
+    expect((await app.request("/tasks")).status).toBe(401);
+
+    const allowed = await app.request("/tasks", {
+      headers: {
+        "access-control-request-headers": "authorization,content-type",
+        "access-control-request-method": "GET",
+        origin: "http://localhost:3000",
+      },
+      method: "OPTIONS",
+    });
+    expect(allowed.headers.get("access-control-allow-origin")).toBe(
+      "http://localhost:3000",
+    );
+    const rejected = await app.request("/tasks", {
+      headers: {
+        "access-control-request-method": "GET",
+        origin: "https://untrusted.example",
+      },
+      method: "OPTIONS",
+    });
+    expect(rejected.headers.get("access-control-allow-origin")).toBeNull();
   });
 });

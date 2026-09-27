@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import {
   type Address,
   addressSchema,
@@ -47,10 +48,13 @@ type ProtocolManifest = {
   contracts: Record<string, ManifestContract>;
 };
 
-/** Reads a repository-relative manifest such as `deployments/bsc-testnet.perago.json`. */
+/** Reads a repository-relative or absolute deployment manifest. */
 function readManifest(path: string): unknown {
   return JSON.parse(
-    readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8"),
+    readFileSync(
+      isAbsolute(path) ? path : new URL(`../../../${path}`, import.meta.url),
+      "utf8",
+    ),
   );
 }
 

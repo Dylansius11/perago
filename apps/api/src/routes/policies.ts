@@ -15,6 +15,7 @@ import {
   preparePolicyActivation,
   preparePolicyRevocation,
 } from "../services/policies.js";
+import { listPolicies } from "../services/views.js";
 
 export function createPolicyRoutes(input: {
   authConfig: WalletAuthConfig;
@@ -25,6 +26,10 @@ export function createPolicyRoutes(input: {
   const routes = new Hono<WalletRouteBindings>();
 
   routes.use("*", requireWalletSession(input.sql, input.authConfig));
+
+  routes.get("/", async (context) =>
+    context.json(await listPolicies(input.sql, context.get("wallet"))),
+  );
 
   routes.post("/", async (context) => {
     const created = await createWalletPolicy(

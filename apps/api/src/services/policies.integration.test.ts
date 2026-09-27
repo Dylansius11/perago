@@ -59,6 +59,7 @@ const userOpHash =
 const identity: WalletIdentity = {
   account: account.toLowerCase() as `0x${string}`,
   chainId: "97",
+  expiresAt: "2026-09-20T13:00:00.000Z",
   ownerEpoch: "0",
   rootOwner: owner.address.toLowerCase() as `0x${string}`,
   walletId: "00000000-0000-4000-8000-000000000001",

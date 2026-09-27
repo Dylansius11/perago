@@ -91,6 +91,8 @@ No package is created until its phase begins. Import boundaries are enforced by 
 - Normalize tokens/amounts, perform deterministic policy intersection, compile adapter actions, and simulate.
 - Store hashes and lifecycle projections, enqueue authorized work, and expose receipt queries.
 - Never sign for the user, execute arbitrary targets, or mark onchain success from worker assertions.
+- P7-002 provides the local `apps/api/src/main.ts` server entrypoint and fork
+  development stack for the web journey; hosted API deployment remains P8-001.
 
 ### `apps/executor`
 
@@ -261,6 +263,17 @@ The executor cannot provide a boolean that causes payment. The evaluator derives
 - **After expiry while authorized:** anyone may call `finalizeExpired(mandateHash)`. `beginExecution` checks expiry and cannot race successfully after the boundary.
 - **After `beginExecution`:** revoke is no longer allowed; the exact UserOperation either records success/failure or the immutable timeout finalizes `FAILED`.
 - **After a terminal state:** revoke, begin, perform, and expiry calls revert or return existing status without external side effects, as specified by the ABI.
+
+### 5.6 Testnet faucet claim
+
+`GET /faucet` and `POST /faucet/claims` require the same wallet-session authentication as private lifecycle reads. The recipient is always the authenticated identity's normalized smart-account address; the request supplies no recipient or amount. The component is configured only with `PERAGO_FAUCET_KEY`, its dedicated BSC Testnet RPC, a secret IP-HMAC salt, and positive base-unit limits. Startup reads the RPC chain ID and refuses any value other than 97. The key funds plain tBNB transfers only; it is never a deployer, root owner, executor, or smart-account session key.
+
+1. The route takes `X-Forwarded-For` only when `PERAGO_TRUST_PROXY=true`; otherwise it uses `getConnInfo`'s Node socket address. It HMAC-SHA-256 hashes that value with `PERAGO_FAUCET_IP_SALT` before persistence. No raw client IP is logged or stored.
+2. A transaction takes ordered PostgreSQL advisory locks for the global faucet budget, wallet identity, and IP hash. It rejects an active wallet claim in the rolling window, an account balance at/above the threshold, an exhausted rolling budget, or the per-IP limit. The advisory locks—not a process-local check—serialize concurrent reservations.
+3. The transaction inserts and commits a `PENDING` ledger row before the key broadcasts. That durable reservation counts against the budget and prevents a duplicate wallet payment.
+4. The service broadcasts exactly the fixed configured amount to the row's recipient, then records the hash as `BROADCAST`. `GET /faucet` reads the receipt for a broadcast hash and marks it `CONFIRMED` or `FAILED`.
+
+The `PENDING → BROADCAST → CONFIRMED|FAILED` ledger is an operational payment record, not authority or an onchain success assertion. A process crash or ambiguous RPC error after `PENDING` commits but before a hash is stored may still have broadcast a transfer. Because absence of broadcast cannot be proved from that row, this implementation never ages such a `PENDING` row into `FAILED`: it remains surfaced, blocks another wallet claim, and counts toward budget until an operator investigates. A receipt-proven reverted transfer becomes `FAILED`, no longer consumes budget, and may be retried under the normal limits.
 
 ## 6. State machines
 
