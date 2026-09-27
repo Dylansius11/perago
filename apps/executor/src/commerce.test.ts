@@ -140,6 +140,12 @@ describe("worker commerce observation", () => {
     expect(
       await readCommerceView({
         ...input,
+        client: clientWith({ job: { status: 1 }, fee: 100n }),
+      }),
+    ).toMatchObject({ status: "Funded", valid: true, refundable: true });
+    expect(
+      await readCommerceView({
+        ...input,
         client: clientWith({ job: { status: 1, provider: addr("a") } }),
       }),
     ).toMatchObject({

@@ -1,6 +1,6 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Chain-97 account, protocol, adapter, bounded swap/stake, and manual ERC-8183 lifecycles are proven; `P6-003` automated settlement is implemented but pending end-to-end fork proof. No live evaluator or hosted settlement API is claimed.
+**Status:** Chain-97 account, protocol, adapter, bounded swap/stake, and manual ERC-8183 lifecycles are proven; `P6-003` automated bound settlement/refund is proven on a local chain-97 fork at block 133475562 ([evidence](../evidence/bsc-testnet.fork.phase6-settlement-smoke.json)). No live evaluator, hosted settlement API, or live Perago payment is claimed.
 **Reviewed:** 2026-09-27
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
@@ -36,6 +36,8 @@ An official page proves what its publisher documents; it does not prove that byt
 | APEX payment token (United Stables `U`) | ERC-8183 demo payment token | `verified` | Selected; upstream labels it USDC, onchain it is `U`. No faucet: funded through one V2 pair. |
 | Quote + pinned `eth_call` state override | Pre-sign simulation | `verified` | Selected in `P3-004`: a QuoterV2 quote or exact-path share estimate at one pinned block, then the account's exact calls run against the production executor, adapter, verifier, and protocol through one `eth_call` with a state override (section 11). Proven on a chain-97 fork and read-only on chain 97 ([evidence](../evidence/bsc-testnet.fork.phase3-smoke.json)). Bundler UserOperation simulation belongs to execution (`P4-002`), because a mandate cannot be authorized before it is signed. No third-party simulator is added. |
 | Groq `openai/gpt-oss-120b` | Untrusted intent planner | `verified` | Selected in `P3-003`; strict `json_schema` constrained decoding returned only the closed candidate across a ten-intent matrix on 2026-09-23 ([evidence](../evidence/p3-003-planner-live.json)). It never authorizes; the deterministic compiler owns every value. Sources: [structured outputs](https://console.groq.com/docs/structured-outputs), [data retention](https://console.groq.com/docs/your-data). |
+
+The production MandateExecutor and pinned APEX kernel/token were read on the chain-97 fork; a locally deployed evaluator paid a verified bound job once and refunded failed jobs. A settlement outage left `SUCCEEDED/PENDING`, and finalized event correlation produced `CONFIRMED` after restart. A fork-only fault injection made the output token's `balanceOf` revert during verifier pre-state measurement; the real production executor recorded `FAILED`, and the worker refunded without provider payment. The original token code was restored before refund. This is **fork** evidence, not a live payment or a real upstream token failure, and the production executor's live end-to-end status remains `proposed` until a reviewed evaluator/provider and a real bound job are deployed and exercised. The [fork report](../evidence/bsc-testnet.fork.phase6-settlement-smoke.json) records the source block, code hashes, transactions, and negative paths; its explorer URLs describe a chain but cannot resolve fork-only transactions.
 
 ## 3. BNB Smart Chain
 

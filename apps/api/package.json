@@ -11,6 +11,7 @@
     "smoke:phase4-swap": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase4-swap-journey.fork.smoke.test.ts",
     "smoke:phase4-swap:testnet": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase4-swap-journey.testnet.smoke.test.ts",
     "smoke:phase5-stake": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase5-stake-journey.fork.smoke.test.ts",
+    "smoke:phase6-settlement": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase6-settlement.fork.smoke.test.ts",
     "smoke:phase5-stake:testnet": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 src/smoke/phase5-stake-journey.testnet.smoke.test.ts",
     "typecheck": "tsc --noEmit"
   },

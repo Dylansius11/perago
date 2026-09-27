@@ -22,8 +22,8 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1–5 and `P6-001`–`P6-002` are complete; `P6-003` (automated settlement) is open with an approved fork-first design.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires a bound ERC-8183 job, not yet created by Perago.
-The API has wallet authentication, policy compilation, simulation, EIP-712 signing, a durable executor queue, and [fork-proven finalized public receipt queries](docs/evidence/bsc-testnet.fork.phase5-stake-journey.json). The evaluator's completion, rejection, and independent refund paths are [proven on a chain-97 fork](docs/evidence/bsc-testnet.fork.phase6-evaluator.json), not deployed on testnet; no hosted receipt API or live Perago payment is claimed.
+**Phases 1–5 and `P6-001`–`P6-003` are complete at their specified evidence gates; Phase 6 automated settlement is fork-proven, not live.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires a bound ERC-8183 job.
+The API has wallet authentication, policy compilation, bound-job simulation, EIP-712 signing, a durable executor queue, and finalized public receipt queries. [Fork evidence for `P6-003`](docs/evidence/bsc-testnet.fork.phase6-settlement-smoke.json) drives the production executor with an APEX job and a locally deployed evaluator: a payment outage leaves execution `SUCCEEDED/PENDING`, restart settles once, and a failed execution refunds without paying the provider. Independent evaluator completion, rejection, and expiry refunds are [proven on a chain-97 fork](docs/evidence/bsc-testnet.fork.phase6-evaluator.json). No hosted receipt API, live evaluator, or live Perago payment is claimed.
 For hosted deployment at `P8-001`, the user chose Supabase managed PostgreSQL instead of the originally planned Railway database. This changes the host, not the PostgreSQL/Drizzle schema or driver; local PostgreSQL is for isolated development and fork verification only. No Supabase service or live evaluator deployment is claimed yet.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
@@ -36,7 +36,7 @@ Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evi
 - one natural-language swap carried end to end on the labelled `testnet-demo` MandateExecutor (`SC-D-006`). It covers policy activation, simulation, the signed digest, authorize, begin, the executor's perform UserOperation, the measured output, and a verified receipt. Replays and a tampered spend, minimum, recipient, adapter, selector, target, or action are all refused ([`docs/evidence/bsc-testnet.phase4-swap-journey.json`](docs/evidence/bsc-testnet.phase4-swap-journey.json)). Payment is Phase 6.
 - one natural-language stake carried end to end on the same executor. The simulation commits the recipient's position holder, its shares, and the CAKE Pool fees. The executor's perform UserOperation mints pool shares above the signed minimum, and a worker killed right after persisting it recovers without a second submission. A second stake simulated against the old position is refused `STALE_POSITION`. Only the account can withdraw, and the owner withdrew the stake minus the 0.1% early fee ([`docs/evidence/bsc-testnet.phase5-stake-journey.json`](docs/evidence/bsc-testnet.phase5-stake-journey.json)).
 
-Also built: the approved Perago landing shell, Foundry invariant tests, PostgreSQL lifecycle constraints and replay-safe projections, and one-use root-wallet authentication. `P3-002` policy activation/revocation is proven on chain 97 ([evidence](docs/evidence/bsc-testnet.p3-policy-live.json)); that earlier deployment is explicitly policy-probe-only. Not built yet: production ERC-8183 job creation/automated settlement and the product web journey.
+Also built: the approved Perago landing shell, Foundry invariant tests, PostgreSQL lifecycle constraints and replay-safe projections, and one-use root-wallet authentication. `P3-002` policy activation/revocation is proven on chain 97 ([evidence](docs/evidence/bsc-testnet.p3-policy-live.json)); that earlier deployment is explicitly policy-probe-only. Not built yet: the production ERC-8183 job provisioning UI, live evaluator deployment/payment, and the product web journey.
 
 ## Planned repository map
 
@@ -51,7 +51,7 @@ packages/
 docs/        Product and technical sources of truth
 ```
 
-The SDK owns domain/account/action types, the evaluator ABI, and the public receipt schema; the API and worker reconcile against onchain mandate status and verification commitments. `P6-002` proves manual, receipt-bound settlement on a fork; `P6-003` automates it and indexes finalized payment evidence on a fork first. Live evaluator deployment and hosted proof belong to `P8-001`.
+The SDK owns domain/account/action types, the evaluator ABI, and the public receipt schema; the API and worker reconcile against onchain mandate status and verification commitments. `P6-002` proves manual, receipt-bound settlement on a fork; `P6-003` proves automated payment/refund and finalized payment indexing on a fork using the production MandateExecutor. Live evaluator deployment and hosted proof belong to `P8-001`.
 
 ## Documentation
 
@@ -68,7 +68,7 @@ The SDK owns domain/account/action types, the evaluator ABI, and the public rece
 ## Honest limitations
 
 - The production MandateExecutor is deployed on chain 97, but it requires a bound ERC-8183 job; successful swap/stake mandate journeys used the separately labelled `testnet-demo` executor. Public receipt queries are verified on a chain-97 fork, not a hosted production API.
-- ERC-8183 and ERC-8004 are draft standards; integration details can change. The immutable OutcomeEvaluator is fork-proven but not deployed; its APEX proxy can be upgraded by the upstream owner, and automated outcome-linked settlement remains `P6-003`.
-- Session and staking paths have fork and testnet evidence; production job creation and payment-token binding remain gated by the technical integration specification.
+- ERC-8183 and ERC-8004 are draft standards; integration details can change. The immutable OutcomeEvaluator is fork-proven but not deployed; its APEX proxy can be upgraded by the upstream owner. `P6-003` automation has fork proof only, not a live bound settlement.
+- Session and staking paths have fork and testnet evidence; production job provisioning and live payment remain gated by the technical integration specification.
 - Simulation reduces execution risk but cannot guarantee future chain state.
 - The MVP deliberately supports only two closed action types and a minimal protocol allowlist.

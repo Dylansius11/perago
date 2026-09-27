@@ -1,6 +1,6 @@
 # Perago Data Model
 
-**Status:** Implemented through `P6-001` for public finalized receipt replay, with the `P6-003` bounded settlement transaction and projection schema in place; automated payment remains fork-proof pending, and hosted deployment is pending.
+**Status:** Implemented through `P6-003`: finalized public receipt replay, bounded settlement transactions, and payment projection are proven with local PostgreSQL and on a chain-97 fork. No hosted deployment or live automated payment is claimed.
 **System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
