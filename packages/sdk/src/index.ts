@@ -125,6 +125,8 @@ export { canonicalJson } from "./canonical-json.js";
 export {
   type PeragoDeploymentManifest,
   peragoDeploymentManifestSchema,
+  resolveSettlementDeployment,
+  type SettlementDeployment,
 } from "./deployment.js";
 export {
   type CompiledPlan,

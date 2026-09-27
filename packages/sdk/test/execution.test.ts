@@ -86,6 +86,27 @@ describe("pending transaction", () => {
         .success,
     ).toBe(false);
   });
+
+  it("allows only signed settlement or refund transactions without a UserOperation", () => {
+    expect(
+      pendingTransactionSchema.parse({
+        ...pending,
+        kind: "SETTLE",
+        userOperationHash: null,
+      }).kind,
+    ).toBe("SETTLE");
+    expect(
+      pendingTransactionSchema.parse({
+        ...pending,
+        kind: "REJECT_JOB",
+        userOperationHash: null,
+      }).kind,
+    ).toBe("REJECT_JOB");
+    expect(
+      pendingTransactionSchema.safeParse({ ...pending, kind: "SETTLE" })
+        .success,
+    ).toBe(false);
+  });
 });
 
 describe("session perform call", () => {

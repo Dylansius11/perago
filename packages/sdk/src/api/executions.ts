@@ -21,6 +21,7 @@ export const executionStatusSchema = z.enum([
   "EXECUTING",
   "VERIFYING",
   "SETTLING",
+  "REFUNDING",
   "RETRY_WAIT",
   "TERMINAL",
   "REJECTED",
@@ -50,6 +51,8 @@ export const executionTransactionKindSchema = z.enum([
   "PERFORM",
   "FINALIZE_EXPIRED",
   "FINALIZE_STALLED",
+  "SETTLE",
+  "REJECT_JOB",
 ]);
 
 export type ExecutionTransactionKind = z.infer<
