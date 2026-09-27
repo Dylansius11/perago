@@ -11,6 +11,7 @@ import {
   MAX_SESSION_ENTITY_ID,
   packUserOperationSignature,
   ROOT_OWNER_ENTITY_ID,
+  semiModularAccountRuntimeCode,
   wrapExecuteUserOp,
 } from "../src/index.js";
 
@@ -62,6 +63,16 @@ describe("Modular Account V2 public API", () => {
         owner: "0x0000000000000000000000000000000000000000",
       }),
     ).toThrow(RangeError);
+  });
+
+  it("derives the exact owner-bound runtime observed on a chain-97 fork", () => {
+    expect(
+      semiModularAccountRuntimeCode({
+        owner: "0x808e215626f00f3c64082341a97bca470cb71fac",
+      }),
+    ).toBe(
+      "0x363d3d373d3d363d7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc545af43d6000803e6038573d6000fd5b3d6000f3808e215626f00f3c64082341a97bca470cb71fac",
+    );
   });
 
   it("packs nonce keys into the documented entity and validation bit positions", () => {

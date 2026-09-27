@@ -47,6 +47,7 @@ export {
   PRIVILEGED_SELECTORS,
   packUserOperationSignature,
   ROOT_OWNER_ENTITY_ID,
+  semiModularAccountRuntimeCode,
   serializeHookConfig,
   serializeModuleEntity,
   serializeValidationConfig,
