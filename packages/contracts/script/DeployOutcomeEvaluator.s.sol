@@ -10,7 +10,6 @@ import {IACP} from "../src/interfaces/IACP.sol";
 interface IApexAdmin {
     function owner() external view returns (address);
     function paused() external view returns (bool);
-    function platformFeeBP() external view returns (uint256);
 }
 
 /// @notice Preflight without a key: forge script script/DeployOutcomeEvaluator.s.sol --sig 'check()' --rpc-url bsc_testnet
@@ -69,7 +68,7 @@ contract DeployOutcomeEvaluator is Script {
         address owner = admin.owner();
         require(owner != address(0), "kernel owner missing");
         require(!admin.paused(), "kernel paused");
-        require(admin.platformFeeBP() == 0, "kernel fee changed");
+        require(IACP(commerce).platformFeeBP() == 0, "kernel fee changed");
         console.log("upstream owner (can upgrade kernel)", owner);
     }
 

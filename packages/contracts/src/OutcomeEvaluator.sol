@@ -50,6 +50,7 @@ contract OutcomeEvaluator is ReentrancyGuard {
                 || receipt.failureReasonHash != bytes32(0)
         ) revert SettlementNotEligible();
         if (_job(jobId, receipt.account).status != IACP.JobStatus.Submitted) revert SettlementNotEligible();
+        if (commerce.platformFeeBP() != 0) revert SettlementNotEligible();
 
         settled[address(commerce)][jobId] = true;
         commerce.complete(jobId, keccak256(abi.encode(mandateHash, receipt.verificationHash)), "");

@@ -16,6 +16,7 @@ import {MockPeragoVerifier} from "./mocks/MockPeragoVerifier.sol";
 // verifier outcome, binding, and terminal receipt all run in the real executor.
 contract EvaluatorEscrow is IACP {
     address public paymentToken;
+    uint256 public platformFeeBP;
     Job public job;
     address public jobToken;
     bool public refuseCompletion;
@@ -35,6 +36,10 @@ contract EvaluatorEscrow is IACP {
 
     function setRefuseCompletion(bool refused) external {
         refuseCompletion = refused;
+    }
+
+    function setPlatformFeeBP(uint256 fee) external {
+        platformFeeBP = fee;
     }
 
     function getJob(uint256) external view returns (Job memory) {
@@ -139,6 +144,15 @@ contract OutcomeEvaluatorTest is Test {
         assertTrue(evaluator.settled(address(escrow), JOB_ID));
         vm.expectRevert(OutcomeEvaluator.AlreadySettled.selector);
         evaluator.settle(JOB_ID, hash);
+    }
+
+    function test_upstreamFeeChangeCannotShortPayTheProvider() public {
+        bytes32 hash = _authorized();
+        _perform(hash, false);
+        escrow.setPlatformFeeBP(100);
+        vm.expectRevert(OutcomeEvaluator.SettlementNotEligible.selector);
+        evaluator.settle(JOB_ID, hash);
+        assertEq(payment.balanceOf(PROVIDER), 0);
     }
 
     function testFuzz_aDifferentJobIdCannotUseThisSuccess(uint256 unrelatedJobId) public {

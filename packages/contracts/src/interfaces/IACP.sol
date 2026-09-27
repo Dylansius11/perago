@@ -2,7 +2,8 @@
 pragma solidity 0.8.37;
 
 /// @notice The deployed BNB APEX kernel's relevant ABI, not a generic ERC-8183 abstraction.
-/// @dev The Job tuple and selectors mirror bnb-chain/apex-contracts/contracts/IACP.sol.
+/// @dev The Job tuple mirrors bnb-chain/apex-contracts/contracts/IACP.sol;
+/// `platformFeeBP` is the deployed kernel's additional public fee getter.
 interface IACP {
     enum JobStatus {
         Open,
@@ -31,5 +32,6 @@ interface IACP {
     function complete(uint256 jobId, bytes32 reason, bytes calldata optParams) external;
     function reject(uint256 jobId, bytes32 reason, bytes calldata optParams) external;
     function paymentToken() external view returns (address);
+    function platformFeeBP() external view returns (uint256);
     function jobPaymentToken(uint256 jobId) external view returns (address);
 }

@@ -504,7 +504,7 @@ Before mandate authorization:
 
 1. checks the executor's one-to-one commerce binding and stored immutable adapter/verifier pair; the stored digest binds the 22 root-signed mandate fields, including action and postcondition commitments;
 2. requires a `SUCCEEDED` record with a nonzero verification hash and no failure commitment;
-3. reads the configured APEX job and checks its ID, smart-account client, deployment-pinned payment recipient, evaluator, inert hook, nonzero budget, pinned per-job payment token, `Submitted` status, and unexpired deadline;
+3. reads the configured APEX job and checks its ID, smart-account client, deployment-pinned payment recipient, evaluator, inert hook, nonzero budget, pinned per-job payment token, `Submitted` status, and unexpired deadline; it rechecks `platformFeeBP == 0` onchain so a later fee change cannot silently short-pay the provider;
 4. marks the local settlement guard before the external call (a reverted completion rolls the guard back);
 5. calls the pinned APEX `complete` with `keccak256(abi.encode(mandateHash, verificationHash))` as reason and emits `CommerceJobSettled`.
 
