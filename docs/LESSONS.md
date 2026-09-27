@@ -246,6 +246,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## User insight
 
+### 2026-09-27 - Use managed Supabase PostgreSQL at the deployment gate
+
+- Asked for a working hosted product without relying on a local database and for smaller, frequent coherent commits with every technical decision recorded.
+- Application: at `P8-001`, provision Supabase managed PostgreSQL, apply the checked-in SQL migrations and smoke the deployed API/worker against it; retain local PostgreSQL only for isolated tests, preserve the provider-neutral `postgres` driver, and record design/evidence with each bounded commit.
+
+
 ### 2026-09-20 - Verification and repository intelligence must be proportional
 
 - Asked to avoid rerunning checks that already passed when the affected surface has not changed, use one final verification at the commit boundary, and skip Graphify when code-relationship analysis does not materially help.

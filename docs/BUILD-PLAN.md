@@ -1,6 +1,6 @@
 # Perago Build Plan
 
-**Status:** Phase 1 accepted on 2026-09-19 and open in [PR #5](https://github.com/Dylansius11/perago/pull/5); Phases 2–5 complete on `dev`. By explicit user decision on 2026-09-23, `P4-001` and `P5-001` were built ahead of order and the production MandateExecutor deployed on chain 97. `P4-003` and `P5-002` have fork and live chain-97 execution evidence on the labelled `testnet-demo` executor (`SC-D-006`). `P6-001` closed on 2026-09-24 with fork evidence for the public receipt and local PostgreSQL replay/reorg proof. `P6-002` closed on 2026-09-27 with deterministic evaluator unit/fuzz and APEX fork evidence, plus live read-only proxy preflight; no evaluator deployment or live Perago payment was claimed. `P6-003` is next only when the user opens it. `P7-000`/`P7-001` were authorized and completed out of order (2026-09-19/20).
+**Status:** Phase 1 accepted on 2026-09-19 and open in [PR #5](https://github.com/Dylansius11/perago/pull/5); Phases 2–5 complete on `dev`. By explicit user decision on 2026-09-23, `P4-001` and `P5-001` were built ahead of order and the production MandateExecutor deployed on chain 97. `P4-003` and `P5-002` have fork and live chain-97 execution evidence on the labelled `testnet-demo` executor (`SC-D-006`). `P6-001` closed on 2026-09-24 with fork evidence for the public receipt and local PostgreSQL replay/reorg proof. `P6-002` closed on 2026-09-27 with deterministic evaluator unit/fuzz and APEX fork evidence, plus live read-only proxy preflight; no evaluator deployment or live Perago payment was claimed. The user opened `P6-003` on 2026-09-27; implementation is in progress under the approved fork-first design. `P7-000`/`P7-001` were authorized and completed out of order (2026-09-19/20).
 **Requirement source:** [`PRD.md`](PRD.md)
 **Technical sources:** [`technical/ARCHITECTURE.md`](technical/ARCHITECTURE.md), [`technical/SMART-CONTRACT.md`](technical/SMART-CONTRACT.md), [`technical/ERD.md`](technical/ERD.md), [`technical/INTEGRATION.md`](technical/INTEGRATION.md), [`technical/TECH-STACK.md`](technical/TECH-STACK.md)
 
@@ -340,6 +340,9 @@ This record tracks live work without marking a task complete before all of its a
 - **Verification:** outage/restart/duplicate settle smoke and mismatched receipt rejection.
 - **Commit:** `feat(executor): settle verified ERC-8183 jobs`.
 
+**Opened 2026-09-27; approved implementation decision:** Pin a deployed evaluator and the upstream proxy/implementation in reviewed manifests before leasing a bound mandate. Preflight the bound submitted job and remaining expiry before consuming authority. Extend the existing one-pending-transaction lease/reconciliation path for `settle` on finalized `SUCCEEDED` only and `reject` on terminal non-success; persist signed bytes before broadcast and never reinterpret an infrastructure retry as another business attempt. Derive public `CONFIRMED` payment only from finalized matching evaluator/kernel evidence, rechecking the mandate and job binding; duplicate logs are idempotent and a payment outage leaves mandate `SUCCEEDED` with payment `PENDING`. Work in reviewable commits for (1) SDK/deployment contract, (2) lease and chain preflight, (3) durable worker transactions, (4) finalized settlement projection, (5) fork/Postgres smoke and evidence, with focused red/green checks and same-change docs at each boundary. The evaluator is not yet deployed; fork-only proof is labeled fork, and live deployment remains at `P8-001` after an explicit provider address and funded disposable deployer are supplied.
+
+
 **Phase 6 smoke:** successful swap pays, forced verifier failure withholds payment, expired/rejected job refunds, and public receipt ties every hash/transaction together. This proves SC-001 and SC-004.
 
 **Phase gate:** contract and public evidence can be independently checked from chain plus canonical offchain documents.
@@ -395,6 +398,9 @@ Added 2026-09-23 at the user's request so testers can fund a smart account witho
 
 - **Requirements:** PRD-O-001–004, PRD-S-008, PRD-S-010–011.
 - **Files/symbols:** reviewed environment examples, deployment manifests/scripts, CI and platform config; never secrets/generated provider state.
+
+**Database hosting decision (user, 2026-09-27):** Use Supabase managed PostgreSQL for the hosted environment instead of the originally selected Railway database. Keep the existing PostgreSQL/Drizzle schema and `postgres` driver; do not add the Supabase application client. At `P8-001`, the operator supplies a private managed connection string, applies checked-in migrations, records the supported patched server version and connection-pooling/TLS settings, and smokes API requests, worker leases, finalized receipt queries, and restart recovery on that database. Local PostgreSQL remains only for deterministic development and fork tests. No Supabase project, credentials, schema migration, or hosted proof exists yet.
+
 - **Acceptance:** fresh deployment from docs/committed config; exact versions; contracts verified; addresses/code hashes/admin state recorded; health/readiness and rollback documented.
 - **Verification:** clean-environment deploy and smoke; secret scan; manifest-to-chain check.
 - **Commit:** `chore: deploy reproducible Perago demo`.

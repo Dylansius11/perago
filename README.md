@@ -22,8 +22,9 @@ The MVP targets one approved BSC swap adapter and one approved BSC staking adapt
 
 ## Status
 
-**Phases 1–5 and `P6-001`–`P6-002` are complete; `P6-003` (automated settlement) starts only when the user opens it.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires a bound ERC-8183 job, not yet created by Perago.
+**Phases 1–5 and `P6-001`–`P6-002` are complete; `P6-003` (automated settlement) is open with an approved fork-first design.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires a bound ERC-8183 job, not yet created by Perago.
 The API has wallet authentication, policy compilation, simulation, EIP-712 signing, a durable executor queue, and [fork-proven finalized public receipt queries](docs/evidence/bsc-testnet.fork.phase5-stake-journey.json). The evaluator's completion, rejection, and independent refund paths are [proven on a chain-97 fork](docs/evidence/bsc-testnet.fork.phase6-evaluator.json), not deployed on testnet; no hosted receipt API or live Perago payment is claimed.
+For hosted deployment at `P8-001`, the user chose Supabase managed PostgreSQL instead of the originally planned Railway database. This changes the host, not the PostgreSQL/Drizzle schema or driver; local PostgreSQL is for isolated development and fork verification only. No Supabase service or live evaluator deployment is claimed yet.
 
 Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
 

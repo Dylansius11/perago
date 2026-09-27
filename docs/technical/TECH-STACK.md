@@ -180,9 +180,9 @@ PostgreSQL owns durable offchain workflow, immutable authored records, raw chain
 - Use `jsonb` only for versioned canonical documents/evidence; indexed state and identities get typed columns.
 - Use `bytea` for addresses/hashes/signatures and `numeric(78,0)` for uint256 values.
 - Use the `postgres` driver with bounded pools per process.
-- No Supabase client, ORM repository abstraction, or database-per-service in MVP.
+- No Supabase client, ORM repository abstraction, or database-per-service in MVP. Supabase is the managed PostgreSQL host, accessed through the existing `postgres` driver; no provider-specific application data API is required.
 
-Managed PostgreSQL 18.6 is preferred. If the deployment provider offers only a supported older major, use its newest patched supported version and record the platform constraint; schema features must remain portable.
+Managed PostgreSQL 18.6 is preferred. At `P8-001`, select Supabase's newest patched supported major, record its actual version and platform constraint, run the checked-in Drizzle SQL migrations and the request/worker/reconciliation smoke against that instance. Local PostgreSQL remains an isolated development and fork-test fixture, never the hosted product database; schema features must remain portable.
 
 ## 8. Contracts
 
@@ -220,7 +220,7 @@ One formatter/linter for supported TypeScript/JSON files. Use its stable recomme
 | Web | Vercel | Native stable Next deployment and preview URLs. |
 | API | Railway long-lived service | Hono Node process, straightforward secrets/networking. |
 | Executor/indexer | Railway worker services | Persistent processes and shared managed network. |
-| Database | Railway managed PostgreSQL | One operational plane with API/workers; use newest supported patched major. |
+| Database | Supabase managed PostgreSQL | User-selected managed host at `P8-001`; retain the portable `postgres` driver, Drizzle migrations, and one durable queue database. |
 | Contracts | BSC Testnet chain 97 | Official target and explorer-verifiable evidence. |
 | RPC | Alchemy primary plus independent BNB-compatible fallback | AA integration plus disagreement/recovery path. |
 | Bundler/paymaster | Alchemy, with validated standards-compatible fallback | Official BNB Testnet support and gas sponsorship. |
