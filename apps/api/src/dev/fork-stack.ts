@@ -25,6 +25,8 @@ function required(name: string): string {
 function apiEnvironment(input: {
   databaseUrl: string;
   executorAddress: string;
+  faucetKey: `0x${string}`;
+  ipSalt: string;
   workerToken: string;
 }): NodeJS.ProcessEnv {
   const inherited = Object.fromEntries(
@@ -35,6 +37,9 @@ function apiEnvironment(input: {
   return {
     ...inherited,
     PERAGO_API_PORT: "8787",
+    PERAGO_BSC_TESTNET_RPC: RPC_URL,
+    PERAGO_FAUCET_KEY: input.faucetKey,
+    PERAGO_FAUCET_IP_SALT: input.ipSalt,
     PERAGO_API_RPC: RPC_URL,
     PERAGO_API_VENUE: "fork",
     PERAGO_DATABASE_URL: input.databaseUrl,
@@ -63,6 +68,9 @@ async function main(): Promise<void> {
   const databaseUrl = required("PERAGO_DEV_DATABASE_URL");
   const executorKey = generatePrivateKey();
   const executor = privateKeyToAccount(executorKey);
+  const faucetKey = generatePrivateKey();
+  const faucet = privateKeyToAccount(faucetKey);
+  const ipSalt = randomBytes(32).toString("hex");
   const workerToken = randomBytes(32).toString("base64url");
   const sql = postgres(databaseUrl, { onnotice: () => {} });
   const children: ChildProcess[] = [];
@@ -91,7 +99,11 @@ async function main(): Promise<void> {
     });
     await testClient.setBalance({
       address: executor.address,
-      value: parseEther("0.005"),
+      value: parseEther("0.05"),
+    });
+    await testClient.setBalance({
+      address: faucet.address,
+      value: parseEther("0.5"),
     });
 
     const api = spawn(process.env.BUN_BIN || "bun", ["src/main.ts"], {
@@ -100,6 +112,8 @@ async function main(): Promise<void> {
         databaseUrl,
         executorAddress: executor.address,
         workerToken,
+        faucetKey,
+        ipSalt,
       }),
       stdio: "ignore",
     });

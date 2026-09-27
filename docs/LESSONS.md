@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - Fund a disposable executor for its full transaction chain
+
+- Observed: a fork-browser swap stopped at `VERIFYING` with a persisted `PERFORM` hash absent from the mempool. The worker's initial `0.005` tBNB fell to `0.003570246` after authorization and begin; the next signed transaction's fee ceiling exceeded the remaining balance.
+- Root cause: the dev fork allocated enough gas for individual submissions but not for the complete multi-stage execution.
+- Rule: size disposable fork balances for the full authorize/begin/perform/finalize path before testing worker liveness; never interpret a persisted transaction hash alone as a broadcast or payment result.
+
 ### 2026-09-28 - Keep motion markup stable across server and client
 
 - Observed: reduced-motion browser screenshots left 30 entrance elements in their hidden server-rendered state and React reported a hydration mismatch between `motion` markup and plain `<div>` branches.
