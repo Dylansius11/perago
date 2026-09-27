@@ -156,6 +156,15 @@ describe("worker commerce observation", () => {
       }),
     ).toMatchObject({ status: "Submitted", valid: false, refundable: true });
   });
+  it("keeps an expired escrow refundable when the upstream fee changes", async () => {
+    expect(
+      await readCommerceView({
+        ...input,
+        now: 1_601n,
+        client: clientWith({ fee: 100n }),
+      }),
+    ).toMatchObject({ status: "Submitted", valid: false, refundable: true });
+  });
   it("throws when a pinned contract's runtime code drifts", async () => {
     await expect(
       readCommerceView({ ...input, client: clientWith({ code: "0x6001" }) }),

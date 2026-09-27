@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-27 - Do not gate an expired escrow refund on payout economics
+
+- Observed: changing APEX `platformFeeBP` to 100 made the worker report `refundable: false` for a matching expired Submitted job, even though `claimRefund(jobId)` has no platform-fee precondition; a focused regression reproduced the refusal.
+- Root cause: the shared job-identity check conflated mutable payout terms with the immutable job identity required for permissionless recovery.
+- Rule: enforce fee terms before submitting or completing payment, but keep exact job/client/token binding and pinned runtime checks independently sufficient for a permissionless expiry refund.
+
 ### 2026-09-27 - Expired escrow needs its own permissionless recovery call
 
 - Observed: the reviewed `OutcomeEvaluator.reject` checks `job.expiredAt > block.timestamp`, so it cannot refund an otherwise valid bound job after its deadline; the official APEX kernel exposes `claimRefund(jobId)` for funded/submitted jobs after that boundary. An existing chain-97 protocol probe recorded permissionless expiry refund for job `1260`.

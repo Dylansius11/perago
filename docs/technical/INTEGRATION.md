@@ -1,7 +1,7 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Evidence-backed through `P3-004`; chain-97 account, protocol, settlement, atomic policy-transition, production adapter, and pre-signature simulation proofs exist, while the executor lifecycle through a smart account remains pending
-**Reviewed:** 2026-09-23
+**Status:** Chain-97 account, protocol, adapter, bounded swap/stake, and manual ERC-8183 lifecycles are proven; `P6-003` automated settlement is implemented but pending end-to-end fork proof. No live evaluator or hosted settlement API is claimed.
+**Reviewed:** 2026-09-27
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Evidence policy and statuses
@@ -15,7 +15,6 @@ An official page proves what its publisher documents; it does not prove that byt
 | `needs re-verification` | Official/current documentation supports the claim, but Perago must validate the exact deployment, version, configuration, or behavior before use. |
 | `blocked` | A required official deployment/capability/evidence is unavailable; do not implement or claim it until resolved. |
 
-No entry is marked “integrated” in this phase.
 
 ## 2. Integration summary
 
@@ -193,7 +192,7 @@ The evaluator also reads `platformFeeBP` inside `settle` and refuses a nonzero v
 - If no compatible deterministic evaluator can be installed, do not claim APEX settlement; deploy a clearly identified Perago test instance or mark settlement blocked.
 - If upgrade/admin state changes after simulation, stop new jobs and invalidate the deployment manifest.
 - If settlement is temporarily unavailable after Perago success, keep the successful receipt and retry the identical eligible call after reconciliation.
-- If the bound job expires before payment, the worker may call only the pinned kernel's permissionless `claimRefund(jobId)` after rechecking the exact job identity; APEX returns funded/submitted escrow to its client and moves the job to `Expired`. This is not payment or a new mandate attempt; a finalized successful mandate becomes public `UNPAID`. The reviewed upstream implementation is [AgenticCommerceUpgradeable.sol](https://github.com/bnb-chain/apex-contracts/blob/main/contracts/AgenticCommerceUpgradeable.sol); existing chain-97 permissionless expiry evidence is `docs/evidence/bsc-testnet.protocol-live.json` job `1260` (`verified` for that deployment, not a live Perago evaluator).
+- If the bound job expires before payment, the worker may call only the pinned kernel's permissionless `claimRefund(jobId)` after rechecking the exact job identity and runtime pins; a changed `platformFeeBP` blocks payment but does not block the refund. APEX returns funded/submitted escrow to its client and moves the job to `Expired`. This is not payment or a new mandate attempt; a finalized successful mandate becomes public `UNPAID`. The reviewed upstream implementation is [AgenticCommerceUpgradeable.sol](https://github.com/bnb-chain/apex-contracts/blob/main/contracts/AgenticCommerceUpgradeable.sol); existing chain-97 permissionless expiry evidence is `docs/evidence/bsc-testnet.protocol-live.json` job `1260` (`verified` for that deployment, not a live Perago evaluator).
 - If the job is rejected before settlement, payment remains unavailable even if execution later reports success; pre-terminal worker submissions require the submitted job and expiry headroom.
 
 ## 7. ERC-8004 decision

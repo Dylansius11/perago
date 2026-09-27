@@ -1,6 +1,6 @@
 # Perago Data Model
 
-**Status:** Implemented through `P3-002`, including live atomic policy-transition evidence; hosted deployment remains pending
+**Status:** Implemented through `P6-001` for public finalized receipt replay, with the `P6-003` bounded settlement transaction and projection schema in place; automated payment remains fork-proof pending, and hosted deployment is pending.
 **System flows:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 **Contract states:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
@@ -401,7 +401,7 @@ Public, rebuildable receipt projection. Private text is represented only by hash
 
 Constraints:
 
-- immutable in-place except settlement fields, which the database permits to transition once from null; a confirmed matching evaluator event is required before a future public `CONFIRMED` payment claim. Deleting and rebuilding from canonical events is allowed;
+- Immutable in-place except settlement fields, which the database permits to transition once from null; a confirmed matching evaluator event is required before a public `CONFIRMED` payment claim. Deleting and rebuilding from canonical events is allowed;
 - `SUCCEEDED` requires a nonzero onchain `verificationHash` from the terminal event; the projector rejects zero, and the public route compares both success and failure commitments against the finalized MandateExecutor record. A separately populated `PASSED` verification-result row is not required unless measured evidence can be independently reconstructed;
 - non-success cannot have a settlement transaction that completed payment; a bound non-success job is public `INELIGIBLE`, not `PENDING`, and an unpinned settlement log never upgrades a bound success from `PENDING`;
 - public terminal status and commitments reconcile to confirmed contract logs and immutable signed fields. The worker-recorded UserOperation hash is returned only with its matching terminal transaction and remains independently checkable from the EntryPoint event.

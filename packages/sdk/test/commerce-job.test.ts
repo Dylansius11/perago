@@ -54,6 +54,9 @@ describe("submitted commerce job preflight", () => {
       assertCommerceJobIdentity({ ...binding, job: { ...job, status: 3 } }),
     ).not.toThrow();
     expect(() =>
+      assertCommerceJobIdentity({ ...binding, platformFeeBP: 100n }),
+    ).not.toThrow();
+    expect(() =>
       assertCommerceJobIdentity({
         ...binding,
         job: { ...job, status: 1, provider: account },

@@ -36,7 +36,7 @@ export class CommerceJobMismatchError extends Error {
   }
 }
 
-/** Identity and escrow terms must hold even when APEX changes job status. */
+/** Binding and escrow identity also apply to a permissionless expiry refund. */
 export function assertCommerceJobIdentity(input: CommerceJobPreflight): void {
   const { job } = input;
   if (job.id !== input.jobId || input.jobId === 0n)
@@ -49,11 +49,8 @@ export function assertCommerceJobIdentity(input: CommerceJobPreflight): void {
     throw new CommerceJobMismatchError("commerce job evaluator changed");
   if (!equal(job.hook, input.hook))
     throw new CommerceJobMismatchError("commerce job hook changed");
-  if (
-    !equal(input.actualPaymentToken, input.paymentToken) ||
-    input.platformFeeBP !== 0n
-  )
-    throw new CommerceJobMismatchError("commerce payment terms changed");
+  if (!equal(input.actualPaymentToken, input.paymentToken))
+    throw new CommerceJobMismatchError("commerce payment token changed");
   if (job.budget === 0n)
     throw new CommerceJobMismatchError("commerce job has no escrow budget");
 }
@@ -61,6 +58,8 @@ export function assertCommerceJobIdentity(input: CommerceJobPreflight): void {
 /** The kernel owns state; this gate never claims payment or authorizes a job. */
 export function assertSubmittedCommerceJob(input: CommerceJobPreflight): void {
   assertCommerceJobIdentity(input);
+  if (input.platformFeeBP !== 0n)
+    throw new CommerceJobMismatchError("commerce platform fee changed");
   if (input.job.status !== 2)
     throw new CommerceJobMismatchError("commerce job is not submitted");
   if (
