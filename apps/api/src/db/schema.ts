@@ -99,6 +99,12 @@ export const adapterStatus = pgEnum("adapter_status", [
   "PAUSED",
   "RETIRED",
 ]);
+export const faucetClaimStatus = pgEnum("faucet_claim_status", [
+  "PENDING",
+  "BROADCAST",
+  "CONFIRMED",
+  "FAILED",
+]);
 
 const createdAt = timestamp("created_at", { withTimezone: true })
   .notNull()
@@ -746,5 +752,59 @@ export const indexerCheckpoints = pgTable(
       sql`octet_length(${table.lastCanonicalBlockHash}) = 32`,
     ),
     check("checkpoint_positive_depth", sql`${table.confirmationDepth} > 0`),
+  ],
+);
+export const faucetClaims = pgTable(
+  "faucet_claims",
+  {
+    id: uuid().primaryKey(),
+    walletId: uuid("wallet_id")
+      .notNull()
+      .references(() => wallets.id),
+    recipientAddress: bytea("recipient_address").notNull(),
+    clientIpHash: bytea("client_ip_hash").notNull(),
+    amountWei: numeric("amount_wei", {
+      mode: "bigint",
+      precision: 78,
+      scale: 0,
+    }).notNull(),
+    status: faucetClaimStatus().notNull(),
+    transactionHash: bytea("transaction_hash"),
+    createdAt,
+    broadcastAt: timestamp("broadcast_at", { withTimezone: true }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("faucet_claim_transaction_hash_unique")
+      .on(table.transactionHash)
+      .where(sql`${table.transactionHash} is not null`),
+    index("faucet_claim_wallet_created_idx").on(
+      table.walletId,
+      table.createdAt,
+    ),
+    index("faucet_claim_ip_created_idx").on(
+      table.clientIpHash,
+      table.createdAt,
+    ),
+    index("faucet_claim_budget_created_idx")
+      .on(table.createdAt)
+      .where(sql`${table.status} in ('PENDING', 'BROADCAST', 'CONFIRMED')`),
+    check(
+      "faucet_claim_recipient_length",
+      sql`octet_length(${table.recipientAddress}) = 20`,
+    ),
+    check(
+      "faucet_claim_ip_hash_length",
+      sql`octet_length(${table.clientIpHash}) = 32`,
+    ),
+    check("faucet_claim_positive_amount", sql`${table.amountWei} > 0`),
+    check(
+      "faucet_claim_transaction_hash_length",
+      sql`${table.transactionHash} is null or octet_length(${table.transactionHash}) = 32`,
+    ),
+    check(
+      "faucet_claim_transaction_state",
+      sql`(${table.status} = 'PENDING' and ${table.transactionHash} is null and ${table.broadcastAt} is null and ${table.confirmedAt} is null) or (${table.status} = 'BROADCAST' and ${table.transactionHash} is not null and ${table.broadcastAt} is not null and ${table.confirmedAt} is null) or (${table.status} in ('CONFIRMED', 'FAILED') and ${table.transactionHash} is not null and ${table.broadcastAt} is not null and ${table.confirmedAt} is not null)`,
+    ),
   ],
 );

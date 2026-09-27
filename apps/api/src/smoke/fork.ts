@@ -22,6 +22,7 @@ export const MIGRATIONS = [
   "0004_execution_worker.sql",
   "0005_chain_event_reorg_versions.sql",
   "0006_commerce_settlement.sql",
+  "0007_faucet_claims.sql",
 ] as const;
 
 /** Anvil's first well-known development key: public, funded only on the local fork. */

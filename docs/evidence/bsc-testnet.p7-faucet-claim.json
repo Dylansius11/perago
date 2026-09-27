@@ -1,0 +1,9 @@
+{
+  "chain": 97,
+  "faucetAddress": "0xf53bc07b954a4fca81996c4c9bae489082b58781",
+  "recipient": "0xe860041e591e6a80caf594b6abbacb48db0d2fd7",
+  "transactionHash": "0x7a0b1474b7ddbf61998f2299bb573c22127b4d7a5963ef7a758dbc53bbc0e99e",
+  "block": "133487892",
+  "amountWei": "20000000000000000",
+  "observedAt": "2026-09-27T13:41:28.527Z"
+}

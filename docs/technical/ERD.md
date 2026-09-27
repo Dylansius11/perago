@@ -473,6 +473,24 @@ Constraints:
 - `ACTIVE` requires source URL, validated block, code hash, and successful integration probe;
 - retired versions remain addressable for historical receipt verification.
 
+### 5.14 `faucet_claims`
+
+One committed tBNB faucet reservation/transfer for an authenticated smart-account identity.
+
+| Column | Type | Constraints / meaning |
+| --- | --- | --- |
+| `id` | uuid | PK |
+| `wallet_id` | uuid | FK `wallets.id`, not null |
+| `recipient_address` | bytea | exactly 20 bytes; copied from the authenticated wallet smart account, never request input |
+| `client_ip_hash` | bytea | 32-byte HMAC-SHA-256 of the chosen client IP using a server secret; no raw IP |
+| `amount_wei` | numeric(78,0) | positive configured tBNB amount |
+| `status` | `faucet_claim_status` | `PENDING | BROADCAST | CONFIRMED | FAILED` |
+| `transaction_hash` | bytea | nullable only while `PENDING`; 32 bytes and unique once broadcast |
+| `created_at` | timestamptz | committed reservation time; rolling-window source |
+| `broadcast_at` / `confirmed_at` | timestamptz | null until the corresponding durable state |
+
+`PENDING` rows contain no hash; `BROADCAST` rows have a hash and broadcast time; `CONFIRMED` and receipt-proven `FAILED` rows additionally have confirmation time. A partial budget index covers `PENDING`, `BROADCAST`, and `CONFIRMED`; `FAILED` transfers do not count after receipt proof. Transactions take ordered advisory locks for the global budget, wallet ID, and IP hash before querying/inserting, so concurrent requests cannot over-reserve a rolling window. A pending row with no hash is never automatically failed: an uncertain broadcast cannot be disproven, so it remains a conservative reservation.
+
 ## 6. State-transition constraints
 
 ### Wallet Policy

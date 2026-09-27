@@ -88,7 +88,16 @@ export const REASON_MESSAGES = {
     "The mandate ended unsuccessfully onchain; its failure hash is a commitment, not a decoded cause.",
   ONCHAIN_REVOKED:
     "The mandate was revoked onchain before a successful execution.",
-  ONCHAIN_EXPIRED: "The mandate expired onchain before a successful execution.",
+  FAUCET_ALREADY_CLAIMED:
+    "This smart account already claimed testnet tBNB in the last 24 hours.",
+  FAUCET_ACCOUNT_FUNDED:
+    "This smart account already holds enough tBNB and is not eligible for a faucet claim.",
+  FAUCET_BUDGET_EXHAUSTED:
+    "The faucet has reached its rolling daily tBNB budget. Try again later.",
+  FAUCET_RATE_LIMITED:
+    "This client has reached the faucet claim limit. Try again later.",
+  FAUCET_UNAVAILABLE:
+    "The faucet is temporarily unavailable. No additional claim was sent.",
 } as const;
 
 export type ReasonCode = keyof typeof REASON_MESSAGES;
