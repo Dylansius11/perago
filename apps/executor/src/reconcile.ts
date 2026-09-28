@@ -4,6 +4,7 @@ import {
   type ExecutionTransactionKind,
   getTaskMandateTypedData,
   type MandateProjectionStatus,
+  PERAGO_USER_OPERATION_GAS,
 } from "@perago/sdk";
 import { hashTypedData, keccak256 } from "viem";
 
@@ -22,7 +23,16 @@ export const MANDATE_RECORD_STATUSES = [
 
 export type MandateRecordStatus = (typeof MANDATE_RECORD_STATUSES)[number];
 
+/** Reserve includes two validation-gas windows, handleOps overhead, and fee drift. */
+export const EXECUTOR_GAS_RESERVE =
+  ((PERAGO_USER_OPERATION_GAS.callGasLimit +
+    2n * PERAGO_USER_OPERATION_GAS.verificationGasLimit +
+    PERAGO_USER_OPERATION_GAS.preVerificationGas +
+    500_000n) *
+    120n) /
+  100n;
 /** What the worker reads at the chain's `latest` block before every action. */
+
 export type ChainView = {
   timestamp: bigint;
   record: {
@@ -32,6 +42,8 @@ export type ChainView = {
   allowance: bigint;
   balance: bigint;
   executorNonce: bigint;
+  /** Read only while an unsigned or authorized mandate can begin. */
+  executorGas: { balance: bigint; price: bigint } | null;
   commerce: null | {
     status:
       | "Open"
@@ -60,7 +72,11 @@ export type Decision =
   | { kind: "SUBMIT"; transaction: ExecutionTransactionKind }
   | {
       kind: "DEFER";
-      code: "APPROVAL_MISSING" | "INPUT_BALANCE_SHORT" | "COMMERCE_JOB_INVALID";
+      code:
+        | "APPROVAL_MISSING"
+        | "INPUT_BALANCE_SHORT"
+        | "EXECUTOR_GAS_SHORT"
+        | "COMMERCE_JOB_INVALID";
     };
 
 const PROJECTION_OF_RECORD: Record<
@@ -82,6 +98,12 @@ function fundsDeferral(job: ExecutionJob, chain: ChainView): Decision | null {
     return { kind: "DEFER", code: "APPROVAL_MISSING" };
   if (chain.balance < maxInput)
     return { kind: "DEFER", code: "INPUT_BALANCE_SHORT" };
+  if (!chain.executorGas) throw new Error("executor gas was not observed");
+  if (
+    chain.executorGas.balance <
+    EXECUTOR_GAS_RESERVE * chain.executorGas.price
+  )
+    return { kind: "DEFER", code: "EXECUTOR_GAS_SHORT" };
   return null;
 }
 

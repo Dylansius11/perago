@@ -37,6 +37,7 @@ const job = (commerceJobId: string) =>
         expiresAt: "1",
       },
     },
+    mandateStatus: "SIGNED",
     pending: null,
   }) as ExecutionJob;
 const deployment = {
@@ -47,6 +48,8 @@ const deployment = {
 const client = () =>
   ({
     getBlock: async () => ({ number: 10n, timestamp: 1n }),
+    getBalance: async () => 10_000_000_000_000_000n,
+    getGasPrice: async () => 1_000_000_000n,
     getCode: async () => "0x6000",
     getStorageAt: async ({ address }: { address: Address }) =>
       toHex(
@@ -110,6 +113,10 @@ describe("readChainView commerce observation", () => {
       }),
     ).toMatchObject({
       commerce: null,
+      executorGas: {
+        balance: 10_000_000_000_000_000n,
+        price: 1_000_000_000n,
+      },
     });
   });
 

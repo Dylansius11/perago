@@ -3,6 +3,7 @@ import type { Address } from "@perago/sdk";
 import { keccak256, type PublicClient } from "viem";
 
 import type { ExecutorDeployment } from "./config.ts";
+import { EXECUTOR_GAS_RESERVE } from "./reconcile.ts";
 
 export type Readiness = {
   ready: boolean;
@@ -42,10 +43,13 @@ export async function checkReadiness(input: {
         keccak256(bytecode) === input.deployment.mandateExecutorCodeHash
       );
     }),
-    settle(
-      async () =>
-        (await input.client.getBalance({ address: input.executor })) > 0n,
-    ),
+    settle(async () => {
+      const [balance, gasPrice] = await Promise.all([
+        input.client.getBalance({ address: input.executor }),
+        input.client.getGasPrice(),
+      ]);
+      return balance >= EXECUTOR_GAS_RESERVE * gasPrice;
+    }),
     settle(async () => {
       const response = await fetch(input.apiUrl, { method: "GET" });
       await response.body?.cancel();

@@ -158,6 +158,7 @@ export const retireReplacedTransactionRequestSchema = z.strictObject({
 export const deferralCodeSchema = z.enum([
   "APPROVAL_MISSING",
   "INPUT_BALANCE_SHORT",
+  "EXECUTOR_GAS_SHORT",
   "CHAIN_UNAVAILABLE",
   "COMMERCE_JOB_INVALID",
 ]);

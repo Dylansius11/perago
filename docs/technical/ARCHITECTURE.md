@@ -305,7 +305,7 @@ stateDiagram-v2
 ```text
 QUEUED -> LEASED -> AUTHORIZING -> AUTHORIZED -> EXECUTING -> VERIFYING -> SETTLING -> TERMINAL
 LEASED -> REJECTED               (authorize reverts at a finalized block; no authority was ever granted)
-LEASED | AUTHORIZED -> RETRY_WAIT -> LEASED   (approval, balance, or chain unavailable)
+LEASED | AUTHORIZED -> RETRY_WAIT -> LEASED   (approval, input balance, executor gas, or chain unavailable)
 ```
 
 Worker state is not product truth. Implemented in `P4-002` (`apps/executor/src/{worker,reconcile,chain,transactions,user-operation}.ts`, `apps/api/src/services/executions.ts`):
@@ -313,7 +313,7 @@ Worker state is not product truth. Implemented in `P4-002` (`apps/executor/src/{
 - The API derives `status` from the mandate projection at the chain's `finalized` block (a verified direct read of MandateExecutor logs, cross-checked against `mandateRecord`) plus the one pending transaction; the worker never writes it. A finalized `NONE` record cannot have earlier lifecycle logs because mandate status never returns to `NONE`: the API can safely advance an unsigned mandate's cursor without fetching historical logs, including when authorization now rejects an expired signature. All other statuses still require the canonical log scan. That scan runs in chunks of at most 10 blocks (the chain-97 Alchemy `eth_getLogs` limit) from a forward-only per-mandate cursor in `indexer_checkpoints` (stream `mandate:0x<hash>`), advanced in the same transaction that applies the events. A bound successful mandate enters `SETTLING` until finalized payout or refund evidence; an unbound mandate can finish after the terminal receipt.
 - Each step starts with `reconcile`, then a fresh `latest` read. The worker signs nothing while a pending transaction is unresolved or while `latest` disagrees with the finalized projection.
 - A transaction's hash and exact signed bytes are persisted through the API, which checks sender, target, function, and arguments, before the bytes are broadcast. A dropped transaction is rebroadcast byte-for-byte; a transaction whose nonce another transaction consumed is retired only once that nonce is finalized, and the step is re-decided from chain state.
-- Authorization and the accepted attempt wait for the exact root approval and balance (`D-004`); a missing precondition parks the job in `RETRY_WAIT` without spending the nonce.
+- Authorization and the accepted attempt wait for the exact root approval and input balance (`D-004`). Before either `authorize` or `beginExecution`, the worker also reads the executor's native balance and current gas price; if it cannot cover a conservative gas reserve based on the fixed UserOperation limits, it defers with `EXECUTOR_GAS_SHORT` rather than consuming a new nonce or beginning an attempt. It rechecks after authorization because balance and fees can change. This preflight is an operational safeguard, not a guarantee against later fee changes or call failure; it never alters the signed action or mandate.
 - At most one UserOperation is ever included per mandate. After inclusion the only remaining step is `finalizeStalledExecution` once the window closes; expiry after authorization is closed with `finalizeExpired`.
 - Leases expire by the database clock; a crashed worker's job is re-leased after its lease and resumes from the persisted state.
 
