@@ -36,9 +36,30 @@ Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evi
 - one natural-language swap carried end to end on the labelled `testnet-demo` MandateExecutor (`SC-D-006`). It covers policy activation, simulation, the signed digest, authorize, begin, the executor's perform UserOperation, the measured output, and a verified receipt. Replays and a tampered spend, minimum, recipient, adapter, selector, target, or action are all refused ([`docs/evidence/bsc-testnet.phase4-swap-journey.json`](docs/evidence/bsc-testnet.phase4-swap-journey.json)). Payment is Phase 6.
 - one natural-language stake carried end to end on the same executor. The simulation commits the recipient's position holder, its shares, and the CAKE Pool fees. The executor's perform UserOperation mints pool shares above the signed minimum, and a worker killed right after persisting it recovers without a second submission. A second stake simulated against the old position is refused `STALE_POSITION`. Only the account can withdraw, and the owner withdrew the stake minus the 0.1% early fee ([`docs/evidence/bsc-testnet.phase5-stake-journey.json`](docs/evidence/bsc-testnet.phase5-stake-journey.json)).
 
-Also built: the approved Perago landing shell, Foundry invariant tests, PostgreSQL lifecycle constraints and replay-safe projections, one-use root-wallet authentication, and a Phase 7 console in progress. Its [disposable chain-97 fork browser journeys](docs/evidence/bsc-testnet.fork.phase7-browser.json) exercise wallet/chain refusal, root account/policy setup, a fork-only faucet claim and repeat refusal, bounded swap and stake, stale quote, provider outage recovery, revocation, onchain expiry, verifier failure, exact-signature replay without another execution, and public receipts. This is not a hosted product journey or live testnet faucet claim. Browser evidence for bound ERC-8183 settlement and user visual review remain open. `P3-002` policy activation/revocation is proven on chain 97 ([evidence](docs/evidence/bsc-testnet.p3-policy-live.json)); that earlier deployment is explicitly policy-probe-only. Production ERC-8183 job provisioning UI and live evaluator/payment remain ahead.
+Also built: the approved Perago landing shell, Foundry invariant tests, PostgreSQL lifecycle constraints and replay-safe projections, one-use root-wallet authentication, and a Phase 7 console in progress. Its [disposable chain-97 fork browser journeys](docs/evidence/bsc-testnet.fork.phase7-browser.json) exercise wallet/chain refusal, root account/policy setup, a fork-only faucet claim and repeat refusal, bounded swap and stake, stale quote, provider outage recovery, revocation, onchain expiry, verifier failure, exact-signature replay without another execution, and public receipts. Separately, a [0.02 tBNB faucet claim](docs/evidence/bsc-testnet.p7-faucet-claim.json) succeeded on live chain 97; this is not a live browser journey or a hosted product deployment. Browser evidence for bound ERC-8183 settlement and user visual review remain open. `P3-002` policy activation/revocation is proven on chain 97 ([evidence](docs/evidence/bsc-testnet.p3-policy-live.json)); that earlier deployment is explicitly policy-probe-only. Production ERC-8183 job provisioning UI and live evaluator/payment remain ahead.
 
 Local fork tests reset PostgreSQL's public schema. `dev:fork` now accepts only the existing local `perago_dev` logical database, not the separate `perago_test` integration database; two containers using different ports but the same Docker volume must not run simultaneously.
+
+### Local testnet-demo console
+
+`pnpm run dev` starts the web app only; it does not boot PostgreSQL, API, or executor. On a development machine, provision a **separate migrated local PostgreSQL database** for `PERAGO_DATABASE_URL` (never `perago_test`, which integration tests reset, or `perago_dev`, which `dev:fork` resets). Configure the server-only values in ignored `.env` per [`.env.example`](.env.example); do not copy secrets into `NEXT_PUBLIC_*`. The API and worker must use the same labelled `deployments/bsc-testnet.demo.perago.json` manifest for the current console, because the production executor requires a bound ERC-8183 job the browser cannot yet provision. A shell-exported variable can override `.env`, so set the non-secret manifest/URL explicitly in each PowerShell terminal:
+
+```powershell
+$env:PERAGO_DEPLOYMENT_MANIFEST="deployments/bsc-testnet.demo.perago.json"
+pnpm --filter @perago/api start
+```
+
+```powershell
+$env:PERAGO_DEPLOYMENT_MANIFEST="deployments/bsc-testnet.demo.perago.json"
+$env:PERAGO_API_URL="http://127.0.0.1:8787"
+pnpm --filter @perago/executor start
+```
+
+```powershell
+pnpm run dev
+```
+
+Check `http://127.0.0.1:8787/health`, `http://127.0.0.1:8787/config` (`deploymentLabel: testnet-demo`), `http://127.0.0.1:8081/readyz` if that worker health port is configured, and `http://localhost:3000/app`. This is **live chain 97**: the faucet uses actual testnet funds and the worker can execute an owner-authorized demo mandate. No live ERC-8183 payment is implied.
 
 ## Planned repository map
 

@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - Check inherited environment before booting a demo worker
+
+- Observed: a local `.env` selected the labelled testnet-demo executor, but the API first served `testnet-production` because an inherited `PERAGO_DEPLOYMENT_MANIFEST` still pointed at production; the inherited `PERAGO_API_URL` also pointed at web port 3000 instead of API port 8787.
+- Root cause: process environment takes precedence over the local env file, and root `pnpm run dev` starts only packages with a `dev` task.
+- Rule: run API and worker with the same explicit non-secret demo manifest and API URL, verify `/config` and `/readyz` before wallet interaction, and keep the worker out of implicit root `dev` startup.
+
 ### 2026-09-28 - Map every terminal projection reason into the SDK
 
 - Observed: a local chain-97 fork recorded a finalized `EXPIRED` mandate with `ONCHAIN_EXPIRED`, but `GET /receipts/:hash` returned HTTP 400 and the browser never showed its public receipt.
