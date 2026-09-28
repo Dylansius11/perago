@@ -22,7 +22,7 @@ import { createApiApp } from "./app.js";
 import { loadBscTestnetCatalog } from "./compiler/catalog.js";
 import { apiAuthDomain, loadApiConfig } from "./config.js";
 import { loadDeployment } from "./deployment.js";
-import { createGeminiPlanner } from "./planner/provider.js";
+import { createOpenRouterPlanner } from "./planner/provider.js";
 import {
   assertFaucetChain,
   createViemFaucetTransport,
@@ -137,8 +137,8 @@ async function start(): Promise<void> {
       now: () => new Date(),
       quoteTtlSeconds: 120,
     },
-    planner: createGeminiPlanner({
-      apiKey: config.geminiApiKey,
+    planner: createOpenRouterPlanner({
+      apiKey: config.openRouterApiKey,
       timeoutMs: 60_000,
     }),
     policyConfig: {

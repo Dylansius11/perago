@@ -17,7 +17,7 @@ export type ApiConfig = {
   authUri: string;
   databaseUrl: string;
   executorAddress: Address;
-  geminiApiKey: string;
+  openRouterApiKey: string;
   intentKey: Buffer;
   manifestPath: string;
   port: number;
@@ -91,7 +91,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     executorAddress: addressSchema.parse(
       required(env, "PERAGO_EXECUTOR_ADDRESS"),
     ),
-    geminiApiKey: required(env, "PERAGO_GEMINI_API_KEY"),
+    openRouterApiKey: required(env, "PERAGO_OPENROUTER_API_KEY"),
     intentKey: Buffer.from(intentKey, "hex"),
     manifestPath: manifestPath(
       env.PERAGO_DEPLOYMENT_MANIFEST ?? DEFAULT_MANIFEST,

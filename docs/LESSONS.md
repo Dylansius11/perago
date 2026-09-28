@@ -4,6 +4,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - Treat provider JSON Schema as advisory until proven
+
+- Observed: OpenRouter Space Bunny returned HTTP 200 with `action: "SWAP"` and flat token fields even when `json_schema` requested an object-valued action; explicit shape instructions later produced seven valid synthetic candidates.
+- Root cause: advertised `response_format` support does not imply a given endpoint enforces the requested schema.
+- Rule: spell out exact output nesting and catalog spelling in the planner prompt, but strictly parse every model response in deterministic code and never repair or authorize a malformed action.
+
 ### 2026-09-28 - Check inherited environment before booting a demo worker
 
 - Observed: a local `.env` selected the labelled testnet-demo executor, but the API first served `testnet-production` because an inherited `PERAGO_DEPLOYMENT_MANIFEST` still pointed at production; the inherited `PERAGO_API_URL` also pointed at web port 3000 instead of API port 8787.
@@ -317,6 +323,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+### 2026-09-28 - Use OpenRouter and let the owner test MetaMask
+
+- Asked to replace the Gemini planner with OpenRouter Space Bunny Alpha, strengthen its system prompt instead of relaxing validation, and let the owner perform the connected MetaMask journey.
+- Application: keep one OpenRouter model and the strict compiler, prove synthetic intent-to-plan cases locally, and do not sign or submit wallet actions on the owner's behalf.
+
 ### 2026-09-28 - Probe changed credentials and submitted chain evidence before editing
 
 - Asked to check a new Google project/key and an existing chain-97 wrap transaction before changing anything, to avoid doing the work twice.

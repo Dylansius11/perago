@@ -10,7 +10,7 @@ const required = {
   PERAGO_DATABASE_URL:
     "postgres://perago:local@127.0.0.1:56432/perago_test_api",
   PERAGO_EXECUTOR_ADDRESS: "0x1111111111111111111111111111111111111111",
-  PERAGO_GEMINI_API_KEY: "test-key",
+  PERAGO_OPENROUTER_API_KEY: "test-key",
   PERAGO_INTENT_ENCRYPTION_KEY: "11".repeat(32),
   PERAGO_WORKER_TOKEN: "a".repeat(32),
 } as const;
@@ -35,15 +35,15 @@ describe("loadApiConfig", () => {
   it("retains the browser origin without a URL path for CORS", () => {
     expect(loadApiConfig(required).webOrigin).toBe("http://localhost:3000");
   });
-  it("requires a Gemini key without accepting the retired Groq key", () => {
-    expect(loadApiConfig(required).geminiApiKey).toBe("test-key");
+  it("requires an OpenRouter key without accepting the retired Gemini key", () => {
+    expect(loadApiConfig(required).openRouterApiKey).toBe("test-key");
     expect(() =>
       loadApiConfig({
         ...required,
-        PERAGO_GEMINI_API_KEY: "",
-        PERAGO_GROQ_API_KEY: "old-key",
+        PERAGO_OPENROUTER_API_KEY: "",
+        PERAGO_GEMINI_API_KEY: "old-key",
       }),
-    ).toThrow("PERAGO_GEMINI_API_KEY is required");
+    ).toThrow("PERAGO_OPENROUTER_API_KEY is required");
   });
 
   it("refuses deployment manifests outside BSC Testnet", async () => {

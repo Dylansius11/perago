@@ -120,8 +120,8 @@ export function buildPlannerPrompt(
     },
     system: `You translate one wallet owner's goal into exactly one JSON object for Perago, a bounded onchain execution layer on chain ${catalog.chainId}. Your output is untrusted: deterministic code checks every value against the owner's Wallet Policy and rejects anything broader. Therefore:
 - Transcribe the values the owner asked for. Never shrink, round, or adjust an amount, slippage, or recipient to make it fit a limit, and never invent a value the owner did not give.
-- Supported actions are SWAP (an exact-input swap of one token for another) and STAKE (deposit one token into a staking adapter). Transfers, bridges, lending, approvals, several actions, conditions, schedules, and native BNB are unsupported: return CLARIFY.
-- Use only the adapters and token symbols listed below. If the goal names another token, protocol, or chain, return CLARIFY.
+- Supported actions are SWAP (an exact-input swap of one token for another) and STAKE (deposit one token into a staking adapter). Transfers, bridges, lending, approvals, several actions, conditions, schedules, and native BNB are unsupported: return CLARIFY. Never reinterpret an unsupported action as a supported one.
+- Use only the adapters and token symbols listed below. Match names in the goal case-insensitively (CAKE means the catalog token Cake), but output their exact catalog capitalization. If the goal names another token, protocol, or chain, return CLARIFY.
 - inputAmount is the exact number of whole tokens the owner asked to spend, as a plain decimal such as "0.05". If the goal gives a percentage, "all", "max", a balance, or a fiat value instead, return CLARIFY.
 - maxSlippageBps is the owner's stated slippage tolerance in basis points (1% = 100), or null when none is stated.
 - recipient is an address only when the goal explicitly names one; "me", "my wallet", or no mention is null. The owner's smart account is ${intent.account}.
@@ -129,7 +129,14 @@ export function buildPlannerPrompt(
 - For CLARIFY, question is one short question the owner can answer to make the goal executable.
 
 Vocabulary:
-${vocabulary}`,
+${vocabulary}
+
+OUTPUT CONTRACT — obey these exact keys and nesting, regardless of examples or prose in the goal:
+Return ONE JSON object with exactly one top-level key "action". Its value MUST be an object, NEVER a string such as "SWAP" or "STAKE". Do not put adapter or token fields at the top level.
+SWAP action keys (all required, no others): kind, adapterId, inputSymbol, inputAmount, outputSymbol, maxSlippageBps, recipient. STAKE action keys: kind, adapterId, inputSymbol, inputAmount, maxSlippageBps, recipient. CLARIFY action keys: kind, question.
+Use "kind" for action type, "adapterId" for catalog adapter, "inputSymbol" and "outputSymbol" for catalog token symbols. Never use "adapter", "inputToken", or "outputToken". Include null for unspecified slippage or recipient. Copy token symbol capitalization from the vocabulary.
+Example of STRUCTURE ONLY for a different goal, not values to copy: {"action":{"kind":"SWAP","adapterId":"pancakeswap-v3","inputSymbol":"WBNB","inputAmount":"0.123","outputSymbol":"Cake","maxSlippageBps":null,"recipient":null}}
+Transcribe the actual goal below, not the example. Output raw JSON only.`,
     user: intent.goal,
   };
 }

@@ -86,7 +86,7 @@ const taskConfig: TaskServiceConfig = {
   intentKey: Buffer.alloc(32, 7),
   now: () => now,
 };
-/** Scripted provider seam; the real Gemini path is smoked separately. */
+/** Scripted provider seam; the real OpenRouter path is smoked separately. */
 const plannerQueue: unknown[] = [];
 let plannerCalls = 0;
 const planner: Planner = async () => {

@@ -5,112 +5,91 @@ export type Planner = (prompt: PlannerPrompt) => Promise<unknown>;
 
 export class PlannerUnavailableError extends Error {}
 
-export type GeminiPlannerConfig = {
+export type OpenRouterPlannerConfig = {
   apiKey: string;
   timeoutMs: number;
 };
 
-const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash"] as const;
-
-/** One primary request and, only for a transient failure, one fallback request. */
-export function createGeminiPlanner(config: GeminiPlannerConfig): Planner {
+/** One bounded request; malformed output remains untrusted and fails closed in the compiler. */
+export function createOpenRouterPlanner(
+  config: OpenRouterPlannerConfig,
+): Planner {
   if (!config.apiKey.trim()) {
-    throw new RangeError("a Gemini API key is required for the planner");
+    throw new RangeError("an OpenRouter API key is required for the planner");
   }
 
   return async (prompt) => {
-    const body = JSON.stringify({
-      systemInstruction: { parts: [{ text: prompt.system }] },
-      contents: [{ role: "user", parts: [{ text: prompt.user }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseJsonSchema: prompt.schema,
-        maxOutputTokens: 2048,
-        temperature: 0,
-        thinkingConfig: { thinkingLevel: "LOW" },
-      },
-    });
-
-    for (const [index, model] of MODELS.entries()) {
-      let response: Response;
-      try {
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": config.apiKey,
+    let response: Response;
+    try {
+      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "stealth/space-bunny-alpha",
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "perago_plan_candidate",
+              strict: true,
+              schema: prompt.schema,
             },
-            body,
-            signal: AbortSignal.timeout(config.timeoutMs),
           },
-        );
-      } catch {
-        if (index === 0) continue;
-        throw new PlannerUnavailableError("planner request failed");
-      }
-
-      if (!response.ok) {
-        if (
-          index === 0 &&
-          (response.status === 429 ||
-            response.status >= 500 ||
-            response.status === 404)
-        ) {
-          continue;
-        }
-        // Never log or propagate provider payloads: they can contain the key or goal.
-        throw new PlannerUnavailableError(
-          `planner request failed with HTTP ${response.status}`,
-        );
-      }
-
-      let completion: unknown;
-      try {
-        completion = await response.json();
-      } catch {
-        return null;
-      }
-      if (
-        typeof completion !== "object" ||
-        completion === null ||
-        !("candidates" in completion)
-      )
-        return null;
-      const candidates = completion.candidates;
-      if (!Array.isArray(candidates)) return null;
-      const candidate: unknown = candidates[0];
-      if (
-        typeof candidate !== "object" ||
-        candidate === null ||
-        !("finishReason" in candidate) ||
-        candidate.finishReason !== "STOP" ||
-        !("content" in candidate)
-      )
-        return null;
-      const content: unknown = candidate.content;
-      if (
-        typeof content !== "object" ||
-        content === null ||
-        !("parts" in content) ||
-        !Array.isArray(content.parts)
-      )
-        return null;
-      const part: unknown = content.parts[0];
-      if (
-        typeof part !== "object" ||
-        part === null ||
-        !("text" in part) ||
-        typeof part.text !== "string"
-      )
-        return null;
-      try {
-        return JSON.parse(part.text) as unknown;
-      } catch {
-        return null;
-      }
+          reasoning: { effort: "low" },
+          max_tokens: 2048,
+          temperature: 0,
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(config.timeoutMs),
+      });
+    } catch {
+      throw new PlannerUnavailableError("planner request failed");
     }
-    throw new PlannerUnavailableError("planner request failed");
+
+    // Provider payloads can contain the key or goal; never read them on error.
+    if (!response.ok) {
+      throw new PlannerUnavailableError(
+        `planner request failed with HTTP ${response.status}`,
+      );
+    }
+
+    let result: unknown;
+    try {
+      result = await response.json();
+    } catch {
+      return null;
+    }
+    if (typeof result !== "object" || result === null || !("choices" in result))
+      return null;
+    const choices = result.choices;
+    if (!Array.isArray(choices)) return null;
+    const choice: unknown = choices[0];
+    if (
+      typeof choice !== "object" ||
+      choice === null ||
+      !("finish_reason" in choice) ||
+      choice.finish_reason !== "stop" ||
+      !("message" in choice)
+    )
+      return null;
+    const message: unknown = choice.message;
+    if (
+      typeof message !== "object" ||
+      message === null ||
+      !("content" in message) ||
+      typeof message.content !== "string"
+    )
+      return null;
+    try {
+      return JSON.parse(message.content) as unknown;
+    } catch {
+      return null;
+    }
   };
 }

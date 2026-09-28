@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createGeminiPlanner, PlannerUnavailableError } from "./provider.js";
+import {
+  createOpenRouterPlanner,
+  PlannerUnavailableError,
+} from "./provider.js";
 
 const prompt = {
   schema: {
@@ -10,100 +13,97 @@ const prompt = {
     additionalProperties: false,
   },
   system: "Only one bounded action",
-  user: "Swap 0.01 WBNB for CAKE",
+  user: "Swap 0.01 WBNB for Cake",
 };
-const candidate = { action: { kind: "CLARIFY", question: "Which token?" } };
+const candidate = {
+  action: {
+    kind: "SWAP",
+    adapterId: "pancakeswap-v3",
+    inputSymbol: "WBNB",
+    inputAmount: "0.01",
+    outputSymbol: "Cake",
+    maxSlippageBps: null,
+    recipient: null,
+  },
+};
 const response = (status: number, value: unknown) =>
   new Response(JSON.stringify(value), {
     status,
     headers: { "Content-Type": "application/json" },
   });
-const success = () =>
+const completion = (content: string | null, finish_reason = "stop") =>
   response(200, {
-    candidates: [
-      {
-        finishReason: "STOP",
-        content: { parts: [{ text: JSON.stringify(candidate) }] },
-      },
-    ],
+    choices: [{ finish_reason, message: { role: "assistant", content } }],
   });
 
 const planner = () =>
-  createGeminiPlanner({ apiKey: "test-key", timeoutMs: 5_000 });
+  createOpenRouterPlanner({ apiKey: "test-key", timeoutMs: 5_000 });
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Gemini planner", () => {
-  it("sends the closed schema to the primary model and returns untrusted JSON", async () => {
-    const requests: Array<{ url: string; body: unknown; key: string | null }> =
+describe("OpenRouter planner boundary", () => {
+  it("requests the bounded schema and parses a well-formed candidate", async () => {
+    const requests: Array<{ url: string; body: unknown; auth: string | null }> =
       [];
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       requests.push({
         url,
         body: JSON.parse(String(init.body)) as unknown,
-        key: new Headers(init.headers).get("x-goog-api-key"),
+        auth: new Headers(init.headers).get("authorization"),
       });
-      return success();
+      return completion(JSON.stringify(candidate));
     });
     expect(await planner()(prompt)).toEqual(candidate);
     expect(requests).toEqual([
       {
-        url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-        key: "test-key",
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        auth: "Bearer test-key",
         body: {
-          systemInstruction: { parts: [{ text: prompt.system }] },
-          contents: [{ role: "user", parts: [{ text: prompt.user }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseJsonSchema: prompt.schema,
-            maxOutputTokens: 2048,
-            temperature: 0,
-            thinkingConfig: { thinkingLevel: "LOW" },
+          model: "stealth/space-bunny-alpha",
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "perago_plan_candidate",
+              strict: true,
+              schema: prompt.schema,
+            },
           },
+          reasoning: { effort: "low" },
+          max_tokens: 2048,
+          temperature: 0,
+          stream: false,
         },
       },
     ]);
   });
 
-  it("uses 3.7 Flash at most once on primary rate exhaustion", async () => {
-    const models: string[] = [];
-    vi.stubGlobal("fetch", async (url: string) => {
-      models.push(url);
-      return models.length === 1
-        ? response(429, { error: "quota" })
-        : success();
-    });
-    expect(await planner()(prompt)).toEqual(candidate);
-    expect(models.map((url) => url.split("/models/")[1])).toEqual([
-      "gemini-3.8-flash:generateContent",
-      "gemini-3.7-flash:generateContent",
-    ]);
-  });
-
-  it("does not amplify an exhausted project quota or leak provider errors", async () => {
-    const models: string[] = [];
-    vi.stubGlobal("fetch", async (url: string) => {
-      models.push(url);
-      return response(429, { error: "sensitive provider payload" });
-    });
-    const error = await planner()(prompt).catch((failure: unknown) => failure);
-    expect(error).toBeInstanceOf(PlannerUnavailableError);
-    expect((error as Error).message).not.toContain(
-      "sensitive provider payload",
-    );
-    expect(models).toHaveLength(2);
-  });
-
-  it("does not retry authentication failure or malformed successful output", async () => {
-    const fetch = vi.fn().mockResolvedValue(response(403, { error: "secret" }));
+  it("does not send a second request or expose provider error payloads", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        response(403, { error: { message: "secret key and user goal" } }),
+      );
     vi.stubGlobal("fetch", fetch);
-    await expect(planner()(prompt)).rejects.toThrow(PlannerUnavailableError);
-    expect(fetch).toHaveBeenCalledTimes(1);
-
-    fetch.mockResolvedValue(
-      response(200, { candidates: [{ finishReason: "MAX_TOKENS" }] }),
+    const failure = await planner()(prompt).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(PlannerUnavailableError);
+    expect((failure as Error).message).toContain("HTTP 403");
+    expect((failure as Error).message).not.toContain(
+      "secret key and user goal",
     );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed on non-JSON and truncated completions", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(completion("not json"))
+      .mockResolvedValueOnce(completion(JSON.stringify(candidate), "length"));
+    vi.stubGlobal("fetch", fetch);
     expect(await planner()(prompt)).toBeNull();
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(await planner()(prompt)).toBeNull();
   });
 });
