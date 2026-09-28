@@ -317,6 +317,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+### 2026-09-28 - Probe changed credentials and submitted chain evidence before editing
+
+- Asked to check a new Google project/key and an existing chain-97 wrap transaction before changing anything, to avoid doing the work twice.
+- Application: use one sanitized live planner request and read-only receipt/calldata/event checks first; change provider code only if those observations identify a code defect, and accept confirmed user-submitted chain evidence without resending the transaction.
+
 ### 2026-09-28 - Use Gemini alone for the intent planner
 
 - Asked to replace Groq entirely with Google AI Studio, make Gemini 3.8 Flash primary and 3.7 Flash fallback, and avoid a time-consuming model comparison.
