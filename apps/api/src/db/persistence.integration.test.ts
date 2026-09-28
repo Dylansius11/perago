@@ -20,6 +20,7 @@ const migrations = [
   new URL("../../drizzle/0000_constrained_lifecycle.sql", import.meta.url),
   new URL("../../drizzle/0004_execution_worker.sql", import.meta.url),
   new URL("../../drizzle/0005_chain_event_reorg_versions.sql", import.meta.url),
+  new URL("../../drizzle/0006_commerce_settlement.sql", import.meta.url),
 ];
 
 const id = (value: number) =>
@@ -536,6 +537,15 @@ describe("P3-001 constrained persistence", () => {
       update execution_receipts set settlement_tx_hash = ${bytes(57, 32)}
       where mandate_hash = ${mandateHash}
     `;
+    await sql.begin(async (tx) => {
+      expect(await applyFinalizedEvents(tx, 97n, [success])).toEqual({
+        inserted: 0,
+      });
+    });
+    const [retained] = await sql<{ settlement_tx_hash: Buffer | null }[]>`
+      select settlement_tx_hash from execution_receipts where mandate_hash = ${mandateHash}
+    `;
+    expect(retained?.settlement_tx_hash).toEqual(bytes(57, 32));
     expect(
       (await getPublicReceipt(sql, hex(mandateHash)))?.settlement.status,
     ).toBe("PENDING");
@@ -598,6 +608,30 @@ describe("P3-001 constrained persistence", () => {
         commerceContract: hex(bytes(75, 20)),
         jobId: "7",
       },
+    });
+  });
+  it("retains finalized APEX payout logs without a mandate argument", async () => {
+    const payment = chainEvent({
+      seed: 47,
+      blockNumber: 62n,
+      blockHash: bytes(62, 32),
+      name: "PaymentReleased",
+      mandateHash: bytes(62, 32),
+    });
+    payment.decodedArgs = {
+      jobId: "7",
+      provider: hex(bytes(63, 20)),
+      amount: "100",
+    };
+    await sql.begin((tx) => applyFinalizedEvents(tx, 97n, [payment]));
+    const [stored] = await sql<{ decoded_name: string; status: string }[]>`
+      select decoded_name, status
+      from chain_events
+      where chain_id = 97 and transaction_hash = ${payment.transactionHash}
+    `;
+    expect(stored).toEqual({
+      decoded_name: "PaymentReleased",
+      status: "CONFIRMED",
     });
   });
   it("refuses a lifecycle event from another chain instead of authorizing the mandate", async () => {
@@ -743,5 +777,51 @@ describe("P3-001 constrained persistence", () => {
         events: [{ ...terminal, data: Buffer.from("ab", "hex") }],
       }),
     ).rejects.toThrow("canonical event payload differs from the retained log");
+  });
+  it("publishes an expired mandate as a terminal public receipt", async () => {
+    const { mandateHash } = await seedMandate(sql, 100);
+    const authorized = chainEvent({
+      seed: 44,
+      blockNumber: 100n,
+      blockHash: bytes(100, 32),
+      name: "MandateAuthorized",
+      mandateHash,
+    });
+    const expired = chainEvent({
+      seed: 45,
+      blockNumber: 101n,
+      blockHash: bytes(101, 32),
+      name: "MandateExpired",
+      mandateHash,
+    });
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "expired-public-receipt",
+      fromBlockNumber: 100n,
+      nextBlockNumber: 101n,
+      parentBlockHash: bytes(99, 32),
+      lastCanonicalBlockHash: bytes(100, 32),
+      confirmationDepth: 1,
+      events: [authorized],
+    });
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "expired-public-receipt",
+      fromBlockNumber: 101n,
+      nextBlockNumber: 102n,
+      parentBlockHash: bytes(100, 32),
+      lastCanonicalBlockHash: bytes(101, 32),
+      confirmationDepth: 1,
+      events: [expired],
+    });
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toMatchObject({
+      status: "EXPIRED",
+      terminalReasonCode: "ONCHAIN_EXPIRED",
+      terminalMessage: expect.stringMatching(/expired.*onchain/i),
+      authorityConsumed: true,
+      begin: null,
+      verification: { status: "NOT_APPLICABLE" },
+      settlement: { status: "NOT_BOUND" },
+    });
   });
 });

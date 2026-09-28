@@ -1,0 +1,102 @@
+{
+  "venue": "fork",
+  "chainId": 97,
+  "observedAtUtc": "2026-09-27T19:15:04Z",
+  "sourceBlock": {
+    "number": "133514198",
+    "hash": "0xced0bc7592de0cf80aff60127c193aac41701558412f530f9e871aaaa95af829"
+  },
+  "deploymentManifest": "deployments/bsc-testnet.demo.perago.json",
+  "command": "node apps/web/scripts/fork-browser.mjs",
+  "environment": "Disposable Anvil fork, local PostgreSQL (the recorded fork-stack launch targeted the perago_dev logical database; the two local containers share a Docker volume), real API/Groq planner, local web app, injected EIP-1193 provider backed by an in-process disposable wallet; no chain-97 broadcast.",
+  "owner": "0x77af954590d0d89b3b7a072ca19d72907115cf7e",
+  "smartAccount": "0x1591988f8e4f926377b9e41eadf4b34f7819b50d",
+  "checks": {
+    "wrongChainGate": "visible",
+    "walletRejection": "visible",
+    "accountCreation": "code present",
+    "faucet": "refused because the account was funded; owner manually funded the disposable smart account on the fork",
+    "policyActivationConfirmations": [
+      "PENDING",
+      "PENDING",
+      "PENDING",
+      "ACTIVE"
+    ],
+    "policySupersession": "v2 ACTIVE",
+    "passingPolicyRules": "13/13; collapsed by default, inspectable on demand",
+    "staleQuote": "STALE_QUOTE refused after fork clock advanced 600 seconds; no signature was requested",
+    "providerOutage": "API_UNREACHABLE displayed during blocked API requests; retry restored the workspace"
+  },
+  "forkFaucetClaim": {
+    "recordedAtUtc": "2026-09-27T21:45:43Z",
+    "environment": "Fresh disposable chain-97 Anvil fork; not a live explorer transaction",
+    "claimTransactionHash": "0x1c3b6ffee727ce711475545dadbedb08af67ec7d2e573822137cf7e8d3c0b667",
+    "recipient": "0xaf53d4d23f8184907f49f70d8e3f71366523375a",
+    "amountWei": "20000000000000000",
+    "blockNumber": "133552141",
+    "blockHash": "0x516d5d17fb2734c31d853395f226604410e9130914753a18cf6809f7cff02ef5",
+    "receiptStatus": "success; transaction recipient and value matched the authenticated owner's derived smart account",
+    "repeatClaim": "FAUCET_ALREADY_CLAIMED; claim control disabled after reload"
+  },
+  "swap": {
+    "goal": "Swap 0.01 WBNB for CAKE",
+    "taskId": "d87d1edf-3edb-4be3-a475-a03a6ab58eec",
+    "mandateHash": "0x83694ab63df97687bbf25390f0401ec17243a2ba53d52a8c7c401058a8fea590",
+    "authorizeTx": "0x5482f2c55d32422ef6bd435f108801837cfd6037a380ddcc87cc7865dfc08c8d",
+    "beginTx": "0x27e9b7371df1d042e9a7556e8fa6d3c327e1e33aba98452741cc28c8148920a2",
+    "performTx": "0xf0ace1b9aa17a68578f2d672c3b15409e33a8e68494580f4dd84c0accd284ad9",
+    "terminalBlock": "133521155",
+    "verificationHash": "0xbfe4bee24a7fb3d415cad84d094a8b2d7a8a3ce8de486a37e7b5fd626ba78376",
+    "publicReceipt": "SUCCEEDED/PASSED; authority consumed; no ERC-8183 job bound on the testnet-demo executor"
+  },
+  "stake": {
+    "goal": "Stake 0.5 CAKE",
+    "taskId": "4c98d658-77e1-494b-b934-b7459c93707e",
+    "mandateHash": "0xae7e294b7a6c506d87b2970984684426d2ca0732cf4b3afa19b4335898ff0e1d",
+    "authorizeTx": "0x2bde333e90a942bfd79c995bd029edc37c4152cbf46867eb972231c4e5c8a9a6",
+    "beginTx": "0xd54820cff8285997f3d15ab9e4f94e2c2b1c96ef2aa11842b2edc9179a56baca",
+    "performTx": "0x3e1a93f7704294baea7886693697ce1a4c78b08f0c19d24698097f94d758d4c6",
+    "terminalBlock": "133521184",
+    "verificationHash": "0xf89f5bfcf8f885e16a7cca18f359f7ac9015a68d60dc8bd3de65661f5220132b",
+    "publicReceipt": "SUCCEEDED/PASSED; authority consumed; no ERC-8183 job bound on the testnet-demo executor"
+  },
+  "forkRevocation": {
+    "environment": "Separate disposable chain-97 Anvil fork browser run with a 60-second worker poll to expose the pre-BEGIN revocation window; not a live explorer transaction",
+    "command": "pnpm --filter @perago/web browser:fork --revoke",
+    "taskId": "ce6de746-08a7-4cc3-ac09-a04693c7b729",
+    "account": "0x7f177572dc9840df628249ff8bf9daf0909df087",
+    "mandateHash": "0xc36a8893c1be670a2cf91fa28f23fe011941ce9036a7f4287c3e4b6ac4135103",
+    "authorizeTx": "0x04c3ceb224cbaf37760898dd4d42933e737d869dae552a72e428e6a6d7b6d798",
+    "terminalTx": "0x79dc162df4c94509c7d5581841f8f76ed8545ac0224b66dc5e82439b69163b77",
+    "terminalBlock": "133562142",
+    "terminalBlockHash": "0xf4f274cefe8b2e74b74102945b9a00039dc2af1cffafa574d96844ff0997f74d",
+    "publicReceipt": "REVOKED/NOT_APPLICABLE; begin and execution transactions absent; authority consumed"
+  },
+  "forkExpiry": {
+    "environment": "Fresh disposable chain-97 Anvil fork with a 20-second worker poll; clock advanced 7200 seconds only on this fork; not a live explorer transaction",
+    "command": "pnpm --filter @perago/web browser:fork --expire",
+    "taskId": "ea8f0f22-195e-47cf-9dc4-a9e01c43bd77",
+    "mandateHash": "0x199398ac1b0149a4236448714874575372cc225dc43bc189973ae45734e2a74d",
+    "authorizeTx": "0x50871cfb100e54f5b311f3a85983beea57ae13ebfd668ef3cc87b70b48baeeeb",
+    "terminalTx": "0x317ae9f32c51b512e103d96c426f336d78b840ef9e147b32a3965f3fe23cb827",
+    "terminalBlock": "133609835",
+    "terminalBlockHash": "0x672eba47cc4340a7d9793fffc608920178e0b286cda9948afa13ac5980138c2b",
+    "publicReceipt": "Browser displayed EXPIRED; public API returned HTTP 200 EXPIRED/ONCHAIN_EXPIRED/NOT_APPLICABLE, authorityConsumed true, begin null, settlement NOT_BOUND"
+  },
+  "forkVerifierFailureAndReplay": {
+    "environment": "Separate disposable chain-97 Anvil fork; the output Cake token code was replaced with a reverting runtime after beginExecution and restored immediately after the onchain FAILED result. This is fault injection, not a live-token claim.",
+    "command": "pnpm --filter @perago/web browser:fork --fail-verify",
+    "taskId": "22fb4487-80e1-40c1-884b-425ab07b65a8",
+    "mandateHash": "0x284aa5395b3ba0f5691e8424d751be5998a8351aa422a7f7cfe71cf3b44fac61",
+    "authorizeTx": "0xedc5ed1b7cce335cd7881db72d46bbbb975356027d1949ec88e8b0223803ccc3",
+    "beginTx": "0x1d76475078d84d8e25a963303cec795b3fc1a56c5afffb65100adc27fa93f9da",
+    "terminalTx": "0x8c0e7e07966e5c5aa4b2cfbb0fdd5e91fee06f22920abd62cc1be33806b72f9b",
+    "terminalBlock": "133610633",
+    "terminalBlockHash": "0x0f3915da2c26e5061be8e6cb983a13458f1783c61f37df6263241fa8ba7e3cfc",
+    "failureReasonHash": "0xbc773c7d3e6e60a7ccaa29208f2ef3aa86fe273271dec70f60866a6c8c908762",
+    "publicReceipt": "Browser displayed FAILED/NOT_VERIFIED and no terminal signing control; public API returned HTTP 200 FAILED/ONCHAIN_FAILED, authorityConsumed true, settlement NOT_BOUND",
+    "exactSignatureReplay": "The browser-originated signed POST was replayed after terminal failure; the API returned the same mandate hash, the authenticated task remained FAILED/TERMINAL, and PostgreSQL still had one TERMINAL execution row."
+  },
+  "screenshots": "The optional fork-browser commands regenerate ignored files under apps/web/.screenshots; fork hashes are not live explorer evidence.",
+  "remainingGate": "P7-002 remains open for browser evidence of a bound ERC-8183 settlement and user visual review; P7-003 remains open for a live chain-97 faucet claim."
+}

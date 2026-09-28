@@ -1,4 +1,5 @@
 import {
+  apexCommerceAbi,
   EXECUTE_USER_OP_SELECTOR,
   type ExecutionJob,
   type ExecutionStatus,
@@ -10,6 +11,7 @@ import {
   MODULAR_ACCOUNT_V2_ADDRESSES,
   mandateExecutorAbi,
   mandateSessionPermissionSchema,
+  outcomeEvaluatorAbi,
   type RecordPendingTransactionRequest,
   signedMandateDocumentSchema,
   simulationResultSchema,
@@ -37,6 +39,7 @@ import { readFinalizedMandate } from "../executions/chain.js";
 import { applyFinalizedEvents } from "../indexer/project-chain-events.js";
 import { isTransportError } from "../simulation/user-operation.js";
 import { revertName } from "./mandates.js";
+import { readFinalizedCommerceState } from "./receipt-index.js";
 
 export type ExecutionServiceConfig = {
   client: PublicClient;
@@ -74,14 +77,9 @@ type ExecutionRow = {
   begin_tx_hash: Buffer | null;
   execute_user_operation_hash: Buffer | null;
   execute_tx_hash: Buffer | null;
+  settlement_tx_hash: Buffer | null;
   finalize_tx_hash: Buffer | null;
-  pending_transaction_kind:
-    | "AUTHORIZE"
-    | "BEGIN"
-    | "PERFORM"
-    | "FINALIZE_EXPIRED"
-    | "FINALIZE_STALLED"
-    | null;
+  pending_transaction_kind: ExecutionTransactionKind | null;
   pending_transaction_hash: Buffer | null;
   pending_raw_transaction: Buffer | null;
   pending_user_operation_hash: Buffer | null;
@@ -158,8 +156,9 @@ async function loadJob(
       m.typed_data, m.signature, s.result_document, p.permission_document,
       e.lease_expires_at, e.authorize_tx_hash, e.begin_tx_hash,
       e.execute_user_operation_hash, e.execute_tx_hash, e.finalize_tx_hash,
-      e.pending_transaction_kind, e.pending_transaction_hash, e.pending_raw_transaction,
-      e.pending_user_operation_hash, e.last_error_code, e.last_error_detail
+      e.settlement_tx_hash, e.pending_transaction_kind, e.pending_transaction_hash,
+      e.pending_raw_transaction, e.pending_user_operation_hash,
+      e.last_error_code, e.last_error_detail
     from executions e
     join mandates m on m.mandate_hash = e.mandate_hash
     join simulations s on s.id = m.simulation_id
@@ -197,6 +196,9 @@ export async function leaseExecution(
   workerId: string,
   config: ExecutionServiceConfig,
 ): Promise<{ job: ExecutionJob | null }> {
+  const pinnedCommerce = config.deployment.settlement
+    ? hashBuffer(config.deployment.settlement.commerce.address)
+    : null;
   return sql.begin(async (tx) => {
     const [row] = await tx<{ mandate_hash: Buffer }[]>`
       select e.mandate_hash
@@ -204,7 +206,7 @@ export async function leaseExecution(
       where e.status not in ('TERMINAL', 'REJECTED')
         and (e.lease_owner is null or e.lease_expires_at <= clock_timestamp())
         and (e.next_retry_at is null or e.next_retry_at <= clock_timestamp())
-        and m.erc8183_contract is null
+        and (m.erc8183_contract is null or m.erc8183_contract = ${pinnedCommerce})
         and m.chain_id = ${config.deployment.chainId}
         and m.mandate_executor_address = ${hashBuffer(config.deployment.mandateExecutor.address)}
       order by e.created_at
@@ -242,7 +244,11 @@ export async function deferExecution(
   mandateHash: `0x${string}`,
   request: {
     workerId: string;
-    code: "APPROVAL_MISSING" | "INPUT_BALANCE_SHORT" | "CHAIN_UNAVAILABLE";
+    code:
+      | "APPROVAL_MISSING"
+      | "INPUT_BALANCE_SHORT"
+      | "CHAIN_UNAVAILABLE"
+      | "COMMERCE_JOB_INVALID";
     retryAfterSeconds: number;
   },
   config: ExecutionServiceConfig,
@@ -268,6 +274,9 @@ export async function deferExecution(
 }
 
 type ControlRow = {
+  commerce_contract: Buffer | null;
+  commerce_job_id: string | null;
+  settlement_tx_hash: Buffer | null;
   mandate_status: string;
   pending_transaction_kind: ExecutionTransactionKind | null;
   pending_transaction_hash: Buffer | null;
@@ -294,7 +303,8 @@ async function loadControl(
   const [row] = await tx<ControlRow[]>`
     select m.status as mandate_status, e.pending_transaction_kind, e.pending_transaction_hash,
       e.pending_raw_transaction, e.pending_user_operation_hash, e.authorize_tx_hash,
-      e.execute_user_operation_hash, m.typed_data, m.signature, s.result_document,
+      e.execute_user_operation_hash, e.settlement_tx_hash, m.typed_data, m.signature, s.result_document,
+      m.erc8183_contract as commerce_contract, m.erc8183_job_id::text as commerce_job_id,
       m.executor_address, m.account_address, s.block_number::text as simulation_block,
       coalesce(c.next_block_number, s.block_number)::text as scan_from
     from executions e
@@ -330,6 +340,9 @@ const TERMINAL_MANDATES = new Set([
 
 /** The worker-visible stage, derived only from the finalized projection and the pending transaction. */
 function deriveStatus(row: {
+  commerce_contract: Buffer | null;
+  settlement_tx_hash: Buffer | null;
+  commerceFinished?: boolean;
   mandate_status: string;
   pending_transaction_kind: ExecutionTransactionKind | null;
   execute_user_operation_hash: Buffer | null;
@@ -344,10 +357,19 @@ function deriveStatus(row: {
       return "VERIFYING";
     case "FINALIZE_STALLED":
       return "EXECUTING";
+    case "SETTLE":
+      return "SETTLING";
+    case "REJECT_JOB":
+    case "CLAIM_REFUND":
+      return "REFUNDING";
     case null:
       break;
   }
-  if (TERMINAL_MANDATES.has(row.mandate_status)) return "TERMINAL";
+  if (TERMINAL_MANDATES.has(row.mandate_status)) {
+    if (row.commerce_contract !== null && !row.commerceFinished)
+      return row.mandate_status === "SUCCEEDED" ? "SETTLING" : "REFUNDING";
+    return "TERMINAL";
+  }
   if (row.mandate_status === "SIGNED") return "LEASED";
   if (row.mandate_status === "AUTHORIZED") return "AUTHORIZED";
   if (row.mandate_status === "EXECUTING") {
@@ -444,6 +466,28 @@ export async function reconcileExecution(
     now: new Date(),
   });
 
+  const settlement = deployment.settlement;
+  if (before.commerce_contract !== null && !settlement)
+    throw new Error("bound execution has no pinned settlement deployment");
+  const commerce =
+    before.commerce_contract !== null &&
+    before.commerce_job_id !== null &&
+    settlement &&
+    TERMINAL_MANDATES.has(scan.recordStatus)
+      ? await readFinalizedCommerceState({
+          client,
+          settlement,
+          mandateExecutor: deployment.mandateExecutor.address,
+          receiptStatus: scan.recordStatus,
+          account: hex(before.account_address),
+          commerceContract: hex(before.commerce_contract),
+          jobId: BigInt(before.commerce_job_id),
+          mandateHash,
+          fromBlock: BigInt(before.simulation_block),
+          finalizedBlock: scan.finalized.number,
+          observedAt: new Date(),
+        })
+      : null;
   let rejection: string | null = null;
   const pendingRemains =
     before.pending_transaction_hash !== null && confirmation === null;
@@ -499,6 +543,20 @@ export async function reconcileExecution(
       `;
     }
     await applyFinalizedEvents(tx, BigInt(deployment.chainId), scan.events);
+    if (commerce) {
+      await applyFinalizedEvents(
+        tx,
+        BigInt(deployment.chainId),
+        commerce.events,
+      );
+      if (commerce.status === "CONFIRMED" && commerce.settlementTxHash) {
+        await tx`
+          update executions set settlement_tx_hash = coalesce(settlement_tx_hash, ${hashBuffer(commerce.settlementTxHash)}),
+            updated_at = now()
+          where mandate_hash = ${key}
+        `;
+      }
+    }
     // The finalized cursor only moves forward; blocks at or below it cannot reorg.
     await tx`
       insert into indexer_checkpoints (
@@ -527,7 +585,15 @@ export async function reconcileExecution(
     }
     const rejected =
       rejection !== null && after.pending_transaction_hash === null;
-    const status: ExecutionStatus = rejected ? "REJECTED" : deriveStatus(after);
+    const commerceFinished =
+      commerce !== null &&
+      (commerce.status === "CONFIRMED" ||
+        commerce.status === "UNPAID" ||
+        (scan.recordStatus !== "SUCCEEDED" &&
+          (commerce.jobStatus === 4 || commerce.jobStatus === 5)));
+    const status: ExecutionStatus = rejected
+      ? "REJECTED"
+      : deriveStatus({ ...after, commerceFinished });
     const finished = status === "TERMINAL" || status === "REJECTED";
     await tx`
       update executions set
@@ -553,6 +619,9 @@ const REQUIRED_PROJECTION: Record<ExecutionTransactionKind, string> = {
   FINALIZE_EXPIRED: "AUTHORIZED",
   PERFORM: "EXECUTING",
   FINALIZE_STALLED: "EXECUTING",
+  SETTLE: "SUCCEEDED",
+  REJECT_JOB: "FAILED",
+  CLAIM_REFUND: "SUCCEEDED",
 };
 
 const same = (left: string, right: string) =>
@@ -607,13 +676,47 @@ async function assertStageTransaction(
     BEGIN: executorCall("beginExecution"),
     FINALIZE_EXPIRED: executorCall("finalizeExpired"),
     FINALIZE_STALLED: executorCall("finalizeStalledExecution"),
+    SETTLE: encodeFunctionData({
+      abi: outcomeEvaluatorAbi,
+      functionName: "settle",
+      args: [BigInt(message.commerceJobId), mandateHash],
+    }),
+    REJECT_JOB: encodeFunctionData({
+      abi: outcomeEvaluatorAbi,
+      functionName: "reject",
+      args: [BigInt(message.commerceJobId), mandateHash],
+    }),
+    CLAIM_REFUND: encodeFunctionData({
+      abi: apexCommerceAbi,
+      functionName: "claimRefund",
+      args: [BigInt(message.commerceJobId)],
+    }),
   };
 
   if (request.kind !== "PERFORM") {
+    const settlementCall =
+      request.kind === "SETTLE" ||
+      request.kind === "REJECT_JOB" ||
+      request.kind === "CLAIM_REFUND";
+    const target =
+      request.kind === "CLAIM_REFUND"
+        ? deployment.settlement?.commerce.address
+        : settlementCall
+          ? deployment.settlement?.evaluator.address
+          : deployment.mandateExecutor.address;
     if (
-      !transaction.to ||
-      !same(transaction.to, deployment.mandateExecutor.address)
+      settlementCall &&
+      (!deployment.settlement ||
+        !control.commerce_contract ||
+        !same(
+          hex(control.commerce_contract),
+          deployment.settlement.commerce.address,
+        ) ||
+        control.commerce_job_id !== String(message.commerceJobId) ||
+        !same(message.commerceContract, deployment.settlement.commerce.address))
     )
+      problems.push("commerce binding");
+    if (!transaction.to || !target || !same(transaction.to, target))
       problems.push("target");
     if (!same(data, expected[request.kind])) problems.push("call");
   } else {
@@ -707,9 +810,15 @@ export async function recordPendingTransaction(
       "another transaction is pending; it must be confirmed or retired first",
     );
   }
-  if (control.mandate_status !== REQUIRED_PROJECTION[request.kind]) {
+  if (
+    request.kind === "REJECT_JOB"
+      ? !["FAILED", "REVOKED", "EXPIRED"].includes(control.mandate_status)
+      : request.kind === "CLAIM_REFUND"
+        ? !TERMINAL_MANDATES.has(control.mandate_status)
+        : control.mandate_status !== REQUIRED_PROJECTION[request.kind]
+  ) {
     throw new ExecutionConflictError(
-      `${request.kind} is only allowed when the finalized mandate is ${REQUIRED_PROJECTION[request.kind]}`,
+      `${request.kind} requires the matching finalized mandate outcome`,
     );
   }
   if (
@@ -727,7 +836,12 @@ export async function recordPendingTransaction(
     const current = await loadControl(tx, key);
     if (
       current.pending_transaction_hash !== null ||
-      current.mandate_status !== control.mandate_status
+      current.mandate_status !== control.mandate_status ||
+      current.commerce_job_id !== control.commerce_job_id ||
+      (current.settlement_tx_hash !== null &&
+        (request.kind === "SETTLE" ||
+          request.kind === "REJECT_JOB" ||
+          request.kind === "CLAIM_REFUND"))
     ) {
       throw new ExecutionConflictError(
         "the execution changed while the transaction was checked",

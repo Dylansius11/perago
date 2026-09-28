@@ -108,7 +108,11 @@ function encryptGoal(key: Buffer, taskId: string, goal: string): Buffer {
   ]);
 }
 
-function decryptGoal(key: Buffer, taskId: string, sealed: Buffer): string {
+export function decryptGoal(
+  key: Buffer,
+  taskId: string,
+  sealed: Buffer,
+): string {
   if (sealed[0] !== CIPHER_VERSION) {
     throw new Error("intent ciphertext version is unsupported");
   }

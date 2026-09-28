@@ -39,7 +39,9 @@ export const REASON_MESSAGES = {
   ACCOUNT_NOT_REGISTERED:
     "The smart account's owner, owner epoch, or active policy is not registered with this MandateExecutor.",
   COMMERCE_BINDING_REQUIRED:
-    "This MandateExecutor requires an ERC-8183 job for every mandate, and Perago cannot create one yet.",
+    "This MandateExecutor requires a submitted, funded ERC-8183 job. Provide its job ID before simulation.",
+  COMMERCE_JOB_INVALID:
+    "The chosen commerce job no longer matches the reviewed settlement deployment or signed execution window.",
   DEPLOYMENT_MISMATCH:
     "A pinned contract's onchain code or wiring does not match the reviewed deployment manifest.",
   SESSION_EXPIRES_FIRST:
@@ -86,7 +88,18 @@ export const REASON_MESSAGES = {
     "The mandate ended unsuccessfully onchain; its failure hash is a commitment, not a decoded cause.",
   ONCHAIN_REVOKED:
     "The mandate was revoked onchain before a successful execution.",
-  ONCHAIN_EXPIRED: "The mandate expired onchain before a successful execution.",
+  ONCHAIN_EXPIRED:
+    "The mandate expired onchain before execution began. Its authority cannot be reused.",
+  FAUCET_ALREADY_CLAIMED:
+    "This smart account already claimed testnet tBNB in the last 24 hours.",
+  FAUCET_ACCOUNT_FUNDED:
+    "This smart account already holds enough tBNB and is not eligible for a faucet claim.",
+  FAUCET_BUDGET_EXHAUSTED:
+    "The faucet has reached its rolling daily tBNB budget. Try again later.",
+  FAUCET_RATE_LIMITED:
+    "This client has reached the faucet claim limit. Try again later.",
+  FAUCET_UNAVAILABLE:
+    "The faucet is temporarily unavailable. No additional claim was sent.",
 } as const;
 
 export type ReasonCode = keyof typeof REASON_MESSAGES;

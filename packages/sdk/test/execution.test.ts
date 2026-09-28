@@ -10,7 +10,24 @@ import {
   mandateExecutorAbi,
   pendingTransactionSchema,
   signedMandateDocumentSchema,
+  simulateTaskRequestSchema,
 } from "../src/index.js";
+
+describe("authenticated job binding request", () => {
+  it("accepts a positive onchain job ID and rejects empty or unrelated fields", () => {
+    expect(simulateTaskRequestSchema.parse({ commerceJobId: "7" })).toEqual({
+      commerceJobId: "7",
+    });
+    expect(simulateTaskRequestSchema.parse({})).toEqual({});
+    expect(
+      simulateTaskRequestSchema.safeParse({ commerceJobId: "0" }).success,
+    ).toBe(false);
+    expect(
+      simulateTaskRequestSchema.safeParse({ commerceJobId: "7", verdict: true })
+        .success,
+    ).toBe(false);
+  });
+});
 
 const hash = `0x${"aa".repeat(32)}`;
 const executor = "0x9999999999999999999999999999999999999999";
@@ -83,6 +100,27 @@ describe("pending transaction", () => {
     ).toBe(false);
     expect(
       pendingTransactionSchema.safeParse({ ...pending, kind: "AUTHORIZE" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("allows only signed settlement or refund transactions without a UserOperation", () => {
+    expect(
+      pendingTransactionSchema.parse({
+        ...pending,
+        kind: "SETTLE",
+        userOperationHash: null,
+      }).kind,
+    ).toBe("SETTLE");
+    expect(
+      pendingTransactionSchema.parse({
+        ...pending,
+        kind: "REJECT_JOB",
+        userOperationHash: null,
+      }).kind,
+    ).toBe("REJECT_JOB");
+    expect(
+      pendingTransactionSchema.safeParse({ ...pending, kind: "SETTLE" })
         .success,
     ).toBe(false);
   });

@@ -1,5 +1,6 @@
-import { REASON_MESSAGES } from "@perago/sdk";
+import { type PublicConfig, REASON_MESSAGES } from "@perago/sdk";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { Sql } from "postgres";
 import { ZodError } from "zod";
 
@@ -8,6 +9,8 @@ import type { WalletAuthConfig } from "./auth/wallet-auth.js";
 import { ReasonError } from "./errors.js";
 import type { Planner } from "./planner/provider.js";
 import { createExecutionRoutes } from "./routes/executions.js";
+import { createFaucetRoutes, type FaucetRouteConfig } from "./routes/faucet.js";
+
 import { createPolicyRoutes } from "./routes/policies.js";
 import { createReceiptRoutes } from "./routes/receipts.js";
 import { createTaskRoutes } from "./routes/tasks.js";
@@ -22,15 +25,30 @@ import { isTransportError } from "./simulation/user-operation.js";
 
 export function createApiApp(input: {
   authConfig: WalletAuthConfig;
+  corsOrigin?: string;
+  faucet?: FaucetRouteConfig;
   mandateConfig: MandateServiceConfig;
   planner: Planner;
   executionConfig: ExecutionServiceConfig;
   policyConfig: PolicyServiceConfig;
   policyVerifier: PolicyChainVerifier;
+  publicConfig?: PublicConfig;
   sql: Sql;
   taskConfig: TaskServiceConfig;
 }) {
   const app = new Hono();
+  app.use(
+    "*",
+    cors({
+      allowHeaders: ["authorization", "content-type"],
+      allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
+      origin: input.corsOrigin ?? "http://localhost:3000",
+    }),
+  );
+  app.get("/health", (context) => context.json({ status: "ok" }));
+  if (input.publicConfig) {
+    app.get("/config", (context) => context.json(input.publicConfig));
+  }
   app.route("/auth", createAuthRoutes(input.sql, input.authConfig));
   app.route(
     "/policies",
@@ -51,6 +69,16 @@ export function createApiApp(input: {
       taskConfig: input.taskConfig,
     }),
   );
+  if (input.faucet) {
+    app.route(
+      "/faucet",
+      createFaucetRoutes({
+        authConfig: input.authConfig,
+        ...input.faucet,
+        sql: input.sql,
+      }),
+    );
+  }
   app.route(
     "/internal/executions",
     createExecutionRoutes({ config: input.executionConfig, sql: input.sql }),

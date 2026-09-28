@@ -4,6 +4,72 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - Map every terminal projection reason into the SDK
+
+- Observed: a local chain-97 fork recorded a finalized `EXPIRED` mandate with `ONCHAIN_EXPIRED`, but `GET /receipts/:hash` returned HTTP 400 and the browser never showed its public receipt.
+- Root cause: `getPublicReceipt` validated the projected reason against `REASON_MESSAGES`, which omitted `ONCHAIN_EXPIRED` despite the indexer emitting it.
+- Rule: keep the SDK reason registry aligned with every onchain terminal projection and exercise the public receipt contract for success, failure, revocation, and expiry.
+
+### 2026-09-28 - A new Docker port is not a new PostgreSQL database
+
+- Observed: `perago-test-db` on port 55432 and `perago-test-db-alt` on port 56432 mounted the same Docker volume. The volume contains separate `perago_test` and `perago_dev` logical databases; the earlier fork stack used `perago_dev`, not a copy of `perago_test`.
+- Root cause: changing the host port was mistaken for an isolated volume, while the fork reset accepted any database URL.
+- Rule: never run two PostgreSQL containers against one volume; require the existing local `perago_dev` database for destructive browser-fork resets, keeping integration-test data in `perago_test`.
+
+### 2026-09-28 - Pin the owner-bound proxy and its mutable implementation separately
+
+- Observed: a chain-97 fork account's runtime encodes its root owner, while ERC-1967 storage points to the account implementation; the browser originally considered any nonempty code a deployed supported account.
+- Root cause: proxy code presence alone does not establish account identity or its current implementation.
+- Rule: compare exact SDK-derived owner-bound runtime and the ERC-1967 implementation slot on read and just before owner writes; refuse a mismatch instead of treating it as an undeployed account.
+
+### 2026-09-28 - A shared chain ancestor cannot prove the wallet's write venue
+
+- Observed: a local fork and live chain 97 can share an older block hash; a gate comparing two blocks behind the current head could approve a wallet pointed at the wrong history.
+- Root cause: historical chain identity was mistaken for current state identity while the app reads through its RPC and writes through the wallet's RPC.
+- Rule: compare the console's latest block hash at the same height through the wallet immediately before every signature and broadcast; fail closed if either head changes or is unavailable.
+
+### 2026-09-28 - Browser signing needs independent local authority checks
+
+- Observed: API-prepared policy calldata and mandate typed data were initially signed directly by the owner, so a compromised response could ask for wider session permission than the visible limits. A receipt timeout also lost the owner transaction hash and exposed a duplicate-broadcast retry path.
+- Root cause: treating an API preparation response and a completed wallet promise as sufficient trust boundaries.
+- Rule: reconstruct the signed policy and mandate commitments from the user's review and pinned SDK deployment before prompting; persist the transaction hash before awaiting finality, then recover by hash rather than rebroadcasting.
+
+### 2026-09-28 - A pending policy confirmation is not activation
+
+- Observed: the browser received HTTP 200 from `PUT /policies/:id/activation`, discarded its review, and displayed the same policy as `DRAFT`; the API response body was `PENDING` because the EntryPoint receipt had not reached the configured depth. A later fork browser run observed `PENDING` three times before `ACTIVE`.
+- Root cause: the client treated the HTTP status as the policy's state instead of checking the response's `status` union.
+- Rule: retain one signed transaction and its review while the API reports `PENDING`; repeat only the exact finality check until `ACTIVE`, and never issue another wallet prompt to recover a pending confirmation.
+
+### 2026-09-28 - Fund a disposable executor for its full transaction chain
+
+- Observed: a fork-browser swap stopped at `VERIFYING` with a persisted `PERFORM` hash absent from the mempool. The worker's initial `0.005` tBNB fell to `0.003570246` after authorization and begin; the next signed transaction's fee ceiling exceeded the remaining balance.
+- Root cause: the dev fork allocated enough gas for individual submissions but not for the complete multi-stage execution.
+- Rule: size disposable fork balances for the full authorize/begin/perform/finalize path before testing worker liveness; never interpret a persisted transaction hash alone as a broadcast or payment result.
+
+### 2026-09-28 - Keep motion markup stable across server and client
+
+- Observed: reduced-motion browser screenshots left 30 entrance elements in their hidden server-rendered state and React reported a hydration mismatch between `motion` markup and plain `<div>` branches.
+- Root cause: `useReducedMotion` selected different element attributes during server rendering and client hydration, so React did not repair the inline hidden styles.
+- Rule: render the same motion elements on server and client, then use a reduced-motion CSS media query to expose content and suppress visual movement even before hydration.
+
+### 2026-09-27 - Check Windows reserved ports before reusing a disposable database container
+
+- Observed: Docker could not restart `perago-test-db` on `127.0.0.1:55432` with `bind: An attempt was made to access a socket in a way forbidden by its access permissions`; no TCP listener owned the port, but `netsh interface ipv4 show excludedportrange protocol=tcp` reported reserved range `55377–55476`. An integration command still reached `55432` after `.env` changed, because an inherited process variable took precedence over Node's env-file.
+- Root cause: Docker's existing host-port binding fell inside a Windows TCP exclusion, while the test process inherited a stale `TEST_DATABASE_URL` from its parent shell.
+- Rule: choose an unreserved host port (for this workstation, `56432`), remap a disposable container without erasing its named volume, and update or clear any exported `TEST_DATABASE_URL` as well as local `.env`; never change a hosted database connection to work around a local port conflict.
+
+### 2026-09-27 - Do not gate an expired escrow refund on payout economics
+
+- Observed: changing APEX `platformFeeBP` to 100 made the worker report `refundable: false` for a matching expired Submitted job, even though `claimRefund(jobId)` has no platform-fee precondition; a focused regression reproduced the refusal.
+- Root cause: the shared job-identity check conflated mutable payout terms with the immutable job identity required for permissionless recovery.
+- Rule: enforce fee terms before submitting or completing payment, but keep exact job/client/token binding and pinned runtime checks independently sufficient for a permissionless expiry refund.
+
+### 2026-09-27 - Expired escrow needs its own permissionless recovery call
+
+- Observed: the reviewed `OutcomeEvaluator.reject` checks `job.expiredAt > block.timestamp`, so it cannot refund an otherwise valid bound job after its deadline; the official APEX kernel exposes `claimRefund(jobId)` for funded/submitted jobs after that boundary. An existing chain-97 protocol probe recorded permissionless expiry refund for job `1260`.
+- Root cause: deterministic evaluator rejection and permissionless kernel expiry are distinct transitions. Waiting for evaluator rejection after the deadline strands the worker in `REFUNDING` and leaves a successful-but-unpaid job indefinitely pending.
+- Rule: pin the exact APEX kernel and job identity, submit only `claimRefund(jobId)` after expiry, and mark a successful mandate `UNPAID` only once the kernel's `Expired` status is finalized; never confuse escrow recovery with verified provider payment.
+
 ### 2026-09-27 - Recheck mutable escrow economics inside the settlement transaction
 
 - Observed: chain-97 APEX had `platformFeeBP = 0` at block `133413598`, but a unit test changing it to 100 bp showed that `OutcomeEvaluator.settle` would otherwise release less than the job budget to the provider.
@@ -245,6 +311,22 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+
+### 2026-09-28 - Prefer closing accepted work over redundant screenshot runs
+
+- Asked to prioritize completing the working Phase 7 journey and accurate todo status rather than repeating screenshots or mobile responsiveness checks already shown.
+- Application: keep the existing desktop/mobile fork-browser evidence, remove the separate screenshot runner, and focus on remaining acceptance gaps and coherent verified commits.
+
+### 2026-09-28 - Keep every financial screen necessary and the path short
+
+- Asked for the AI goal-to-action journey and high-quality, seamless UI without many redundant screens or steps, while retaining frequent small commits and accurate decision records.
+- Application: keep policy, plan, simulation, signed limits, and receipt in one progressive workspace; collapse passing rule details but expose failures; remove completed progress scaffolding once the authoritative result appears; never remove a distinct root signature or onchain approval needed to enforce the limits.
+
+### 2026-09-27 - Use managed Supabase PostgreSQL at the deployment gate
+
+- Asked for a working hosted product without relying on a local database and for smaller, frequent coherent commits with every technical decision recorded.
+- Application: at `P8-001`, provision Supabase managed PostgreSQL, apply the checked-in SQL migrations and smoke the deployed API/worker against it; retain local PostgreSQL only for isolated tests, preserve the provider-neutral `postgres` driver, and record design/evidence with each bounded commit.
+
 
 ### 2026-09-20 - Verification and repository intelligence must be proportional
 

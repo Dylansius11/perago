@@ -74,6 +74,25 @@ export const executionReceiptSchema = z.strictObject({
       commerceContract: addressSchema,
       jobId: uint256StringSchema,
     }),
+    z.strictObject({
+      status: z.literal("UNPAID"),
+      commerceContract: addressSchema,
+      jobId: uint256StringSchema,
+    }),
+    z.strictObject({
+      status: z.literal("CONFIRMED"),
+      commerceContract: addressSchema,
+      jobId: uint256StringSchema,
+      transactionHash: hashSchema,
+      blockNumber: uint256StringSchema,
+      blockHash: hashSchema,
+      evaluatorLogIndex: z.number().int().nonnegative(),
+      completionLogIndex: z.number().int().nonnegative(),
+      paymentLogIndex: z.number().int().nonnegative(),
+      provider: addressSchema,
+      paymentToken: addressSchema,
+      amount: uint256StringSchema,
+    }),
   ]),
 });
 

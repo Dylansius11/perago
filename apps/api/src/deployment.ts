@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import {
   type Address,
   addressSchema,
@@ -6,6 +7,8 @@ import {
   hashSchema,
   type ProtocolCatalog,
   peragoDeploymentManifestSchema,
+  resolveSettlementDeployment,
+  type SettlementDeployment,
 } from "@perago/sdk";
 
 export type DeployedContract = { address: Address; codeHash: Hash };
@@ -32,6 +35,7 @@ export type PeragoDeployment = {
   mandateExecutor: DeployedContract;
   executionWindowSeconds: bigint;
   allowUnboundCommerceJobs: boolean;
+  settlement?: SettlementDeployment | null;
   quoter: Address;
   adapters: { SWAP: AdapterDeployment; STAKE: AdapterDeployment };
 };
@@ -44,10 +48,13 @@ type ProtocolManifest = {
   contracts: Record<string, ManifestContract>;
 };
 
-/** Reads a repository-relative manifest such as `deployments/bsc-testnet.perago.json`. */
+/** Reads a repository-relative or absolute deployment manifest. */
 function readManifest(path: string): unknown {
   return JSON.parse(
-    readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8"),
+    readFileSync(
+      isAbsolute(path) ? path : new URL(`../../../${path}`, import.meta.url),
+      "utf8",
+    ),
   );
 }
 
@@ -103,6 +110,7 @@ export function loadDeployment(
     mandateExecutor: contract(perago.contracts, "mandateExecutor"),
     executionWindowSeconds: BigInt(perago.constructor.executionWindowSeconds),
     allowUnboundCommerceJobs: perago.constructor.allowUnboundCommerceJobs,
+    settlement: resolveSettlementDeployment(perago, protocols),
     quoter: contract(protocols.contracts, "pancakeV3QuoterV2").address,
     adapters: {
       SWAP: {

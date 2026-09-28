@@ -1,5 +1,5 @@
 import { z } from "zod";
-
+import { uint256StringSchema } from "../domain/primitives.js";
 import { taskIntentSchema } from "../domain/task-intent.js";
 
 /**
@@ -14,3 +14,12 @@ export const createTaskRequestSchema = z.strictObject({
 });
 
 export type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>;
+
+/** User-selected, pre-funded/submitted APEX job; never a worker-chosen verdict. */
+export const simulateTaskRequestSchema = z.strictObject({
+  commerceJobId: uint256StringSchema
+    .refine((value) => value !== "0", "commerce job ID must be positive")
+    .optional(),
+});
+
+export type SimulateTaskRequest = z.infer<typeof simulateTaskRequestSchema>;

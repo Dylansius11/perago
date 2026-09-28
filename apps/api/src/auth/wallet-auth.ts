@@ -24,6 +24,7 @@ export type WalletAuthConfig = {
 export type WalletIdentity = {
   account: `0x${string}`;
   chainId: string;
+  expiresAt: string;
   ownerEpoch: string;
   rootOwner: `0x${string}`;
   walletId: string;
@@ -271,15 +272,17 @@ export async function verifyWalletChallenge(
   });
 }
 
+type AuthenticatedWalletRow = WalletRow & { expires_at: Date };
+
 export async function authenticateWalletSession(
   sql: Sql,
   token: string,
   now = new Date(),
 ): Promise<WalletIdentity> {
-  const [wallet] = await sql<WalletRow[]>`
+  const [wallet] = await sql<AuthenticatedWalletRow[]>`
     select w.id, w.chain_id::text, w.account_address, w.root_owner_address,
       w.account_type, w.account_version, w.entry_point_address,
-      w.factory_address, w.owner_epoch::text
+      w.factory_address, w.owner_epoch::text, s.expires_at
     from wallet_sessions s
     join wallets w on w.id = s.wallet_id
     where s.token_hash = ${hashToken(token)}
@@ -291,6 +294,7 @@ export async function authenticateWalletSession(
   return {
     account: asAddress(wallet.account_address),
     chainId: wallet.chain_id,
+    expiresAt: wallet.expires_at.toISOString(),
     ownerEpoch: wallet.owner_epoch,
     rootOwner: asAddress(wallet.root_owner_address),
     walletId: wallet.id,

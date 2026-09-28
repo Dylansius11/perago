@@ -11,6 +11,7 @@ import {
   TransactionReceiptNotFoundError,
 } from "viem";
 
+import { readCommerceView } from "./commerce.ts";
 import type { ExecutorDeployment } from "./config.ts";
 import { type ChainView, MANDATE_RECORD_STATUSES } from "./reconcile.ts";
 
@@ -44,30 +45,53 @@ export async function readChainView(input: {
   const block = await client.getBlock({ blockTag: "latest" });
   const at = { blockNumber: block.number };
 
-  const [record, allowance, balance, executorNonce] = await Promise.all([
-    client.readContract({
-      ...at,
-      abi: mandateExecutorAbi,
-      address: deployment.mandateExecutor,
-      args: [job.mandateHash],
-      functionName: "mandateRecord",
-    }),
-    client.readContract({
-      ...at,
-      abi: erc20Abi,
-      address: message.inputToken,
-      args: [message.account, deployment.mandateExecutor],
-      functionName: "allowance",
-    }),
-    client.readContract({
-      ...at,
-      abi: erc20Abi,
-      address: message.inputToken,
-      args: [message.account],
-      functionName: "balanceOf",
-    }),
-    client.getTransactionCount({ address: executor, ...at }),
-  ]);
+  const commerceJobId = BigInt(message.commerceJobId);
+  let commerce: Promise<ChainView["commerce"]>;
+  if (commerceJobId === 0n) {
+    commerce = Promise.resolve(null);
+  } else {
+    if (!deployment.settlement) {
+      throw new Error("bound job has no pinned commerce settlement");
+    }
+    commerce = readCommerceView({
+      client,
+      settlement: deployment.settlement,
+      executor: deployment.mandateExecutor,
+      account: message.account,
+      jobId: commerceJobId,
+      blockNumber: block.number,
+      mandateExpiresAt: BigInt(message.expiresAt),
+      executionWindowSeconds: deployment.executionWindowSeconds,
+      now: block.timestamp,
+    });
+  }
+
+  const [record, allowance, balance, executorNonce, commerceView] =
+    await Promise.all([
+      client.readContract({
+        ...at,
+        abi: mandateExecutorAbi,
+        address: deployment.mandateExecutor,
+        args: [job.mandateHash],
+        functionName: "mandateRecord",
+      }),
+      client.readContract({
+        ...at,
+        abi: erc20Abi,
+        address: message.inputToken,
+        args: [message.account, deployment.mandateExecutor],
+        functionName: "allowance",
+      }),
+      client.readContract({
+        ...at,
+        abi: erc20Abi,
+        address: message.inputToken,
+        args: [message.account],
+        functionName: "balanceOf",
+      }),
+      client.getTransactionCount({ address: executor, ...at }),
+      commerce,
+    ]);
 
   const status = MANDATE_RECORD_STATUSES[record.status];
   if (!status)
@@ -99,6 +123,7 @@ export async function readChainView(input: {
     allowance,
     balance,
     executorNonce: BigInt(executorNonce),
+    commerce: commerceView,
     pending,
   };
 }

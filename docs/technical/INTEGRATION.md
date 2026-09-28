@@ -1,7 +1,7 @@
 # Perago BNB and Protocol Integration Map
 
-**Status:** Evidence-backed through `P3-004`; chain-97 account, protocol, settlement, atomic policy-transition, production adapter, and pre-signature simulation proofs exist, while the executor lifecycle through a smart account remains pending
-**Reviewed:** 2026-09-23
+**Status:** Chain-97 account, protocol, adapter, bounded swap/stake, and manual ERC-8183 lifecycles are proven; `P6-003` automated bound settlement/refund is proven on a local chain-97 fork at block 133475562 ([evidence](../evidence/bsc-testnet.fork.phase6-settlement-smoke.json)). No live evaluator, hosted settlement API, or live Perago payment is claimed.
+**Reviewed:** 2026-09-27
 **Contract boundary:** [`SMART-CONTRACT.md`](SMART-CONTRACT.md)
 
 ## 1. Evidence policy and statuses
@@ -15,7 +15,6 @@ An official page proves what its publisher documents; it does not prove that byt
 | `needs re-verification` | Official/current documentation supports the claim, but Perago must validate the exact deployment, version, configuration, or behavior before use. |
 | `blocked` | A required official deployment/capability/evidence is unavailable; do not implement or claim it until resolved. |
 
-No entry is marked “integrated” in this phase.
 
 ## 2. Integration summary
 
@@ -37,6 +36,8 @@ No entry is marked “integrated” in this phase.
 | APEX payment token (United Stables `U`) | ERC-8183 demo payment token | `verified` | Selected; upstream labels it USDC, onchain it is `U`. No faucet: funded through one V2 pair. |
 | Quote + pinned `eth_call` state override | Pre-sign simulation | `verified` | Selected in `P3-004`: a QuoterV2 quote or exact-path share estimate at one pinned block, then the account's exact calls run against the production executor, adapter, verifier, and protocol through one `eth_call` with a state override (section 11). Proven on a chain-97 fork and read-only on chain 97 ([evidence](../evidence/bsc-testnet.fork.phase3-smoke.json)). Bundler UserOperation simulation belongs to execution (`P4-002`), because a mandate cannot be authorized before it is signed. No third-party simulator is added. |
 | Groq `openai/gpt-oss-120b` | Untrusted intent planner | `verified` | Selected in `P3-003`; strict `json_schema` constrained decoding returned only the closed candidate across a ten-intent matrix on 2026-09-23 ([evidence](../evidence/p3-003-planner-live.json)). It never authorizes; the deterministic compiler owns every value. Sources: [structured outputs](https://console.groq.com/docs/structured-outputs), [data retention](https://console.groq.com/docs/your-data). |
+
+The production MandateExecutor and pinned APEX kernel/token were read on the chain-97 fork; a locally deployed evaluator paid a verified bound job once and refunded failed jobs. A settlement outage left `SUCCEEDED/PENDING`, and finalized event correlation produced `CONFIRMED` after restart. A fork-only fault injection made the output token's `balanceOf` revert during verifier pre-state measurement; the real production executor recorded `FAILED`, and the worker refunded without provider payment. The original token code was restored before refund. This is **fork** evidence, not a live payment or a real upstream token failure, and the production executor's live end-to-end status remains `proposed` until a reviewed evaluator/provider and a real bound job are deployed and exercised. The [fork report](../evidence/bsc-testnet.fork.phase6-settlement-smoke.json) records the source block, code hashes, transactions, and negative paths; its explorer URLs describe a chain but cannot resolve fork-only transactions.
 
 ## 3. BNB Smart Chain
 
@@ -193,7 +194,8 @@ The evaluator also reads `platformFeeBP` inside `settle` and refuses a nonzero v
 - If no compatible deterministic evaluator can be installed, do not claim APEX settlement; deploy a clearly identified Perago test instance or mark settlement blocked.
 - If upgrade/admin state changes after simulation, stop new jobs and invalidate the deployment manifest.
 - If settlement is temporarily unavailable after Perago success, keep the successful receipt and retry the identical eligible call after reconciliation.
-- If the job expires/rejects first, payment remains unavailable even if execution later reports success; executor must check job deadline before beginning.
+- If the bound job expires before payment, the worker may call only the pinned kernel's permissionless `claimRefund(jobId)` after rechecking the exact job identity and runtime pins; a changed `platformFeeBP` blocks payment but does not block the refund. APEX returns funded/submitted escrow to its client and moves the job to `Expired`. This is not payment or a new mandate attempt; a finalized successful mandate becomes public `UNPAID`. The reviewed upstream implementation is [AgenticCommerceUpgradeable.sol](https://github.com/bnb-chain/apex-contracts/blob/main/contracts/AgenticCommerceUpgradeable.sol); existing chain-97 permissionless expiry evidence is `docs/evidence/bsc-testnet.protocol-live.json` job `1260` (`verified` for that deployment, not a live Perago evaluator).
+- If the job is rejected before settlement, payment remains unavailable even if execution later reports success; pre-terminal worker submissions require the submitted job and expiry headroom.
 
 ## 7. ERC-8004 decision
 

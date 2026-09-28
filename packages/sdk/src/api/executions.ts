@@ -21,6 +21,7 @@ export const executionStatusSchema = z.enum([
   "EXECUTING",
   "VERIFYING",
   "SETTLING",
+  "REFUNDING",
   "RETRY_WAIT",
   "TERMINAL",
   "REJECTED",
@@ -50,6 +51,9 @@ export const executionTransactionKindSchema = z.enum([
   "PERFORM",
   "FINALIZE_EXPIRED",
   "FINALIZE_STALLED",
+  "SETTLE",
+  "REJECT_JOB",
+  "CLAIM_REFUND",
 ]);
 
 export type ExecutionTransactionKind = z.infer<
@@ -155,6 +159,7 @@ export const deferralCodeSchema = z.enum([
   "APPROVAL_MISSING",
   "INPUT_BALANCE_SHORT",
   "CHAIN_UNAVAILABLE",
+  "COMMERCE_JOB_INVALID",
 ]);
 
 export const deferExecutionRequestSchema = z.strictObject({

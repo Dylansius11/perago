@@ -20,6 +20,7 @@ import { erc20Abi, keccak256, type PublicClient } from "viem";
 
 import type { PeragoDeployment } from "../deployment.js";
 import { ReasonError } from "../errors.js";
+import { readSubmittedCommerceJob } from "./commerce.js";
 import {
   type ChainSnapshot,
   type PinnedBlock,
@@ -48,6 +49,7 @@ export type SimulationEnvironment = {
 };
 
 export type SimulationSubject = {
+  commerceJobId: bigint | null;
   executor: Address;
   nonce: bigint;
   ownerEpoch: string;
@@ -74,6 +76,7 @@ function simulatedMandate(input: {
   action: SimulationResult["action"];
   adapter: Address;
   expiresAt: bigint;
+  commerce: { commerceContract: Address; commerceJobId: string } | null;
   subject: SimulationSubject;
 }): TaskMandate {
   const { action, adapter, expiresAt, subject } = input;
@@ -107,8 +110,8 @@ function simulatedMandate(input: {
       action.kind === "SWAP"
         ? hashSwapPostcondition(action.recipient, action.tokenOut, minimum)
         : hashStakePostcondition(action.recipient, action.poolId, minimum),
-    commerceContract: ZERO_ADDRESS,
-    commerceJobId: "0",
+    commerceContract: input.commerce?.commerceContract ?? ZERO_ADDRESS,
+    commerceJobId: input.commerce?.commerceJobId ?? "0",
   });
 }
 
@@ -168,7 +171,7 @@ export async function simulatePlan(
       `onchain owner ${config.rootOwner} epoch ${config.ownerEpoch} policy ${config.activePolicyHash}`,
     );
   }
-  if (!snapshot.allowUnboundCommerceJobs) {
+  if (!snapshot.allowUnboundCommerceJobs && subject.commerceJobId === null) {
     throw new ReasonError("COMMERCE_BINDING_REQUIRED");
   }
 
@@ -179,6 +182,26 @@ export async function simulatePlan(
       `mandate expiry ${expiresAt}; session valid until ${subject.sessionValidUntil}`,
     );
   }
+  if (subject.commerceJobId !== null && !deployment.settlement) {
+    throw new ReasonError(
+      "DEPLOYMENT_MISMATCH",
+      "no pinned evaluator is configured",
+    );
+  }
+  const commerce =
+    subject.commerceJobId === null || !deployment.settlement
+      ? null
+      : await readSubmittedCommerceJob({
+          client,
+          settlement: deployment.settlement,
+          executor: deployment.mandateExecutor.address,
+          account: plan.account,
+          jobId: subject.commerceJobId,
+          blockNumber,
+          mandateExpiresAt: expiresAt,
+          executionWindowSeconds: deployment.executionWindowSeconds,
+          now: block.timestamp,
+        });
   const quoteExpiresAt =
     block.timestamp + BigInt(environment.quoteTtlSeconds) < expiresAt
       ? block.timestamp + BigInt(environment.quoteTtlSeconds)
@@ -225,6 +248,7 @@ export async function simulatePlan(
       action,
       adapter: adapter.adapter.address,
       expiresAt,
+      commerce,
       subject,
     });
     return runExactPath({

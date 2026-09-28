@@ -48,6 +48,7 @@ Every version below is installed and exact in the committed manifests; `pnpm-loc
 | Legacy Alchemy AA SDK (`@alchemy/aa-core`) | `3.19.0` | npm registry stable tag, but its exact `viem 2.8.6` peer conflicts with the selected Viem baseline; do not install it. |
 | Biome | `2.5.14` | npm registry stable tag. |
 | Vitest | `5.0.1` | npm registry stable tag; keep only behavior tests that meet root verification rules. |
+| Playwright | `1.63.0` | `apps/web` dev-only fork-wallet browser journey. It runs real Chromium against the app and a disposable fork; no runtime client dependency or mocked receipt is shipped. |
 | Solidity | `0.8.37` | `solc` npm stable tag; Foundry config pins exact compiler and optimizer settings. |
 | Foundry | `1.8.3` | Latest non-prerelease immutable GitHub release on 2026-09-17. |
 | OpenZeppelin Contracts | `5.6.1` | npm registry stable tag; install as a pinned Git submodule/tag or exact dependency according to Foundry convention. |
@@ -180,9 +181,9 @@ PostgreSQL owns durable offchain workflow, immutable authored records, raw chain
 - Use `jsonb` only for versioned canonical documents/evidence; indexed state and identities get typed columns.
 - Use `bytea` for addresses/hashes/signatures and `numeric(78,0)` for uint256 values.
 - Use the `postgres` driver with bounded pools per process.
-- No Supabase client, ORM repository abstraction, or database-per-service in MVP.
+- No Supabase client, ORM repository abstraction, or database-per-service in MVP. Supabase is the managed PostgreSQL host, accessed through the existing `postgres` driver; no provider-specific application data API is required.
 
-Managed PostgreSQL 18.6 is preferred. If the deployment provider offers only a supported older major, use its newest patched supported version and record the platform constraint; schema features must remain portable.
+Managed PostgreSQL 18.6 is preferred. At `P8-001`, select Supabase's newest patched supported major, record its actual version and platform constraint, run the checked-in Drizzle SQL migrations and the request/worker/reconciliation smoke against that instance. Local PostgreSQL remains an isolated development and fork-test fixture, never the hosted product database; schema features must remain portable.
 
 ## 8. Contracts
 
@@ -208,7 +209,7 @@ One formatter/linter for supported TypeScript/JSON files. Use its stable recomme
 
 - Vitest for uncertain pure-domain/backend behavior and lifecycle integration tests.
 - Foundry for all contract tests.
-- Browser verification for later UI behavior; no UI test framework or screenshot suite before Phase 7.
+- Playwright runs a fork-only injected-wallet smoke after the Phase 7 gate opened; its disposable key stays in the Node script process and never reaches the page. Production browser behavior must still be inspected visually.
 - Throwaway smoke scripts for deployment/integration proof are removed or promoted only when they protect a plausible regression.
 
 ## 10. Deployment targets
@@ -220,7 +221,7 @@ One formatter/linter for supported TypeScript/JSON files. Use its stable recomme
 | Web | Vercel | Native stable Next deployment and preview URLs. |
 | API | Railway long-lived service | Hono Node process, straightforward secrets/networking. |
 | Executor/indexer | Railway worker services | Persistent processes and shared managed network. |
-| Database | Railway managed PostgreSQL | One operational plane with API/workers; use newest supported patched major. |
+| Database | Supabase managed PostgreSQL | User-selected managed host at `P8-001`; retain the portable `postgres` driver, Drizzle migrations, and one durable queue database. |
 | Contracts | BSC Testnet chain 97 | Official target and explorer-verifiable evidence. |
 | RPC | Alchemy primary plus independent BNB-compatible fallback | AA integration plus disagreement/recovery path. |
 | Bundler/paymaster | Alchemy, with validated standards-compatible fallback | Official BNB Testnet support and gas sponsorship. |

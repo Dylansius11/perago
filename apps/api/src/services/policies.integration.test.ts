@@ -39,6 +39,7 @@ const migrations = [
   new URL("../../drizzle/0003_mandate_signing.sql", import.meta.url),
   new URL("../../drizzle/0004_execution_worker.sql", import.meta.url),
   new URL("../../drizzle/0005_chain_event_reorg_versions.sql", import.meta.url),
+  new URL("../../drizzle/0006_commerce_settlement.sql", import.meta.url),
 ];
 const owner = privateKeyToAccount(
   "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -58,6 +59,7 @@ const userOpHash =
 const identity: WalletIdentity = {
   account: account.toLowerCase() as `0x${string}`,
   chainId: "97",
+  expiresAt: "2026-09-20T13:00:00.000Z",
   ownerEpoch: "0",
   rootOwner: owner.address.toLowerCase() as `0x${string}`,
   walletId: "00000000-0000-4000-8000-000000000001",

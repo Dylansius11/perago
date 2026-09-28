@@ -1,3 +1,4 @@
+import { simulateTaskRequestSchema } from "@perago/sdk";
 import { Hono } from "hono";
 import type { Sql } from "postgres";
 
@@ -19,6 +20,7 @@ import {
   type TaskServiceConfig,
   validateTaskConfig,
 } from "../services/tasks.js";
+import { getTaskDetail, listTaskSummaries } from "../services/views.js";
 
 const PLANNING_STATUS = {
   PLANNER_UNAVAILABLE: 503,
@@ -38,6 +40,33 @@ export function createTaskRoutes(input: {
   const routes = new Hono<WalletRouteBindings>();
 
   routes.use("*", requireWalletSession(input.sql, input.authConfig));
+
+  routes.get("/", async (context) => {
+    const rawLimit = context.req.query("limit");
+    const limit = rawLimit === undefined ? 20 : Number(rawLimit);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new SyntaxError("limit must be an integer from 1 through 100");
+    }
+    return context.json(
+      await listTaskSummaries(
+        input.sql,
+        context.get("wallet"),
+        input.taskConfig,
+        limit,
+      ),
+    );
+  });
+
+  routes.get("/:taskId", async (context) =>
+    context.json(
+      await getTaskDetail(
+        input.sql,
+        context.get("wallet"),
+        input.taskConfig,
+        context.req.param("taskId"),
+      ),
+    ),
+  );
 
   routes.post("/", async (context) => {
     const result = await createTask(
@@ -77,6 +106,7 @@ export function createTaskRoutes(input: {
       input.sql,
       context.get("wallet"),
       context.req.param("taskId"),
+      simulateTaskRequestSchema.parse(await context.req.json()),
       input.mandateConfig,
     );
     return context.json(view, 201);

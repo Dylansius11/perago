@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import type { Sql } from "postgres";
-
+import { sessionView } from "../services/views.js";
+import {
+  requireWalletSession,
+  type WalletRouteBindings,
+} from "./middleware.js";
 import {
   createWalletChallenge,
   verifyWalletChallenge,
@@ -8,7 +12,7 @@ import {
 } from "./wallet-auth.js";
 
 export function createAuthRoutes(sql: Sql, config: WalletAuthConfig) {
-  const routes = new Hono();
+  const routes = new Hono<WalletRouteBindings>();
 
   routes.post("/challenges", async (context) => {
     const challenge = await createWalletChallenge(
@@ -27,6 +31,10 @@ export function createAuthRoutes(sql: Sql, config: WalletAuthConfig) {
     );
     return context.json(session, 201);
   });
+
+  routes.get("/session", requireWalletSession(sql, config), (context) =>
+    context.json(sessionView(context.get("wallet"))),
+  );
 
   return routes;
 }

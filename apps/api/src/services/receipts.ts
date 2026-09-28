@@ -9,6 +9,7 @@ import {
 import type { JSONValue, Sql } from "postgres";
 import { bscTestnet } from "viem/chains";
 import type { MandateRecordStatus } from "../executions/chain.js";
+import type { FinalizedCommerceState } from "./receipt-index.js";
 
 const hex = (value: Buffer) => `0x${value.toString("hex")}` as `0x${string}`;
 
@@ -37,6 +38,7 @@ interface ReceiptRow {
   execution_tx_hash: Buffer | null;
   erc8183_contract: Buffer | null;
   erc8183_job_id: string | null;
+  settlement_tx_hash: Buffer | null;
   verification_hash: Buffer | null;
   terminal_transaction_hash: Buffer;
   terminal_block_number: string;
@@ -76,10 +78,43 @@ export function assertReceiptCommitments(
   }
 }
 
+/** Only the finalized index observation may turn a bound success into paid. */
+export function publicReceiptSettlement(input: {
+  status: ReceiptRow["status"];
+  commerceContract: `0x${string}` | null;
+  jobId: string | null;
+  settlementTxHash: `0x${string}` | null;
+  commerce: FinalizedCommerceState | null;
+}) {
+  if (input.commerceContract === null || input.jobId === null)
+    return { status: "NOT_BOUND" as const };
+  const binding = {
+    commerceContract: input.commerceContract,
+    jobId: input.jobId,
+  };
+  if (input.status !== "SUCCEEDED")
+    return { status: "INELIGIBLE" as const, ...binding };
+  if (input.commerce?.status === "UNPAID")
+    return { status: "UNPAID" as const, ...binding };
+  if (
+    input.commerce?.status !== "CONFIRMED" ||
+    input.settlementTxHash !== input.commerce.settlementTxHash ||
+    !input.commerce.evidence
+  ) {
+    return { status: "PENDING" as const, ...binding };
+  }
+  return {
+    status: "CONFIRMED" as const,
+    ...binding,
+    ...input.commerce.evidence,
+  };
+}
+
 /** Read only the canonical, confirmed receipt and its public commitment fields. */
 export async function getPublicReceipt(
   sql: Sql,
   mandateHash: string,
+  commerce: FinalizedCommerceState | null = null,
 ): Promise<ExecutionReceipt | null> {
   const key = Buffer.from(hashSchema.parse(mandateHash).slice(2), "hex");
   const [row] = await sql<ReceiptRow[]>`
@@ -94,7 +129,7 @@ export async function getPublicReceipt(
       begun.block_hash as begin_block_hash,
       case when e.execute_tx_hash = r.execution_tx_hash
         then e.execute_user_operation_hash else null end as execute_user_operation_hash,
-      r.execution_tx_hash, r.erc8183_contract,
+      r.execution_tx_hash, r.settlement_tx_hash, r.erc8183_contract,
       r.erc8183_job_id::text, r.verification_hash,
       terminal.transaction_hash as terminal_transaction_hash,
       terminal.block_number::text as terminal_block_number,
@@ -152,16 +187,15 @@ export async function getPublicReceipt(
   if ((row.erc8183_contract === null) !== (row.erc8183_job_id === null)) {
     throw new Error("receipt commerce binding is incomplete");
   }
-  const settlement =
-    row.erc8183_contract === null || row.erc8183_job_id === null
-      ? { status: "NOT_BOUND" }
-      : {
-          // The evaluator and its event source are not pinned until P6-003;
-          // neither a DB transaction hash nor an arbitrary log proves payment.
-          status: row.status === "SUCCEEDED" ? "PENDING" : "INELIGIBLE",
-          commerceContract: hex(row.erc8183_contract),
-          jobId: row.erc8183_job_id,
-        };
+  const settlement = publicReceiptSettlement({
+    status: row.status,
+    commerceContract:
+      row.erc8183_contract === null ? null : hex(row.erc8183_contract),
+    jobId: row.erc8183_job_id,
+    settlementTxHash:
+      row.settlement_tx_hash === null ? null : hex(row.settlement_tx_hash),
+    commerce,
+  });
   if (row.chain_id !== String(bscTestnet.id)) {
     throw new Error("public receipt has no configured explorer for this chain");
   }

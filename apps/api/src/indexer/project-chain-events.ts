@@ -39,6 +39,15 @@ const terminalEventNames: Record<string, true> = {
   ExecutionReceiptRecorded: true,
 };
 
+const mandateEventNames: Record<string, true> = {
+  MandateAuthorized: true,
+  ExecutionBegun: true,
+  MandateRevoked: true,
+  MandateExpired: true,
+  ExecutionReceiptRecorded: true,
+  CommerceJobSettled: true,
+};
+
 function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
   return Buffer.from(left).equals(Buffer.from(right));
 }
@@ -99,9 +108,10 @@ function validateBatch(batch: ChainEventBatch): void {
     }
     if (
       event.decodedName !== null &&
+      mandateEventNames[event.decodedName] === true &&
       mandateHashFromArgs(event.decodedArgs) === null
     ) {
-      throw new TypeError("decoded lifecycle events require mandateHash");
+      throw new TypeError("decoded mandate events require mandateHash");
     }
   }
 }
@@ -332,8 +342,19 @@ async function insertConfirmedEvents(
     }
     inserted += rows.count;
     const mandateHash = mandateHashFromArgs(event.decodedArgs);
-    if (mandateHash)
+    if (!mandateHash) continue;
+    if (rows.count > 0) {
       affectedMandates.set(mandateHash.toString("hex"), mandateHash);
+    } else if (
+      event.decodedName !== null &&
+      event.decodedName in terminalEventNames
+    ) {
+      const [receipt] = await tx`
+        select mandate_hash from execution_receipts where mandate_hash = ${mandateHash}
+      `;
+      if (!receipt)
+        affectedMandates.set(mandateHash.toString("hex"), mandateHash);
+    }
   }
   return inserted;
 }

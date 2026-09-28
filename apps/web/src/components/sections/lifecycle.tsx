@@ -1,4 +1,5 @@
 import { RiseIn, Unveil } from "@/components/motion/reveal";
+import { ScrollRail } from "@/components/motion/scroll-rail";
 import { Caption } from "@/components/primitives";
 
 /*
@@ -63,6 +64,7 @@ type StepData = {
 export function Lifecycle() {
   return (
     <section id="mandate" className="scroll-mt-16 border-b border-ruleinvert">
+      <ScrollRail target="mandate" />
       <SectionHeader />
       {/*
        * Four columns, two rows, seven cells: the tree photograph spans both
@@ -70,7 +72,7 @@ export function Lifecycle() {
        * 01 through 06 for assistive tech; the photograph is decorative and
        * sits after step 03 in the DOM.
        */}
-      <div className="grid md:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-4">
         <StepCell data={STEPS[0]} />
         <StepCell data={STEPS[1]} />
         <StepCell data={STEPS[2]} dark />

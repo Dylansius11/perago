@@ -20,7 +20,7 @@ export function createReceiptRoutes(sql: Sql, config: ExecutionServiceConfig) {
         404,
       );
     }
-    const receipt = await getPublicReceipt(sql, mandateHash);
+    const receipt = await getPublicReceipt(sql, mandateHash, indexed.commerce);
     if (!receipt) {
       return context.json(
         {

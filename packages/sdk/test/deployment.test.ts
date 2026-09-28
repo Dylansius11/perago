@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { peragoDeploymentManifestSchema } from "../src/index.js";
+import {
+  peragoDeploymentManifestSchema,
+  resolveSettlementDeployment,
+} from "../src/index.js";
 
 const manifest = (name: string): unknown =>
   JSON.parse(
@@ -22,6 +25,95 @@ describe("peragoDeploymentManifestSchema", () => {
     expect(parsed.protocolManifest).toBe(
       "deployments/bsc-testnet.protocols.json",
     );
+  });
+
+  it("accepts a reviewed evaluator binding and rejects an incomplete or zero-address recipient", () => {
+    const production = peragoDeploymentManifestSchema.parse(
+      manifest("bsc-testnet.perago.json"),
+    );
+    const settlement = {
+      evaluator: {
+        address: "0x1111111111111111111111111111111111111111",
+        codeHash: `0x${"aa".repeat(32)}`,
+      },
+      provider: "0x2222222222222222222222222222222222222222",
+    };
+    expect(
+      peragoDeploymentManifestSchema.parse({ ...production, settlement })
+        .settlement?.provider,
+    ).toBe(settlement.provider);
+    expect(
+      peragoDeploymentManifestSchema.safeParse({
+        ...production,
+        settlement: { evaluator: settlement.evaluator },
+      }).success,
+    ).toBe(false);
+    expect(
+      peragoDeploymentManifestSchema.safeParse({
+        ...production,
+        settlement: {
+          ...settlement,
+          provider: "0x0000000000000000000000000000000000000000",
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      peragoDeploymentManifestSchema.safeParse({
+        ...production,
+        settlement: {
+          ...settlement,
+          evaluator: {
+            ...settlement.evaluator,
+            address: "0x0000000000000000000000000000000000000000",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("pins the evaluator and deployed proxy implementations or rejects drift", () => {
+    const production = peragoDeploymentManifestSchema.parse(
+      manifest("bsc-testnet.perago.json"),
+    );
+    const protocol = manifest("bsc-testnet.protocols.json") as {
+      chainId: number;
+      contracts: Record<string, Record<string, string>>;
+    };
+    const settlement = {
+      evaluator: {
+        address: "0x1111111111111111111111111111111111111111",
+        codeHash: `0x${"aa".repeat(32)}`,
+      },
+      provider: "0x2222222222222222222222222222222222222222",
+    };
+    expect(resolveSettlementDeployment(production, protocol)).toBeNull();
+    const configured = { ...production, settlement };
+    const resolved = resolveSettlementDeployment(configured, protocol);
+    expect(resolved?.commerce.address).toBe(
+      protocol.contracts.apexKernel?.address.toLowerCase(),
+    );
+    expect(resolved?.commerce.implementation).toBe(
+      protocol.contracts.apexKernel?.erc1967Implementation,
+    );
+    expect(resolved?.evaluator.address).toBe(settlement.evaluator.address);
+    expect(() =>
+      resolveSettlementDeployment(configured, {
+        ...protocol,
+        chainId: 56,
+      }),
+    ).toThrow();
+    expect(() =>
+      resolveSettlementDeployment(configured, {
+        ...protocol,
+        contracts: {
+          ...protocol.contracts,
+          apexKernel: {
+            ...protocol.contracts.apexKernel,
+            erc1967Implementation: "0x0000000000000000000000000000000000000000",
+          },
+        },
+      }),
+    ).toThrow();
   });
 
   // Loaders read the named protocol manifest from disk, so it must stay inside `deployments/`.

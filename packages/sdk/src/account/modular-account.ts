@@ -317,6 +317,18 @@ export function serializeHookConfig(config: {
   ]);
 }
 
+const ACCOUNT_RUNTIME_PREFIX =
+  "363d3d373d3d363d7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc545af43d6000803e6038573d6000fd5b3d6000f3";
+
+function runtimeCodeForOwner(owner: Address): Hex {
+  return `0x${ACCOUNT_RUNTIME_PREFIX}${owner.slice(2).toLowerCase()}`;
+}
+
+/** Runtime bytecode of the owner-bound account proxy, independent of its storage. */
+export function semiModularAccountRuntimeCode(params: { owner: Address }): Hex {
+  return runtimeCodeForOwner(assertAddress(params.owner, "owner"));
+}
+
 /**
  * Derives the counterfactual semi-modular account address for a root owner.
  *
@@ -344,7 +356,7 @@ export function deriveSemiModularAccountAddress(params: {
   );
 
   return getContractAddress({
-    bytecode: `0x6100513d8160233d3973${addresses.semiModularAccountBytecode.slice(2)}60095155f3363d3d373d3d363d7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc545af43d6000803e6038573d6000fd5b3d6000f3${owner.slice(2)}`,
+    bytecode: `0x6100513d8160233d3973${addresses.semiModularAccountBytecode.slice(2)}60095155f3${runtimeCodeForOwner(owner).slice(2)}`,
     from: addresses.factory,
     opcode: "CREATE2",
     salt: combinedSalt,
