@@ -88,6 +88,8 @@ export const REASON_MESSAGES = {
     "The mandate ended unsuccessfully onchain; its failure hash is a commitment, not a decoded cause.",
   ONCHAIN_REVOKED:
     "The mandate was revoked onchain before a successful execution.",
+  ONCHAIN_EXPIRED:
+    "The mandate expired onchain before execution began. Its authority cannot be reused.",
   FAUCET_ALREADY_CLAIMED:
     "This smart account already claimed testnet tBNB in the last 24 hours.",
   FAUCET_ACCOUNT_FUNDED:

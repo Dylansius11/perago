@@ -778,4 +778,50 @@ describe("P3-001 constrained persistence", () => {
       }),
     ).rejects.toThrow("canonical event payload differs from the retained log");
   });
+  it("publishes an expired mandate as a terminal public receipt", async () => {
+    const { mandateHash } = await seedMandate(sql, 100);
+    const authorized = chainEvent({
+      seed: 44,
+      blockNumber: 100n,
+      blockHash: bytes(100, 32),
+      name: "MandateAuthorized",
+      mandateHash,
+    });
+    const expired = chainEvent({
+      seed: 45,
+      blockNumber: 101n,
+      blockHash: bytes(101, 32),
+      name: "MandateExpired",
+      mandateHash,
+    });
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "expired-public-receipt",
+      fromBlockNumber: 100n,
+      nextBlockNumber: 101n,
+      parentBlockHash: bytes(99, 32),
+      lastCanonicalBlockHash: bytes(100, 32),
+      confirmationDepth: 1,
+      events: [authorized],
+    });
+    await applyChainEventBatch(sql, {
+      chainId: 97n,
+      streamName: "expired-public-receipt",
+      fromBlockNumber: 101n,
+      nextBlockNumber: 102n,
+      parentBlockHash: bytes(100, 32),
+      lastCanonicalBlockHash: bytes(101, 32),
+      confirmationDepth: 1,
+      events: [expired],
+    });
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toMatchObject({
+      status: "EXPIRED",
+      terminalReasonCode: "ONCHAIN_EXPIRED",
+      terminalMessage: expect.stringMatching(/expired.*onchain/i),
+      authorityConsumed: true,
+      begin: null,
+      verification: { status: "NOT_APPLICABLE" },
+      settlement: { status: "NOT_BOUND" },
+    });
+  });
 });

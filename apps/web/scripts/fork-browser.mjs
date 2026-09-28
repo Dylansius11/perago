@@ -2,7 +2,7 @@
 /**
  * Fork-only browser proof. A disposable key is created in this Node process;
  * the page sees an EIP-1193 provider but NEVER receives the private key.
- * Start `pnpm --filter @perago/api dev:fork` with a dedicated perago_fork
+ * Start `pnpm --filter @perago/api dev:fork` with the existing perago_dev
  * database (never the perago_test integration DB) and
  * `NEXT_PUBLIC_PERAGO_RPC_URL=http://127.0.0.1:8545 pnpm --filter @perago/web dev`.
  * Then run `pnpm --filter @perago/web browser:fork`.
@@ -10,7 +10,10 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { deriveSemiModularAccountAddress } from "@perago/sdk";
+import {
+  deriveSemiModularAccountAddress,
+  mandateExecutorAbi,
+} from "@perago/sdk";
 import { chromium } from "playwright";
 import { createPublicClient, createWalletClient, http, parseEther } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
@@ -26,15 +29,21 @@ const wallet = createWalletClient({
 });
 const mobile = process.argv.includes("--mobile");
 const revoke = process.argv.includes("--revoke");
+const expire = process.argv.includes("--expire");
+const failVerify = process.argv.includes("--fail-verify");
 const output = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
   ".screenshots",
-  revoke
-    ? "fork-browser-revoke"
-    : mobile
-      ? "fork-browser-mobile"
-      : "fork-browser",
+  failVerify
+    ? "fork-browser-failed"
+    : expire
+      ? "fork-browser-expire"
+      : revoke
+        ? "fork-browser-revoke"
+        : mobile
+          ? "fork-browser-mobile"
+          : "fork-browser",
 );
 
 const client = createPublicClient({ chain: bscTestnet, transport: http(RPC) });
@@ -445,9 +454,21 @@ async function main() {
       fullPage: true,
     });
     await page.getByRole("button", { name: "Approve exact input" }).click();
+    const acceptance = failVerify
+      ? page.waitForResponse(
+          (response) =>
+            /\/tasks\/[^/]+\/mandate$/u.test(
+              new URL(response.url()).pathname,
+            ) && response.request().method() === "POST",
+        )
+      : null;
     await page
       .getByRole("button", { name: "Sign exact mandate" })
       .click({ timeout: 60_000 });
+    const signedResponse = acceptance ? await acceptance : null;
+    const signedHash = signedResponse
+      ? (await signedResponse.json()).mandateHash
+      : null;
     await page
       .getByRole("region", { name: "Signed mandate" })
       .waitFor({ timeout: 60_000 });
@@ -456,6 +477,129 @@ async function main() {
       fullPage: true,
     });
     console.log(JSON.stringify({ check: "swap-queued", visible: true }));
+    if (expire) {
+      await page
+        .getByRole("button", { name: "Revoke before execution" })
+        .waitFor({ timeout: 150_000 });
+      await rpc("evm_increaseTime", [7200]);
+      await rpc("evm_mine");
+      await page
+        .getByRole("region", { name: "Public receipt" })
+        .waitFor({ timeout: 180_000 });
+      const expired = await page
+        .getByRole("region", { name: "Public receipt" })
+        .innerText();
+      if (
+        !expired.includes("EXPIRED") ||
+        !expired.includes("authority consumed")
+      ) {
+        throw new Error(
+          `Expiry did not end authority: ${expired.slice(0, 500)}`,
+        );
+      }
+      console.log(
+        JSON.stringify({ check: "owner-mandate-expired", visible: true }),
+      );
+      if (errors.length) throw new Error(errors.join("\n"));
+      return;
+    }
+    if (failVerify) {
+      if (!signedHash) throw new Error("Signed mandate hash was not returned.");
+      const config = await (await fetch("http://127.0.0.1:8787/config")).json();
+      const outputToken = config.tokens.find(
+        (token) => token.symbol === "Cake",
+      )?.address;
+      const originalCode = outputToken
+        ? await client.getCode({ address: outputToken })
+        : null;
+      if (!originalCode)
+        throw new Error("Pinned fork output token has no runtime.");
+      const readRecord = () =>
+        client.readContract({
+          abi: mandateExecutorAbi,
+          address: config.mandateExecutor,
+          functionName: "mandateRecord",
+          args: [signedHash],
+        });
+      const beginDeadline = Date.now() + 180_000;
+      while ((await readRecord()).status !== 2 && Date.now() < beginDeadline)
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      if ((await readRecord()).status !== 2)
+        throw new Error("Mandate never entered EXECUTING on the fork.");
+      let failed = false;
+      try {
+        await rpc("anvil_setCode", [outputToken, "0x60006000fd"]);
+        const failureDeadline = Date.now() + 180_000;
+        while (Date.now() < failureDeadline) {
+          const status = (await readRecord()).status;
+          if (status === 4) {
+            failed = true;
+            break;
+          }
+          if (status !== 2)
+            throw new Error(`Unexpected onchain status ${status}`);
+          await new Promise((resolve) => setTimeout(resolve, 1_000));
+        }
+      } finally {
+        await rpc("anvil_setCode", [outputToken, originalCode]);
+      }
+      if (!failed) throw new Error("Verifier fault did not end in FAILED.");
+      await page
+        .getByRole("region", { name: "Public receipt" })
+        .waitFor({ timeout: 180_000 });
+      const failedReceipt = await page
+        .getByRole("region", { name: "Public receipt" })
+        .innerText();
+      if (
+        !failedReceipt.includes("FAILED") ||
+        !failedReceipt.includes("NOT_VERIFIED")
+      )
+        throw new Error(
+          `Failure receipt missing: ${failedReceipt.slice(0, 500)}`,
+        );
+      if (
+        await page.getByRole("button", { name: "Sign exact mandate" }).count()
+      )
+        throw new Error("Terminal mandate still offers a replay signature.");
+      const originalRequest = signedResponse?.request();
+      const authorization = originalRequest?.headers().authorization;
+      const signedBody = originalRequest?.postData();
+      if (!authorization || !signedBody)
+        throw new Error("Browser submission proof is unavailable for replay.");
+      const replay = await fetch(signedResponse.url(), {
+        method: "POST",
+        headers: { authorization, "content-type": "application/json" },
+        body: signedBody,
+      });
+      const replayed = await replay.json();
+      if (replay.status !== 201 || replayed.mandateHash !== signedHash)
+        throw new Error("Exact signature replay was not idempotent.");
+      const taskAfterReplay = await fetch(
+        signedResponse.url().replace(/\/mandate$/u, ""),
+        { headers: { authorization } },
+      );
+      const unchanged = await taskAfterReplay.json();
+      if (
+        unchanged.execution?.status !== "TERMINAL" ||
+        unchanged.receipt?.status !== "FAILED"
+      )
+        throw new Error("Signature replay queued another execution.");
+      console.log(
+        JSON.stringify({
+          check: "terminal-signature-replay",
+          oneExecution: true,
+        }),
+      );
+      console.log(
+        JSON.stringify({
+          check: "verifier-failed",
+          mandateHash: signedHash,
+          visible: true,
+        }),
+      );
+      if (errors.length) throw new Error(errors.join("\n"));
+      return;
+    }
     if (revoke) {
       const control = page.getByRole("button", {
         name: "Revoke before execution",

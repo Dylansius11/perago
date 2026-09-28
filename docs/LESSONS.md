@@ -4,11 +4,17 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - Map every terminal projection reason into the SDK
+
+- Observed: a local chain-97 fork recorded a finalized `EXPIRED` mandate with `ONCHAIN_EXPIRED`, but `GET /receipts/:hash` returned HTTP 400 and the browser never showed its public receipt.
+- Root cause: `getPublicReceipt` validated the projected reason against `REASON_MESSAGES`, which omitted `ONCHAIN_EXPIRED` despite the indexer emitting it.
+- Rule: keep the SDK reason registry aligned with every onchain terminal projection and exercise the public receipt contract for success, failure, revocation, and expiry.
+
 ### 2026-09-28 - A new Docker port is not a new PostgreSQL database
 
-- Observed: `perago-test-db` on port 55432 and `perago-test-db-alt` on port 56432 mounted the same Docker volume and both specified `POSTGRES_DB=perago_test`; `dev:fork` drops the public schema, so the second container did not isolate its writes.
-- Root cause: changing the host port was mistaken for a separate database and `dev:fork` accepted any database URL.
-- Rule: never run two PostgreSQL containers against one volume; require a dedicated `perago_fork` logical database before destructive browser-fork resets, and keep integration-test data in `perago_test`.
+- Observed: `perago-test-db` on port 55432 and `perago-test-db-alt` on port 56432 mounted the same Docker volume. The volume contains separate `perago_test` and `perago_dev` logical databases; the earlier fork stack used `perago_dev`, not a copy of `perago_test`.
+- Root cause: changing the host port was mistaken for an isolated volume, while the fork reset accepted any database URL.
+- Rule: never run two PostgreSQL containers against one volume; require the existing local `perago_dev` database for destructive browser-fork resets, keeping integration-test data in `perago_test`.
 
 ### 2026-09-28 - Pin the owner-bound proxy and its mutable implementation separately
 

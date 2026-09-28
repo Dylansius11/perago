@@ -30,8 +30,8 @@ export function requireForkDatabase(databaseUrl: string): string {
     url.hash
   )
     throw new Error("dev:fork requires a local PostgreSQL server");
-  if (url.pathname !== "/perago_fork")
-    throw new Error("dev:fork requires the disposable perago_fork database");
+  if (url.pathname !== "/perago_dev")
+    throw new Error("dev:fork requires the disposable perago_dev database");
   return databaseUrl;
 }
 

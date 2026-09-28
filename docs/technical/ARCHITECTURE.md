@@ -94,7 +94,7 @@ No package is created until its phase begins. Import boundaries are enforced by 
 - P7-002 provides the local `apps/api/src/main.ts` server entrypoint and fork
   development stack for the web journey; hosted API deployment remains P8-001.
 - The fork development stack resets the public schema only in a local
-  `perago_fork` logical database. `perago_test` is reserved for integration
+  `perago_dev` logical database. `perago_test` is reserved for integration
   tests; different Docker host ports do not isolate a shared data volume.
 
 ### `apps/executor`

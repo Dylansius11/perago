@@ -8,7 +8,7 @@
   },
   "deploymentManifest": "deployments/bsc-testnet.demo.perago.json",
   "command": "node apps/web/scripts/fork-browser.mjs",
-  "environment": "Disposable Anvil fork, local PostgreSQL (these earlier runs used perago_test; the later dev:fork guard requires perago_fork), real API/Groq planner, local web app, injected EIP-1193 provider backed by an in-process disposable wallet; no chain-97 broadcast.",
+  "environment": "Disposable Anvil fork, local PostgreSQL (the recorded fork-stack launch targeted the perago_dev logical database; the two local containers share a Docker volume), real API/Groq planner, local web app, injected EIP-1193 provider backed by an in-process disposable wallet; no chain-97 broadcast.",
   "owner": "0x77af954590d0d89b3b7a072ca19d72907115cf7e",
   "smartAccount": "0x1591988f8e4f926377b9e41eadf4b34f7819b50d",
   "checks": {
@@ -72,6 +72,31 @@
     "terminalBlockHash": "0xf4f274cefe8b2e74b74102945b9a00039dc2af1cffafa574d96844ff0997f74d",
     "publicReceipt": "REVOKED/NOT_APPLICABLE; begin and execution transactions absent; authority consumed"
   },
-  "screenshots": "Rerun the corresponding browser command to regenerate ignored files in apps/web/.screenshots/fork-browser, fork-browser-mobile, or fork-browser-revoke; fork hashes are not live explorer evidence.",
-  "remainingGate": "P7-002 remains open for browser failure-verification, replay, expiry/settlement, and user visual review; P7-003 remains open for a live chain-97 claim."
+  "forkExpiry": {
+    "environment": "Fresh disposable chain-97 Anvil fork with a 20-second worker poll; clock advanced 7200 seconds only on this fork; not a live explorer transaction",
+    "command": "pnpm --filter @perago/web browser:fork --expire",
+    "taskId": "ea8f0f22-195e-47cf-9dc4-a9e01c43bd77",
+    "mandateHash": "0x199398ac1b0149a4236448714874575372cc225dc43bc189973ae45734e2a74d",
+    "authorizeTx": "0x50871cfb100e54f5b311f3a85983beea57ae13ebfd668ef3cc87b70b48baeeeb",
+    "terminalTx": "0x317ae9f32c51b512e103d96c426f336d78b840ef9e147b32a3965f3fe23cb827",
+    "terminalBlock": "133609835",
+    "terminalBlockHash": "0x672eba47cc4340a7d9793fffc608920178e0b286cda9948afa13ac5980138c2b",
+    "publicReceipt": "Browser displayed EXPIRED; public API returned HTTP 200 EXPIRED/ONCHAIN_EXPIRED/NOT_APPLICABLE, authorityConsumed true, begin null, settlement NOT_BOUND"
+  },
+  "forkVerifierFailureAndReplay": {
+    "environment": "Separate disposable chain-97 Anvil fork; the output Cake token code was replaced with a reverting runtime after beginExecution and restored immediately after the onchain FAILED result. This is fault injection, not a live-token claim.",
+    "command": "pnpm --filter @perago/web browser:fork --fail-verify",
+    "taskId": "22fb4487-80e1-40c1-884b-425ab07b65a8",
+    "mandateHash": "0x284aa5395b3ba0f5691e8424d751be5998a8351aa422a7f7cfe71cf3b44fac61",
+    "authorizeTx": "0xedc5ed1b7cce335cd7881db72d46bbbb975356027d1949ec88e8b0223803ccc3",
+    "beginTx": "0x1d76475078d84d8e25a963303cec795b3fc1a56c5afffb65100adc27fa93f9da",
+    "terminalTx": "0x8c0e7e07966e5c5aa4b2cfbb0fdd5e91fee06f22920abd62cc1be33806b72f9b",
+    "terminalBlock": "133610633",
+    "terminalBlockHash": "0x0f3915da2c26e5061be8e6cb983a13458f1783c61f37df6263241fa8ba7e3cfc",
+    "failureReasonHash": "0xbc773c7d3e6e60a7ccaa29208f2ef3aa86fe273271dec70f60866a6c8c908762",
+    "publicReceipt": "Browser displayed FAILED/NOT_VERIFIED and no terminal signing control; public API returned HTTP 200 FAILED/ONCHAIN_FAILED, authorityConsumed true, settlement NOT_BOUND",
+    "exactSignatureReplay": "The browser-originated signed POST was replayed after terminal failure; the API returned the same mandate hash, the authenticated task remained FAILED/TERMINAL, and PostgreSQL still had one TERMINAL execution row."
+  },
+  "screenshots": "The optional fork-browser commands regenerate ignored files under apps/web/.screenshots; fork hashes are not live explorer evidence.",
+  "remainingGate": "P7-002 remains open for browser evidence of a bound ERC-8183 settlement and user visual review; P7-003 remains open for a live chain-97 faucet claim."
 }
