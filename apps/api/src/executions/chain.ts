@@ -116,6 +116,28 @@ export async function readFinalizedMandate(input: {
   failureReasonHash: Hash;
 }> {
   const finalized = await input.client.getBlock({ blockTag: "finalized" });
+  const record = await input.client.readContract({
+    abi: mandateExecutorAbi,
+    address: input.mandateExecutor,
+    args: [input.mandateHash],
+    blockNumber: finalized.number,
+    functionName: "mandateRecord",
+  });
+  const recordStatus = MANDATE_RECORD_STATUSES[record.status];
+  if (!recordStatus) throw new Error("unknown mandate record status");
+
+  // Status never returns to NONE. A NONE record cannot have lifecycle logs at
+  // or before this finalized block, so old unsigned mandates need no scan.
+  if (recordStatus === "NONE") {
+    return {
+      events: [],
+      finalized: { hash: finalized.hash, number: finalized.number },
+      recordStatus,
+      verificationHash: record.verificationHash,
+      failureReasonHash: record.failureReasonHash,
+    };
+  }
+
   const events: ChainEventInput[] = [];
   for (
     let from = input.fromBlock;
@@ -142,15 +164,6 @@ export async function readFinalizedMandate(input: {
       }
     }
   }
-  const record = await input.client.readContract({
-    abi: mandateExecutorAbi,
-    address: input.mandateExecutor,
-    args: [input.mandateHash],
-    blockNumber: finalized.number,
-    functionName: "mandateRecord",
-  });
-  const recordStatus = MANDATE_RECORD_STATUSES[record.status];
-  if (!recordStatus) throw new Error("unknown mandate record status");
   return {
     events,
     finalized: { hash: finalized.hash, number: finalized.number },
