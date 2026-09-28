@@ -22,6 +22,19 @@ function required(name: string): string {
   return value;
 }
 
+export function requireForkDatabase(databaseUrl: string): string {
+  const url = new URL(databaseUrl);
+  if (
+    !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
+    url.search ||
+    url.hash
+  )
+    throw new Error("dev:fork requires a local PostgreSQL server");
+  if (url.pathname !== "/perago_fork")
+    throw new Error("dev:fork requires the disposable perago_fork database");
+  return databaseUrl;
+}
+
 function apiEnvironment(input: {
   databaseUrl: string;
   executorAddress: string;
@@ -65,7 +78,7 @@ async function waitForApi(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const databaseUrl = required("PERAGO_DEV_DATABASE_URL");
+  const databaseUrl = requireForkDatabase(required("PERAGO_DEV_DATABASE_URL"));
   const executorKey = generatePrivateKey();
   const executor = privateKeyToAccount(executorKey);
   const faucetKey = generatePrivateKey();
@@ -105,6 +118,8 @@ async function main(): Promise<void> {
       address: faucet.address,
       value: parseEther("0.5"),
     });
+    // Diverge before exposing the fork API: a live wallet must never share the probed head.
+    await testClient.mine({ blocks: 1 });
 
     const api = spawn(process.env.BUN_BIN || "bun", ["src/main.ts"], {
       cwd: process.cwd(),
@@ -126,7 +141,8 @@ async function main(): Promise<void> {
         PERAGO_DEPLOYMENT_MANIFEST: MANIFEST,
         PERAGO_EXECUTOR_DEFER_SECONDS: "2",
         PERAGO_EXECUTOR_KEY: executorKey,
-        PERAGO_EXECUTOR_POLL_MS: "400",
+        PERAGO_EXECUTOR_POLL_MS:
+          process.env.PERAGO_FORK_WORKER_POLL_MS ?? "400",
         PERAGO_EXECUTOR_RPC: RPC_URL,
         PERAGO_WORKER_TOKEN: workerToken,
       },
@@ -154,4 +170,4 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+if (import.meta.main) void main();

@@ -4,6 +4,36 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-28 - A new Docker port is not a new PostgreSQL database
+
+- Observed: `perago-test-db` on port 55432 and `perago-test-db-alt` on port 56432 mounted the same Docker volume and both specified `POSTGRES_DB=perago_test`; `dev:fork` drops the public schema, so the second container did not isolate its writes.
+- Root cause: changing the host port was mistaken for a separate database and `dev:fork` accepted any database URL.
+- Rule: never run two PostgreSQL containers against one volume; require a dedicated `perago_fork` logical database before destructive browser-fork resets, and keep integration-test data in `perago_test`.
+
+### 2026-09-28 - Pin the owner-bound proxy and its mutable implementation separately
+
+- Observed: a chain-97 fork account's runtime encodes its root owner, while ERC-1967 storage points to the account implementation; the browser originally considered any nonempty code a deployed supported account.
+- Root cause: proxy code presence alone does not establish account identity or its current implementation.
+- Rule: compare exact SDK-derived owner-bound runtime and the ERC-1967 implementation slot on read and just before owner writes; refuse a mismatch instead of treating it as an undeployed account.
+
+### 2026-09-28 - A shared chain ancestor cannot prove the wallet's write venue
+
+- Observed: a local fork and live chain 97 can share an older block hash; a gate comparing two blocks behind the current head could approve a wallet pointed at the wrong history.
+- Root cause: historical chain identity was mistaken for current state identity while the app reads through its RPC and writes through the wallet's RPC.
+- Rule: compare the console's latest block hash at the same height through the wallet immediately before every signature and broadcast; fail closed if either head changes or is unavailable.
+
+### 2026-09-28 - Browser signing needs independent local authority checks
+
+- Observed: API-prepared policy calldata and mandate typed data were initially signed directly by the owner, so a compromised response could ask for wider session permission than the visible limits. A receipt timeout also lost the owner transaction hash and exposed a duplicate-broadcast retry path.
+- Root cause: treating an API preparation response and a completed wallet promise as sufficient trust boundaries.
+- Rule: reconstruct the signed policy and mandate commitments from the user's review and pinned SDK deployment before prompting; persist the transaction hash before awaiting finality, then recover by hash rather than rebroadcasting.
+
+### 2026-09-28 - A pending policy confirmation is not activation
+
+- Observed: the browser received HTTP 200 from `PUT /policies/:id/activation`, discarded its review, and displayed the same policy as `DRAFT`; the API response body was `PENDING` because the EntryPoint receipt had not reached the configured depth. A later fork browser run observed `PENDING` three times before `ACTIVE`.
+- Root cause: the client treated the HTTP status as the policy's state instead of checking the response's `status` union.
+- Rule: retain one signed transaction and its review while the API reports `PENDING`; repeat only the exact finality check until `ACTIVE`, and never issue another wallet prompt to recover a pending confirmation.
+
 ### 2026-09-28 - Fund a disposable executor for its full transaction chain
 
 - Observed: a fork-browser swap stopped at `VERIFYING` with a persisted `PERFORM` hash absent from the mempool. The worker's initial `0.005` tBNB fell to `0.003570246` after authorization and begin; the next signed transaction's fee ceiling exceeded the remaining balance.
@@ -275,6 +305,16 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+
+### 2026-09-28 - Prefer closing accepted work over redundant screenshot runs
+
+- Asked to prioritize completing the working Phase 7 journey and accurate todo status rather than repeating screenshots or mobile responsiveness checks already shown.
+- Application: keep the existing desktop/mobile fork-browser evidence, remove the separate screenshot runner, and focus on remaining acceptance gaps and coherent verified commits.
+
+### 2026-09-28 - Keep every financial screen necessary and the path short
+
+- Asked for the AI goal-to-action journey and high-quality, seamless UI without many redundant screens or steps, while retaining frequent small commits and accurate decision records.
+- Application: keep policy, plan, simulation, signed limits, and receipt in one progressive workspace; collapse passing rule details but expose failures; remove completed progress scaffolding once the authoritative result appears; never remove a distinct root signature or onchain approval needed to enforce the limits.
 
 ### 2026-09-27 - Use managed Supabase PostgreSQL at the deployment gate
 

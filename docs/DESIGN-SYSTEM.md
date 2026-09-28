@@ -136,6 +136,15 @@ Two libraries, two lanes.
 
 Rules: a section is a server component unless it animates, then the animated leaf carries `"use client"`. A repeated pattern is extracted into a shared component instead of restyled. No component library is installed; shadcn/ui was deliberately not initialized because its tokens and defaults would introduce a second convention beside this system.
 
+### App console
+
+The approved full-bleed grid, paper/ink/signal palette, hairline borders, and Archivo/JetBrains Mono roles continue into `/app` and `/faucet`. No parallel component system or dashboard-card styling is introduced. The compact mobile console bar keeps the mark, two destinations, and an accessible wallet control visible without horizontal scrolling; the fork venue remains explicit in the workspace.
+
+- `/app` is one progressive workspace, not a wizard of duplicate pages: connect the root owner, create and fund the smart account, activate a bounded policy, then enter one goal. Account and funding prompts disappear when the chain proves readiness. A dedicated faucet page exists only because funding has its own eligibility, refusal, and transaction state. A mined activation still reads `PENDING` until the API's confirmation depth passes; the same signed transaction is checked again with no extra wallet prompt.
+- The user authors the immutable Wallet Policy. AI only proposes a closed swap/stake plan from the goal; the API's deterministic rule-by-rule decision, simulation, and exact wallet prompts control the rest of the journey. Passing policy rules remain inspectable behind a native disclosure; rejected rules open with their exact reasons. The UI does not present AI as a policy signer or safety boundary.
+- `/app/tasks/[taskId]` keeps plan, policy decision, pinned simulation, exact EIP-712 mandate, approval, execution, and receipt together. Actions enable only when the preceding authoritative state exists; a stale quote disables signing. The owner signs the exact token approval separately where necessary; a UI shortcut cannot remove a required onchain authorization. Completed process checklists disappear once the authoritative state or receipt is present.
+- The public receipt is reachable without the owner's wallet session. Pending and failed states keep their own words, reason codes, and recoverable paths. A fork receipt never claims to be a live testnet payment.
+
 ## 7. Copy
 
 Copy states what the deployed contracts enforce.

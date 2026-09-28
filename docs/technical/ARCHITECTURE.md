@@ -93,6 +93,9 @@ No package is created until its phase begins. Import boundaries are enforced by 
 - Never sign for the user, execute arbitrary targets, or mark onchain success from worker assertions.
 - P7-002 provides the local `apps/api/src/main.ts` server entrypoint and fork
   development stack for the web journey; hosted API deployment remains P8-001.
+- The fork development stack resets the public schema only in a local
+  `perago_fork` logical database. `perago_test` is reserved for integration
+  tests; different Docker host ports do not isolate a shared data volume.
 
 ### `apps/executor`
 
@@ -170,14 +173,16 @@ An LLM candidate becomes executable only after every deterministic stage passes,
 1. Web connects the user's external root wallet and deterministically derives the supported Modular Account V2 address for chain 97.
 2. API issues a short-lived challenge bound to its domain and URI, chain 97, root owner, derived smart account, random nonce, issue time, and expiry.
 3. The root wallet signs that exact message. API recovers the signer, locks and consumes the challenge once, creates or validates the wallet identity, and returns an opaque short-lived bearer token while persisting only its hash.
-4. Before first use, web/API validate EntryPoint, factory, implementation, validation module, and permission-module bytecode against the pinned deployment manifest.
+4. Before first use, API validates EntryPoint, factory, implementation, validation module, and permission-module bytecode against the pinned deployment manifest. Web compares the deployed account's exact owner-bound proxy runtime and ERC-1967 implementation slot against the SDK derivation and pinned implementation, both in its holdings read and immediately before every owner signature/broadcast. A mismatched account is a hard stop, never an undeployed account.
 5. User provides policy fields; API validates addresses, decimals, enum values, duplicate assets/protocols, caps, slippage, recipients, expiry, and session ceiling.
 6. SDK canonicalizes the immutable policy document and computes `policyHash`.
-7. Web prepares one root-authorized UserOperation that registers/refreshes the root-owner epoch in MandateExecutor, sets `activePolicyHash`, and installs or replaces the executor permission with exact target/function/token/time ceilings. No root/global permission is allowed.
-8. The Alchemy bundler simulates and submits the UserOperation; a paymaster may sponsor it under a Perago policy capped by chain, method, account, and budget.
-9. API waits for configured confirmation depth and verifies smart account, root owner, EntryPoint, exact calldata and UserOperation events, policy hash, permission configuration, chain, canonical receipt blocks, and pinned bytecode directly onchain.
-10. In one database transaction, the matching policy becomes `ACTIVE` and the previous active version becomes `SUPERSEDED`.
+7. Web reconstructs the reviewed policy hash and exact permission-install calldata from user-authored limits before signing the API-prepared root transition; API-prepared fields cannot widen local intent. It prepares one root-authorized UserOperation that registers/refreshes the root-owner epoch in MandateExecutor, sets `activePolicyHash`, and installs or replaces the executor permission with exact target/function/token/time ceilings. No root/global permission is allowed.
+8. Immediately before signing and broadcasting, web proves the wallet's current chain-97 head matches the console RPC's current head; a shared historical ancestor is insufficient. The root owner signs the UserOperation hash and pays gas for `EntryPoint.handleOps` from the external wallet; this path does not rely on a paymaster or a bundler. A mined EntryPoint transaction is not yet an active policy. The browser persists the submitted transaction/UserOperation hashes keyed by owner, chain, target, and calldata before waiting for a receipt; recovery queries that hash rather than rebroadcasting after a timeout.
+9. API verifies the smart account, root owner, EntryPoint, exact calldata and UserOperation events, policy hash, permission configuration, chain, canonical receipt blocks, and pinned bytecode directly onchain. While the configured depth has not passed, the confirmation endpoint returns `PENDING`; web retains the same signed transaction evidence and asks the API again without prompting or broadcasting from the wallet a second time.
+10. Only after the API returns `ACTIVE` does one database transaction activate the matching policy and supersede the old version. The web must not render a `PENDING` response as an activated policy or discard the review while awaiting finality.
 11. Indexer later confirms the same events; reconciliation repairs any missed API write.
+
+For a Task Mandate, web similarly recomputes the prepared EIP-712 domain, simulation/action commitment, exact plan bounds, account, executor, and nonce against the reviewed local plan before asking the wallet to sign. Server-prepared calldata or typed data is never by itself authority to prompt the owner.
 
 A draft policy or provider-side permission record has no execution effect. Offchain `ACTIVE` is a projection of the confirmed onchain policy hash and account permission state.
 

@@ -48,6 +48,7 @@ Every version below is installed and exact in the committed manifests; `pnpm-loc
 | Legacy Alchemy AA SDK (`@alchemy/aa-core`) | `3.19.0` | npm registry stable tag, but its exact `viem 2.8.6` peer conflicts with the selected Viem baseline; do not install it. |
 | Biome | `2.5.14` | npm registry stable tag. |
 | Vitest | `5.0.1` | npm registry stable tag; keep only behavior tests that meet root verification rules. |
+| Playwright | `1.63.0` | `apps/web` dev-only fork-wallet browser journey. It runs real Chromium against the app and a disposable fork; no runtime client dependency or mocked receipt is shipped. |
 | Solidity | `0.8.37` | `solc` npm stable tag; Foundry config pins exact compiler and optimizer settings. |
 | Foundry | `1.8.3` | Latest non-prerelease immutable GitHub release on 2026-09-17. |
 | OpenZeppelin Contracts | `5.6.1` | npm registry stable tag; install as a pinned Git submodule/tag or exact dependency according to Foundry convention. |
@@ -208,7 +209,7 @@ One formatter/linter for supported TypeScript/JSON files. Use its stable recomme
 
 - Vitest for uncertain pure-domain/backend behavior and lifecycle integration tests.
 - Foundry for all contract tests.
-- Browser verification for later UI behavior; no UI test framework or screenshot suite before Phase 7.
+- Playwright runs a fork-only injected-wallet smoke after the Phase 7 gate opened; its disposable key stays in the Node script process and never reaches the page. Production browser behavior must still be inspected visually.
 - Throwaway smoke scripts for deployment/integration proof are removed or promoted only when they protect a plausible regression.
 
 ## 10. Deployment targets
