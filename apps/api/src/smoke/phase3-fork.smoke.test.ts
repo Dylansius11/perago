@@ -49,7 +49,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
 import { loadDeployment, type PeragoDeployment } from "../deployment.js";
-import { createGroqPlanner } from "../planner/provider.js";
+import { createGeminiPlanner } from "../planner/provider.js";
 import {
   type MandateServiceConfig,
   registerDeploymentAdapters,
@@ -70,7 +70,7 @@ import {
 
 /**
  * P3-004 and the Phase 3 smoke. Everything runs through the real HTTP app,
- * a real PostgreSQL database, and the real Groq planner, against a local fork
+ * a real PostgreSQL database, and the real Gemini planner, against a local fork
  * of BSC Testnet at the latest block: real PancakeSwap and CAKE Pool state,
  * the production adapters and verifiers, and a MandateExecutor deployed on the
  * fork over those adapters with unbound ERC-8183 jobs allowed - the production
@@ -83,7 +83,7 @@ import {
 const required = (name: string) => requiredEnv(name, "Phase 3");
 const RPC = required("PERAGO_BSC_TESTNET_RPC");
 const DATABASE_URL = required("TEST_DATABASE_URL");
-const GROQ_KEY = required("PERAGO_GROQ_API_KEY");
+const GEMINI_KEY = required("PERAGO_GEMINI_API_KEY");
 const ANVIL = process.env.ANVIL_BIN || "anvil";
 const FORGE = process.env.FORGE_BIN || "forge";
 const PORT = 8548;
@@ -368,9 +368,8 @@ beforeAll(async () => {
       workerTokenHash: createHash("sha256").update(randomBytes(32)).digest(),
     },
     mandateConfig,
-    planner: createGroqPlanner({
-      apiKey: GROQ_KEY,
-      model: "openai/gpt-oss-120b",
+    planner: createGeminiPlanner({
+      apiKey: GEMINI_KEY,
       timeoutMs: 60_000,
     }),
     policyConfig: {

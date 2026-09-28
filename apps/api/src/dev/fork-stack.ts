@@ -58,7 +58,7 @@ function apiEnvironment(input: {
     PERAGO_DATABASE_URL: input.databaseUrl,
     PERAGO_DEPLOYMENT_MANIFEST: MANIFEST,
     PERAGO_EXECUTOR_ADDRESS: input.executorAddress,
-    PERAGO_GROQ_API_KEY: required("PERAGO_GROQ_API_KEY"),
+    PERAGO_GEMINI_API_KEY: required("PERAGO_GEMINI_API_KEY"),
     PERAGO_INTENT_ENCRYPTION_KEY: required("PERAGO_INTENT_ENCRYPTION_KEY"),
     PERAGO_WEB_ORIGIN: process.env.PERAGO_WEB_ORIGIN ?? "http://localhost:3000",
     PERAGO_WORKER_TOKEN: input.workerToken,

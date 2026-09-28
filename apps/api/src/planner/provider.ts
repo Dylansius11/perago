@@ -1,70 +1,116 @@
-import Groq from "groq-sdk";
-
 import type { PlannerPrompt } from "./prompt.js";
 
-/**
- * The whole planner surface: one call that returns untrusted JSON. Transport
- * failure throws `PlannerUnavailableError`; any response, including a
- * malformed one, is returned for strict parsing by the compiler.
- */
+/** Returns untrusted JSON for deterministic validation; transport failures are retryable. */
 export type Planner = (prompt: PlannerPrompt) => Promise<unknown>;
 
 export class PlannerUnavailableError extends Error {}
 
-export type GroqPlannerConfig = {
+export type GeminiPlannerConfig = {
   apiKey: string;
-  model: string;
   timeoutMs: number;
 };
 
-export function createGroqPlanner(config: GroqPlannerConfig): Planner {
-  if (config.apiKey.length === 0) {
-    throw new RangeError("a Groq API key is required for the planner");
+const MODELS = ["gemini-3.8-flash", "gemini-3.7-flash"] as const;
+
+/** One primary request and, only for a transient failure, one fallback request. */
+export function createGeminiPlanner(config: GeminiPlannerConfig): Planner {
+  if (!config.apiKey.trim()) {
+    throw new RangeError("a Gemini API key is required for the planner");
   }
-  const client = new Groq({
-    apiKey: config.apiKey,
-    maxRetries: 1,
-    timeout: config.timeoutMs,
-  });
 
   return async (prompt) => {
-    let completion: Groq.Chat.ChatCompletion;
-    try {
-      completion = await client.chat.completions.create({
-        model: config.model,
-        messages: [
-          { role: "system", content: prompt.system },
-          { role: "user", content: prompt.user },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "perago_plan_candidate",
-            strict: true,
-            schema: prompt.schema,
-          },
-        },
-        include_reasoning: false,
-        max_completion_tokens: 4_096,
-        reasoning_effort: "medium",
+    const body = JSON.stringify({
+      systemInstruction: { parts: [{ text: prompt.system }] },
+      contents: [{ role: "user", parts: [{ text: prompt.user }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseJsonSchema: prompt.schema,
+        maxOutputTokens: 2048,
         temperature: 0,
-      });
-    } catch (error) {
-      // Provider errors can echo request details; keep only the status class.
-      const status = error instanceof Groq.APIError ? error.status : undefined;
-      throw new PlannerUnavailableError(
-        `planner request failed${status === undefined ? "" : ` with HTTP ${status}`}`,
-      );
-    }
+        thinkingConfig: { thinkingLevel: "LOW" },
+      },
+    });
 
-    const choice = completion.choices[0];
-    if (choice?.finish_reason !== "stop" || !choice.message.content) {
-      return null;
+    for (const [index, model] of MODELS.entries()) {
+      let response: Response;
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": config.apiKey,
+            },
+            body,
+            signal: AbortSignal.timeout(config.timeoutMs),
+          },
+        );
+      } catch {
+        if (index === 0) continue;
+        throw new PlannerUnavailableError("planner request failed");
+      }
+
+      if (!response.ok) {
+        if (
+          index === 0 &&
+          (response.status === 429 ||
+            response.status >= 500 ||
+            response.status === 404)
+        ) {
+          continue;
+        }
+        // Never log or propagate provider payloads: they can contain the key or goal.
+        throw new PlannerUnavailableError(
+          `planner request failed with HTTP ${response.status}`,
+        );
+      }
+
+      let completion: unknown;
+      try {
+        completion = await response.json();
+      } catch {
+        return null;
+      }
+      if (
+        typeof completion !== "object" ||
+        completion === null ||
+        !("candidates" in completion)
+      )
+        return null;
+      const candidates = completion.candidates;
+      if (!Array.isArray(candidates)) return null;
+      const candidate: unknown = candidates[0];
+      if (
+        typeof candidate !== "object" ||
+        candidate === null ||
+        !("finishReason" in candidate) ||
+        candidate.finishReason !== "STOP" ||
+        !("content" in candidate)
+      )
+        return null;
+      const content: unknown = candidate.content;
+      if (
+        typeof content !== "object" ||
+        content === null ||
+        !("parts" in content) ||
+        !Array.isArray(content.parts)
+      )
+        return null;
+      const part: unknown = content.parts[0];
+      if (
+        typeof part !== "object" ||
+        part === null ||
+        !("text" in part) ||
+        typeof part.text !== "string"
+      )
+        return null;
+      try {
+        return JSON.parse(part.text) as unknown;
+      } catch {
+        return null;
+      }
     }
-    try {
-      return JSON.parse(choice.message.content) as unknown;
-    } catch {
-      return null;
-    }
+    throw new PlannerUnavailableError("planner request failed");
   };
 }

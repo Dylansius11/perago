@@ -317,6 +317,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+### 2026-09-28 - Use Gemini alone for the intent planner
+
+- Asked to replace Groq entirely with Google AI Studio, make Gemini 3.8 Flash primary and 3.7 Flash fallback, and avoid a time-consuming model comparison.
+- Application: pin those two stable model IDs, keep one transient fallback at most, preserve deterministic authorization, and never advertise quota immunity or reuse an exposed key.
+
 
 ### 2026-09-28 - Prefer closing accepted work over redundant screenshot runs
 

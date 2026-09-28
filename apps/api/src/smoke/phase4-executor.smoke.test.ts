@@ -54,7 +54,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
 import { loadDeployment, type PeragoDeployment } from "../deployment.js";
-import { createGroqPlanner } from "../planner/provider.js";
+import { createGeminiPlanner } from "../planner/provider.js";
 import { registerDeploymentAdapters } from "../services/mandates.js";
 import type { PolicyChainVerifier } from "../services/policies.js";
 import {
@@ -73,7 +73,7 @@ import {
 } from "./fork.js";
 
 /**
- * P4-002 smoke. The real API (HTTP, PostgreSQL, Groq planner) queues signed
+ * P4-002 smoke. The real API (HTTP, PostgreSQL, Gemini planner) queues signed
  * mandates; the real executor process (`apps/executor/src/main.ts`) leases and
  * drives them against a local anvil fork of BSC Testnet that mines a block
  * every second with `finalized` two blocks behind `latest`. The executor is
@@ -87,7 +87,7 @@ import {
 const SMOKE = "Phase 4 executor";
 const RPC = requiredEnv("PERAGO_BSC_TESTNET_RPC", SMOKE);
 const DATABASE_URL = requiredEnv("TEST_DATABASE_URL", SMOKE);
-const GROQ_KEY = requiredEnv("PERAGO_GROQ_API_KEY", SMOKE);
+const GEMINI_KEY = requiredEnv("PERAGO_GEMINI_API_KEY", SMOKE);
 const ANVIL = process.env.ANVIL_BIN || "anvil";
 const FORGE = process.env.FORGE_BIN || "forge";
 const PORT = 8549;
@@ -532,9 +532,8 @@ beforeAll(async () => {
       now: () => new Date(),
       quoteTtlSeconds: 120,
     },
-    planner: createGroqPlanner({
-      apiKey: GROQ_KEY,
-      model: "openai/gpt-oss-120b",
+    planner: createGeminiPlanner({
+      apiKey: GEMINI_KEY,
       timeoutMs: 60_000,
     }),
     policyConfig: {

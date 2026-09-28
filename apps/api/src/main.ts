@@ -22,7 +22,7 @@ import { createApiApp } from "./app.js";
 import { loadBscTestnetCatalog } from "./compiler/catalog.js";
 import { apiAuthDomain, loadApiConfig } from "./config.js";
 import { loadDeployment } from "./deployment.js";
-import { createGroqPlanner } from "./planner/provider.js";
+import { createGeminiPlanner } from "./planner/provider.js";
 import {
   assertFaucetChain,
   createViemFaucetTransport,
@@ -137,9 +137,8 @@ async function start(): Promise<void> {
       now: () => new Date(),
       quoteTtlSeconds: 120,
     },
-    planner: createGroqPlanner({
-      apiKey: config.groqApiKey,
-      model: "openai/gpt-oss-120b",
+    planner: createGeminiPlanner({
+      apiKey: config.geminiApiKey,
       timeoutMs: 60_000,
     }),
     policyConfig: {

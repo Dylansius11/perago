@@ -7,7 +7,7 @@
  * `NEXT_PUBLIC_PERAGO_RPC_URL=http://127.0.0.1:8545 pnpm --filter @perago/web dev`.
  * Then run `pnpm --filter @perago/web browser:fork`.
  */
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -31,6 +31,7 @@ const mobile = process.argv.includes("--mobile");
 const revoke = process.argv.includes("--revoke");
 const expire = process.argv.includes("--expire");
 const failVerify = process.argv.includes("--fail-verify");
+const wrapOnly = process.argv.includes("--wrap-only");
 const output = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -45,6 +46,13 @@ const output = path.join(
           ? "fork-browser-mobile"
           : "fork-browser",
 );
+async function writeEvidence(name, report) {
+  await writeFile(
+    new URL(`../../../docs/evidence/${name}.json`, import.meta.url),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  console.log(JSON.stringify(report));
+}
 
 const client = createPublicClient({ chain: bscTestnet, transport: http(RPC) });
 async function rpc(method, params = []) {
@@ -365,8 +373,10 @@ async function main() {
     await page.getByRole("button", { name: "Wrap", exact: true }).waitFor();
     await page.getByRole("button", { name: "Wrap", exact: true }).click();
     await page
-      .getByRole("button", { name: "Wrap", exact: true })
-      .waitFor({ state: "detached", timeout: 60_000 });
+      .getByRole("listitem")
+      .filter({ hasText: "Confirm the wrap" })
+      .getByText("Done")
+      .waitFor({ timeout: 60_000 });
     await page
       .getByRole("button", { name: "Review exact limits" })
       .waitFor({ timeout: 60_000 });
@@ -413,6 +423,24 @@ async function main() {
         confirmations: policyConfirmations,
       }),
     );
+    await page.getByRole("button", { name: "Wrap", exact: true }).waitFor();
+    if (wrapOnly) {
+      if (errors.length) throw new Error(errors.join("\n"));
+      const report = {
+        venue: "local chain-97 fork",
+        command: "pnpm --filter @perago/web browser:fork --wrap-only",
+        chainId: 97,
+        sourceBlock: (await client.getBlockNumber()).toString(),
+        smartAccount: deriveSemiModularAccountAddress({
+          owner: account.address,
+        }),
+        checks: ["wrap-confirmed", "policy-ACTIVE", "wrap-still-visible"],
+        provider: "not called; local placeholder Gemini key",
+        liveChainBroadcast: false,
+      };
+      await writeEvidence("bsc-testnet.fork.wrap-after-policy", report);
+      return;
+    }
     await page
       .getByRole("textbox", { name: "Your goal" })
       .fill("Swap 0.01 WBNB for CAKE");
