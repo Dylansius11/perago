@@ -4,6 +4,24 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## Technical lessons
 
+### 2026-09-29 - Scope a custom CA to the process that needs it
+
+- Observed: `docker build` on the VPS stalled indefinitely at pnpm 12's "Verifying lockfile against supply-chain policies" step, with no open TCP socket; the identical install in a plain container finished in 10 s until `NODE_EXTRA_CA_CERTS` was exported, which reproduced the stall.
+- Root cause: the image exported the Supabase CA path globally, so the package manager inherited a setting meant only for the database client.
+- Rule: set `NODE_EXTRA_CA_CERTS` in the runtime environment of the processes that connect to PostgreSQL, never as an image-wide `ENV` during dependency installation.
+
+### 2026-09-29 - Verify the Supabase pooler certificate explicitly
+
+- Observed: the `postgres` driver with `sslmode=verify-full` rejected the Supabase session pooler with `SELF_SIGNED_CERT_IN_CHAIN` under both Node and Bun, and connected once the Supabase Root 2021 CA was trusted; a raw pasted connection string also threw `URIError` because its password was not percent-encoded.
+- Root cause: the pooler presents a chain rooted in Supabase's private CA, and the driver decodes the URL password with `decodeURIComponent`.
+- Rule: pin the Supabase root CA in the deployment, keep `sslmode=verify-full`, never fall back to `require`, and percent-encode the password when composing `PERAGO_DATABASE_URL`.
+
+### 2026-09-29 - Join a shared reverse proxy without touching its neighbours
+
+- Observed: the VPS already served other projects through one Caddy container that owns ports 80 and 443 and a Docker network named after another project.
+- Root cause: a second proxy or a published host port would conflict with, or bypass, the existing TLS edge.
+- Rule: publish no host port; join the proxy's network as `external`, back up the Caddyfile, append one site block, `caddy validate`, then `caddy reload`, and recheck every neighbour's health after the reload.
+
 ### 2026-09-28 - Treat provider JSON Schema as advisory until proven
 
 - Observed: OpenRouter Space Bunny returned HTTP 200 with `action: "SWAP"` and flat token fields even when `json_schema` requested an object-valued action; explicit shape instructions later produced seven valid synthetic candidates.
@@ -323,6 +341,12 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+
+### 2026-09-29 - Shared VPS housekeeping has a hard boundary
+
+- Asked to delete the unused annona and tr4ce deployments from the shared VPS to free space, then clarified that anything connected to cadence must stay.
+- Application: remove only containers, images, and directories no live neighbour depends on; keep a shared proxy, its network, its certificate volumes, and its config file even when they are named after a retired project, and recheck neighbour health after each change.
+
 ### 2026-09-29 - Keep the first hosted demo unpaid and its database fresh
 
 - Asked to prioritize the already working swap/stake journey, defer live ERC-8183 provider payment to future development, and start a clean Supabase-hosted app without erasing local proof or onchain history.

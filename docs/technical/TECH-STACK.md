@@ -183,7 +183,7 @@ PostgreSQL owns durable offchain workflow, immutable authored records, raw chain
 - Use the `postgres` driver with bounded pools per process.
 - No Supabase client, ORM repository abstraction, or database-per-service in MVP. Supabase is the managed PostgreSQL host, accessed through the existing `postgres` driver; no provider-specific application data API is required.
 
-Managed PostgreSQL 18.6 is preferred. At `P8-001`, select Supabase's newest patched supported major, record its actual version and platform constraint, run the checked-in Drizzle SQL migrations and the request/worker/reconciliation smoke against that instance. Local PostgreSQL remains an isolated development and fork-test fixture, never the hosted product database; schema features must remain portable.
+Managed PostgreSQL 18.6 was preferred; the selected Supabase project (`perago`, `pmmcliaefapvkuyybxkh`, ap-southeast-1) runs PostgreSQL 17.6, its current supported major, and every checked-in migration is portable to it and to local PostgreSQL 16. Hosted migrations run only through `apps/api/src/migrate.ts` (`pnpm --filter @perago/api db:migrate`), which applies unapplied files in one transaction under an advisory lock and records each file's SHA-256 in `schema_migrations`; it never drops a schema and refuses edited, unknown, or out-of-order history. The API and worker connect through the Supabase session pooler (port 5432, because the VPS has no IPv6 route to the direct host and the transaction pooler breaks the driver's prepared statements) with `sslmode=verify-full`; the image trusts the pinned Supabase Root 2021 CA (`deploy/vps/supabase-root-2021-ca.crt`, SHA-256 fingerprint `80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA`) through `NODE_EXTRA_CA_CERTS`, and a connection without it fails. Local PostgreSQL remains an isolated development and fork-test fixture, never the hosted product database.
 
 ## 8. Contracts
 
@@ -219,14 +219,14 @@ One formatter/linter for supported TypeScript/JSON files. Use its stable recomme
 | Component | Target | Reason |
 | --- | --- | --- |
 | Web | Vercel | Native stable Next deployment and preview URLs. |
-| API | Railway long-lived service | Hono Node process, straightforward secrets/networking. |
-| Executor/indexer | Railway worker services | Persistent processes and shared managed network. |
+| API | Owner-provided Ubuntu 24.04 VPS, Docker compose (`deploy/vps`) behind the host's shared Caddy | Long-lived Bun process with no host port; Caddy terminates Let's Encrypt TLS for `perago-api.43-129-38-115.nip.io` and refuses `/internal/*`. Replaces the earlier Railway plan by user decision on 2026-09-29. |
+| Executor worker | Same VPS and image, separate container | Persistent Node process; the only holder of the executor key, reaching the API over the private compose network. |
 | Database | Supabase managed PostgreSQL | User-selected managed host at `P8-001`; retain the portable `postgres` driver, Drizzle migrations, and one durable queue database. |
 | Contracts | BSC Testnet chain 97 | Official target and explorer-verifiable evidence. |
 | RPC | Alchemy primary plus independent BNB-compatible fallback | AA integration plus disagreement/recovery path. |
 | Bundler/paymaster | Alchemy, with validated standards-compatible fallback | Official BNB Testnet support and gas sponsorship. |
 
-Deployment files are not created until the corresponding phase. Do not commit `.vercel`, `.railway`, environment values, generated wallet files, or provider state.
+`pnpm deploy:vps` ships a `git archive` of the committed `HEAD`, builds one image tagged by commit on the VPS, applies migrations, and replaces the API and worker only after both pass their health checks; `--rollback <sha>` restarts a retained release (three are kept). Per-process secrets live outside every release in `~/perago/{api,worker}.env` (mode 600) as described by `deploy/vps/*.env.example`. The Vercel project `perago` (root `apps/web`) is linked to `Dylansius11/perago` and receives only public `NEXT_PUBLIC_*` values (`apps/web/.env.example`). Do not commit `.vercel`, environment values, generated wallet files, or provider state.
 
 ### Local prerequisites
 
