@@ -218,6 +218,16 @@ describe("P3-002 API route smoke", () => {
     const session = (await sessionResponse.json()) as { token: string };
     authorization = `Bearer ${session.token}`;
 
+    const replayResponse = await app.request("/auth/sessions", {
+      body: JSON.stringify({ challengeId: challenge.challengeId, signature }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(replayResponse.status).toBe(409);
+    expect(await replayResponse.json()).toMatchObject({
+      error: { code: "REQUEST_CONFLICT" },
+    });
+
     const policyResponse = await app.request("/policies", {
       body: JSON.stringify({
         policy: {

@@ -217,13 +217,13 @@ export async function verifyWalletChallenge(
     `;
     if (!challenge) throw new Error("wallet challenge was not found");
     if (challenge.consumed_at !== null) {
-      throw new Error("challenge has already been consumed");
+      throw new RangeError("challenge has already been consumed");
     }
     if (challenge.expires_at.getTime() <= now.getTime()) {
       throw new Error("challenge has expired");
     }
     if (challenge.domain !== config.domain || challenge.uri !== config.uri) {
-      throw new Error("challenge domain configuration has changed");
+      throw new RangeError("challenge domain configuration has changed");
     }
 
     let recovered: `0x${string}`;
@@ -249,7 +249,7 @@ export async function verifyWalletChallenge(
       returning id
     `;
     if (consumed.count !== 1) {
-      throw new Error("challenge has already been consumed");
+      throw new RangeError("challenge has already been consumed");
     }
 
     const wallet = await findOrCreateWallet(tx, challenge, now);
