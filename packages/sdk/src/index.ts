@@ -44,6 +44,7 @@ export {
   type MandateSessionPermission,
   MODULAR_ACCOUNT_V2_ADDRESSES,
   type ModularAccountV2Addresses,
+  modularAccountAbi,
   PRIVILEGED_SELECTORS,
   packUserOperationSignature,
   ROOT_OWNER_ENTITY_ID,
@@ -121,6 +122,19 @@ export {
   type SubmitMandateSignatureRequest,
   submitMandateSignatureRequestSchema,
 } from "./api/mandates.js";
+export {
+  type EstimateUserOperationRequest,
+  type EstimateUserOperationResponse,
+  estimateUserOperationRequestSchema,
+  estimateUserOperationResponseSchema,
+  type SubmitUserOperationResponse,
+  submitUserOperationRequestSchema,
+  submitUserOperationResponseSchema,
+  type UserOperationRequest,
+  type UserOperationStatus,
+  userOperationRequestSchema,
+  userOperationStatusSchema,
+} from "./api/operations.js";
 export {
   type ConfirmPolicyActivationRequest,
   type ConfirmPolicyRevocationRequest,

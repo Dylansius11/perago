@@ -32,6 +32,10 @@ import {
 import { registerDeploymentAdapters } from "./services/mandates.js";
 
 import { createViemPolicyChainVerifier } from "./services/policy-chain.js";
+import {
+  createAlchemyBundlerRpc,
+  createSponsorship,
+} from "./services/sponsorship.js";
 
 type AccountManifest = {
   contracts: Record<string, { address: string; codeHash: string }>;
@@ -65,6 +69,8 @@ async function assertPinnedCode(
 async function start(): Promise<void> {
   const catalog = loadBscTestnetCatalog();
   const deployment = loadDeployment(catalog, config.manifestPath);
+  /** Public config order; the same list is the standing allowance set. */
+  const catalogTokens = catalog.tokens.map((token) => token.address);
   const chain = defineChain({
     ...bscTestnet,
     rpcUrls: { default: { http: [config.rpcUrl] } },
@@ -106,6 +112,21 @@ async function start(): Promise<void> {
   const performSelector = toFunctionSelector(
     getAbiItem({ abi: mandateExecutorAbi, name: "perform" }),
   );
+  const wbnb = catalog.tokens.find((token) => token.symbol === "WBNB");
+  if (!wbnb) throw new Error("the token catalog has no WBNB");
+  const sponsorship = config.sponsorship
+    ? createSponsorship(
+        {
+          mandateExecutor: deployment.mandateExecutor.address,
+          tokens: catalogTokens,
+          wbnb: wbnb.address,
+        },
+        createAlchemyBundlerRpc({
+          policyId: config.sponsorship.policyId,
+          url: config.sponsorship.bundlerRpc,
+        }),
+      )
+    : undefined;
   const app = createApiApp({
     authConfig: {
       challengeTtlMs: 300_000,
@@ -177,6 +198,7 @@ async function start(): Promise<void> {
               transaction: "https://testnet.bscscan.com/tx/",
             },
       faucet: { enabled: faucetRuntime !== null },
+      sponsorship: { enabled: sponsorship !== undefined },
       mandateExecutor: deployment.mandateExecutor.address,
       performSelector,
       quoteTtlSeconds: 120,
@@ -184,6 +206,7 @@ async function start(): Promise<void> {
       tokens: catalog.tokens,
       venue: config.venue,
     },
+    ...(sponsorship ? { sponsorship } : {}),
     sql,
     taskConfig: {
       catalog,

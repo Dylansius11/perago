@@ -51,6 +51,27 @@ describe("loadApiConfig", () => {
       }),
     ).toThrow("PERAGO_OPENROUTER_API_KEY is required");
   });
+  it("enables sponsorship only when the bundler URL and policy id come together", () => {
+    expect(loadApiConfig(required).sponsorship).toBeNull();
+    expect(
+      loadApiConfig({
+        ...required,
+        PERAGO_ALCHEMY_BUNDLER_RPC: "https://bundler.example/v2/secret",
+        PERAGO_ALCHEMY_GAS_MANAGER_POLICY_ID: "policy",
+      }).sponsorship,
+    ).toEqual({
+      bundlerRpc: "https://bundler.example/v2/secret",
+      policyId: "policy",
+    });
+    for (const half of [
+      { PERAGO_ALCHEMY_BUNDLER_RPC: "https://bundler.example/v2/secret" },
+      { PERAGO_ALCHEMY_GAS_MANAGER_POLICY_ID: "policy" },
+    ]) {
+      expect(() => loadApiConfig({ ...required, ...half })).toThrow(
+        "must be set together",
+      );
+    }
+  });
 
   it("refuses deployment manifests outside BSC Testnet", async () => {
     const directory = await mkdtemp(join(tmpdir(), "perago-api-config-"));

@@ -138,6 +138,7 @@ const app = createApiApp({
     executionWindowSeconds: "600",
     explorer: null,
     faucet: { enabled: false },
+    sponsorship: { enabled: false },
     mandateExecutor,
     performSelector: "0x12345678",
     quoteTtlSeconds: 120,
@@ -483,6 +484,7 @@ describe("P7 owner read routes", () => {
       {
         chainId: "97",
         faucet: { enabled: false },
+        sponsorship: { enabled: false },
         venue: "fork",
       },
     );
