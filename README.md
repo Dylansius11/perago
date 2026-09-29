@@ -1,98 +1,237 @@
-# Perago
+<div align="center">
 
-**Intent, carried through.** Perago turns a plain-English goal into a one-time onchain mandate, executes within hard limits, proves the outcome, and permanently drops its authority.
+<img src="apps/web/public/brand/primary-bg.png" alt="Perago" width="220" />
 
-## Why
+### Give the goal, not the wallet.
 
-Onchain agents are useful only when convenience does not require wallet-wide trust. Natural language is not authorization, a transaction receipt is not proof of intent, and an AI should not decide whether its own work deserves payment.
+Perago turns a plain-English goal into a one-time onchain mandate, runs it inside hard limits, proves the outcome, and then drops its authority for good.
 
-Perago separates interpretation from authority:
+[Open the app](https://perago-app.vercel.app) · [API health](https://perago-api.43-129-38-115.nip.io/health) · [Onchain evidence](#onchain-evidence) · [How it works](#how-it-works)
 
-1. A self-custodial owner controls an ERC-4337 smart account with narrowly scoped executor permissions.
-2. The user activates a persistent Wallet Policy on that account.
-3. AI translates one outcome into a typed plan.
-4. Deterministic policy intersection and simulation expose the exact limits.
-5. The root owner signs one bounded Task Mandate.
-6. A constrained executor commits one attempt and the smart account calls only the approved path.
-7. An adapter-specific verifier proves the postcondition.
-8. A public Execution Receipt records consumed authority and evidence.
-9. When a future ERC-8183 job is explicitly bound, payment may release only after deterministic success; the current demo does not pay an agent.
+![BNB Smart Chain Testnet](https://img.shields.io/badge/BNB%20Smart%20Chain-Testnet%20(97)-F0B90B?logo=binance&logoColor=white)
+![ERC-4337](https://img.shields.io/badge/account-ERC--4337-0FB5A6)
+![Solidity 0.8.37](https://img.shields.io/badge/Solidity-0.8.37-363636?logo=solidity)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)
 
-The current hosted demo targets one approved BSC swap adapter and one approved BSC staking adapter with verified receipts. Live ERC-8183 payment is deferred by the user's 2026-09-29 decision; the fork-proven implementation is retained, not presented as a live capability. No arbitrary calldata, unrestricted keys, cross-chain execution, leverage, or agent marketplace.
+</div>
 
-## Status
+> Perago is in active development. The live demo covers one PancakeSwap V3 swap and one CAKE Pool stake on BNB Smart Chain Testnet. More protocol integrations for staking, swapping, and payments are on the way.
 
-**Phases 1–5 and `P6-001`–`P6-003` are complete at their specified evidence gates; Phase 6 automated settlement is fork-proven, not live.** The bounded swap (`P4-003`) and stake (`P5-002`) have fork and live chain-97 execution evidence on the labelled `testnet-demo` MandateExecutor ([swap](docs/evidence/bsc-testnet.phase4-swap-journey.json), [stake](docs/evidence/bsc-testnet.phase5-stake-journey.json)). The separately [deployed production executor](deployments/bsc-testnet.perago.json) requires a bound ERC-8183 job.
-The API has wallet authentication, policy compilation, bound-job simulation, EIP-712 signing, a durable executor queue, and finalized public receipt queries. [Fork evidence for `P6-003`](docs/evidence/bsc-testnet.fork.phase6-settlement-smoke.json) drives the production executor with an APEX job and a locally deployed evaluator: a payment outage leaves execution `SUCCEEDED/PENDING`, restart settles once, and a failed execution refunds without paying the provider. Independent evaluator completion, rejection, and expiry refunds are [proven on a chain-97 fork](docs/evidence/bsc-testnet.fork.phase6-evaluator.json). No hosted receipt API, live evaluator, or live Perago payment is claimed.
-For hosted deployment at `P8-001`, the user chose Supabase managed PostgreSQL instead of the originally planned Railway database. This changes the host, not the PostgreSQL/Drizzle schema or driver; local PostgreSQL is for isolated development and fork verification only. No Supabase service or live evaluator deployment is claimed yet.
-The hosted Supabase project will start empty without deleting the local proof database. A previously used smart account can retain an onchain active policy after new hosted login; its policy must be reconciled or changed with an owner-authorized transition before the existing wallet is advertised as working on the fresh database.
+## The problem
 
-Proven on BNB Smart Chain Testnet (chain 97), with per-run reports in [`docs/evidence/`](docs/evidence/) and pinned addresses in [`deployments/`](deployments/):
+AI agents are good at turning "put 0.01 WBNB into CAKE" into a transaction. The hard part is letting them do it without handing over the wallet. Most agent setups today give the bot a private key or a broad session key, trust the prompt to keep it in bounds, and treat a transaction hash as proof that the job was done.
 
-- a semi-modular ERC-4337 account controlled by an external owner, driven by owner-paid **and** fully sponsored UserOperations;
-- a bounded session that performs its one allowlisted call and is rejected for an unrelated target, an unallowlisted selector, module install, a self-call, an over-limit spend, an expired window, and after revocation;
-- user-controlled MetaMask signatures activating and revoking one Wallet Policy, each through one atomic root UserOperation that changes the bounded account permission and MandateExecutor policy together;
-- a PancakeSwap V3 exact-input swap, a CAKE Pool stake, and a fee-bearing unstake, all executed by the smart account;
-- an ERC-8183 job lifecycle on the official BNB APEX kernel: completion paying the provider, evaluator rejection refunding the client, and permissionless expiry refund;
-- one natural-language swap carried end to end on the labelled `testnet-demo` MandateExecutor (`SC-D-006`). It covers policy activation, simulation, the signed digest, authorize, begin, the executor's perform UserOperation, the measured output, and a verified receipt. Replays and a tampered spend, minimum, recipient, adapter, selector, target, or action are all refused ([`docs/evidence/bsc-testnet.phase4-swap-journey.json`](docs/evidence/bsc-testnet.phase4-swap-journey.json)). Payment is fork-proven in Phase 6 and deferred from the live demo.
-- one natural-language stake carried end to end on the same executor. The simulation commits the recipient's position holder, its shares, and the CAKE Pool fees. The executor's perform UserOperation mints pool shares above the signed minimum, and a worker killed right after persisting it recovers without a second submission. A second stake simulated against the old position is refused `STALE_POSITION`. Only the account can withdraw, and the owner withdrew the stake minus the 0.1% early fee ([`docs/evidence/bsc-testnet.phase5-stake-journey.json`](docs/evidence/bsc-testnet.phase5-stake-journey.json)).
+Perago splits the two jobs. The AI only reads the goal and proposes a typed plan. Everything that grants or checks authority is deterministic: your wallet policy, an exact simulation, a mandate you sign once, contracts that allow one call, and a verifier that checks the result onchain.
 
-Also built: the approved Perago landing shell, Foundry invariant tests, PostgreSQL lifecycle constraints and replay-safe projections, one-use root-wallet authentication, and a Phase 7 console in progress. Its [disposable chain-97 fork browser journeys](docs/evidence/bsc-testnet.fork.phase7-browser.json) exercise wallet/chain refusal, root account/policy setup, a fork-only faucet claim and repeat refusal, bounded swap and stake, stale quote, provider outage recovery, revocation, onchain expiry, verifier failure, exact-signature replay without another execution, and public receipts. Separately, a [0.02 tBNB faucet claim](docs/evidence/bsc-testnet.p7-faucet-claim.json) succeeded on live chain 97; this is not a live browser journey or a hosted product deployment. Browser evidence for bound ERC-8183 settlement and user visual review remain open. `P3-002` policy activation/revocation is proven on chain 97 ([evidence](docs/evidence/bsc-testnet.p3-policy-live.json)); that earlier deployment is explicitly policy-probe-only. Production ERC-8183 job provisioning UI and live evaluator/payment remain ahead.
+## With and without Perago
 
-Local fork tests reset PostgreSQL's public schema. `dev:fork` now accepts only the existing local `perago_dev` logical database, not the separate `perago_test` integration database; two containers using different ports but the same Docker volume must not run simultaneously.
+| | A typical agent wallet | Perago |
+| --- | --- | --- |
+| What the agent holds | A private key or a broad session that can move any asset | One signed mandate for one action, with hard limits |
+| How long an approval lasts | Until someone remembers to revoke it | One use. Success, failure, expiry, or revocation ends it for good |
+| Who sets the limits | Prompt text and the model's judgment | Your Wallet Policy. The AI can narrow a plan but can never widen it |
+| What it can call | Often arbitrary calldata and unlimited token approvals | One allowlisted target and function selector, exact approvals only |
+| Slippage and minimum output | Chosen by the agent at run time | Simulated at a pinned block, signed by you, checked onchain |
+| Proof of the outcome | A transaction hash, which only shows that something ran | An adapter-specific verifier checks the postcondition and writes a public receipt |
+| Replays | Up to the app | The contract refuses a consumed mandate. Replays were tried on testnet and refused |
+| Your keys | Sometimes pasted into a bot or server | Stay in your wallet. The model and the API never see them |
+| Paying the agent (next phase) | Trust, or the model grading its own work | Released only after deterministic success, through an ERC-8183 evaluator (fork-proven) |
 
-### Local testnet-demo console
+## How it works
 
-`pnpm run dev` starts the web app only; it does not boot PostgreSQL, API, or executor. On a development machine, provision a **separate migrated local PostgreSQL database** for `PERAGO_DATABASE_URL` (never `perago_test`, which integration tests reset, or `perago_dev`, which `dev:fork` resets). Configure the server-only values in ignored `.env` per [`.env.example`](.env.example); do not copy secrets into `NEXT_PUBLIC_*`. The API and worker must use the same labelled `deployments/bsc-testnet.demo.perago.json` manifest for the current console, because the production executor requires a bound ERC-8183 job the browser cannot yet provision. A shell-exported variable can override `.env`, so set the non-secret manifest/URL explicitly in each PowerShell terminal:
-
-```powershell
-$env:PERAGO_DEPLOYMENT_MANIFEST="deployments/bsc-testnet.demo.perago.json"
-pnpm --filter @perago/api start
+```mermaid
+flowchart LR
+    A["Goal in plain English"] --> B["AI proposes a typed plan"]
+    B --> C{"Inside your<br/>Wallet Policy?"}
+    C -->|no| R["Refused with a reason code"]
+    C -->|yes| D["Exact simulation<br/>at a pinned block"]
+    D --> E["You sign one<br/>Task Mandate"]
+    E --> F["Executor runs the<br/>approved call only"]
+    F --> G{"Verifier: did the<br/>outcome happen?"}
+    G -->|yes| S["SUCCEEDED<br/>public receipt"]
+    G -->|no| X["FAILED<br/>public receipt"]
+    S --> Z["Authority ends"]
+    X --> Z
 ```
 
-```powershell
-$env:PERAGO_DEPLOYMENT_MANIFEST="deployments/bsc-testnet.demo.perago.json"
-$env:PERAGO_API_URL="http://127.0.0.1:8787"
-pnpm --filter @perago/executor start
+The same journey, step by step:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Owner
+    participant Web as Perago web
+    participant API as Perago API
+    participant AI as Planner (OpenRouter)
+    participant Worker as Executor worker
+    participant Chain as BNB Chain
+
+    Owner->>Web: "Swap 0.005 WBNB to CAKE"
+    Web->>API: goal + signed-in wallet session
+    API->>AI: goal text only, no keys, no authority
+    AI-->>API: typed plan candidate
+    API->>API: 13 policy rules + exact simulation
+    API-->>Web: spend cap, minimum output, recipient, expiry, EIP-712 digest
+    Owner->>Web: sign the Task Mandate once
+    Web->>API: signature
+    API->>Worker: queued execution with a lease
+    Worker->>Chain: authorize, beginExecution, perform (one UserOperation)
+    Chain->>Chain: adapter runs, verifier checks the postcondition
+    Chain-->>Worker: SUCCEEDED or FAILED, mandate consumed
+    Worker->>API: finalized record
+    API-->>Web: public receipt anyone can check
 ```
 
-```powershell
-pnpm run dev
+What each piece is responsible for:
+
+- Your ERC-4337 smart account (Alchemy Modular Account V2) holds the funds. You stay the root owner.
+- A Wallet Policy you activate once sets the assets, caps, and protocols an executor may ever touch. Protected assets can never be spent.
+- The planner turns text into a closed plan type. It cannot add authority, and a plan outside the policy is refused rather than clamped.
+- The API compiles the plan, runs 13 policy rules, simulates the exact call, and builds the 22-field `TaskMandate` you sign with EIP-712.
+- `MandateExecutor` checks the signature, nonce, expiry, spend bounds, recipient, action hash, and postcondition hash. It marks the mandate consumed before the call and records a terminal status after it.
+- The swap and stake adapters make one call each. Their verifiers read the chain afterwards and decide success from balances and pool shares, not from the model.
+- The worker is the only process holding the executor key. It has no power beyond what the signed mandate allows, and a crash or duplicate delivery cannot submit twice.
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Vercel
+        W["perago-app.vercel.app<br/>Next.js 16 + wagmi"]
+    end
+    subgraph VPS["VPS (Docker, behind Caddy TLS)"]
+        A["API<br/>Hono on Bun"]
+        X["Executor worker<br/>Node 24"]
+    end
+    DB[("Supabase PostgreSQL<br/>session pooler, verified TLS")]
+    L["OpenRouter planner"]
+    C["BNB Smart Chain Testnet<br/>MandateExecutor, adapters, verifiers,<br/>ERC-4337 smart account"]
+
+    W -->|HTTPS| A
+    W -->|"owner signatures (MetaMask)"| C
+    A --> DB
+    A --> L
+    A -->|"reads, simulates"| C
+    X -->|"private network"| A
+    X -->|"signs and submits"| C
 ```
 
-Check `http://127.0.0.1:8787/health`, `http://127.0.0.1:8787/config` (`deploymentLabel: testnet-demo`), `http://127.0.0.1:8081/readyz` if that worker health port is configured, and `http://localhost:3000/app`. This is **live chain 97**: the faucet uses actual testnet funds and the worker can execute an owner-authorized demo mandate. No live ERC-8183 payment is implied.
+Onchain state wins over the database. The API rebuilds receipts from finalized chain events, and no database row can turn a failed mandate into a success.
 
-## Planned repository map
+## Onchain evidence
+
+Everything below is on BNB Smart Chain Testnet (chain 97). Per-run reports live in [`docs/evidence/`](docs/evidence/) and pinned addresses and code hashes in [`deployments/`](deployments/).
+
+### Deployed contracts
+
+None of these contracts has an owner, admin, or upgrade path. All seven are source-verified on Sourcify with a full creation and runtime bytecode match ([report](docs/evidence/bsc-testnet.sourcify-verification.json)).
+
+| Contract | Address | Creation tx | Source |
+| --- | --- | --- | --- |
+| MandateExecutor (production, needs a bound ERC-8183 job) | [`0xc618…EC66`](https://testnet.bscscan.com/address/0xc6184Fb3e12F4C79b50f37175f3229d91664EC66) | [`0x05d9…acfd`](https://testnet.bscscan.com/tx/0x05d946bab983f8682fc5d753069ab625bf787c02c060c9582d410fbd756bacfd) | [Sourcify](https://repo.sourcify.dev/97/0xc6184Fb3e12F4C79b50f37175f3229d91664EC66) |
+| MandateExecutor (`testnet-demo`, used by the live app) | [`0x5587…1b7C`](https://testnet.bscscan.com/address/0x5587896753AD6f65ad40ee812f4e1160f6691b7C) | [`0xa546…1600`](https://testnet.bscscan.com/tx/0xa546d06ff7a482a8b5ed3aaa8eb4ab1ea51ac53f846994336621cd55b3d91600) | [Sourcify](https://repo.sourcify.dev/97/0x5587896753AD6f65ad40ee812f4e1160f6691b7C) |
+| PancakeV3SwapAdapter | [`0xB9Fa…C635`](https://testnet.bscscan.com/address/0xB9FaeB0Bb29401a1308e0C1287913D94b18EC635) | [`0xc509…fbfa`](https://testnet.bscscan.com/tx/0xc509cf5cdcc2d8fa016bffb0759004ad3995fe3f5debcf3c4c101886b6d1bbfa) | [Sourcify](https://repo.sourcify.dev/97/0xB9FaeB0Bb29401a1308e0C1287913D94b18EC635) |
+| SwapVerifier | [`0xBeeA…53a5`](https://testnet.bscscan.com/address/0xBeeAeEa965B70117dd2F05E227413d04D5ee53a5) | [`0x8a5b…9553`](https://testnet.bscscan.com/tx/0x8a5bd8deb727026e83766b847174b517226b3042605dfd2eda4973930f7c9553) | [Sourcify](https://repo.sourcify.dev/97/0xBeeAeEa965B70117dd2F05E227413d04D5ee53a5) |
+| CakeStakeAdapter | [`0xB68d…d8aE`](https://testnet.bscscan.com/address/0xB68d52C76036744C5F7676d530295B3E8DD9d8aE) | [`0x3325…9161`](https://testnet.bscscan.com/tx/0x33251bd6c91ff97a2f2123bacd0f52af5e79c3914e71b953bbff3f404eb19161) | [Sourcify](https://repo.sourcify.dev/97/0xB68d52C76036744C5F7676d530295B3E8DD9d8aE) |
+| StakeVerifier | [`0x6625…6D8A`](https://testnet.bscscan.com/address/0x66255cAd973A59043eb75e8d4eF71F440de36D8A) | [`0x6576…c9aa`](https://testnet.bscscan.com/tx/0x6576c4c8e3bc837f1da3b408052a2e60a424339475f7e62490cbc4ddb7c9c9aa) | [Sourcify](https://repo.sourcify.dev/97/0x66255cAd973A59043eb75e8d4eF71F440de36D8A) |
+| PeragoAcpHook (ERC-8183 hook) | [`0x64a8…cff0`](https://testnet.bscscan.com/address/0x64a807FceFb25ea710B2D3cb15Abf5e46f32cff0) | [`0xced1…453a`](https://testnet.bscscan.com/tx/0xced1ecf0dd8854cc662d834ea0b521489e56ef42a0625137870d0fd655a6453a) | [Sourcify](https://repo.sourcify.dev/97/0x64a807FceFb25ea710B2D3cb15Abf5e46f32cff0) |
+
+### Live journeys
+
+| Run | What happened | Transactions |
+| --- | --- | --- |
+| Natural-language swap ([report](docs/evidence/bsc-testnet.phase4-swap-journey.json)) | "Swap 0.01 WBNB for CAKE": policy activated, mandate signed, one PancakeSwap V3 swap above the signed minimum, verified receipt. Replays and tampered spend, minimum, recipient, adapter, selector, target, or action were all refused | [authorize](https://testnet.bscscan.com/tx/0xf673c21a630b9b4a84be7090161a0ea60e86f99bbabb35473203c7bd35cc4278) · [begin](https://testnet.bscscan.com/tx/0x71076311f97375bd780770a964d1b00169734217df2f877e466520758a35626f) · [perform](https://testnet.bscscan.com/tx/0xa1a60d2fd56b3e5387026f7623b8bfb9f503c41d282e17a4f95ff9bd5ddfe64b) |
+| Natural-language stake ([report](docs/evidence/bsc-testnet.phase5-stake-journey.json)) | "Stake 1 CAKE": 24,271,418,072 CAKE Pool shares minted above the signed minimum. The worker was killed after persisting the submission and recovered without a second one. A stake simulated against an old position was refused `STALE_POSITION`. The owner then withdrew | [authorize](https://testnet.bscscan.com/tx/0x7232219c0df47c4216db18a35493523cedbf5382e07196474249301d98f9e159) · [begin](https://testnet.bscscan.com/tx/0x6ecbeea5bf4ded07be5a1780326504bc6d80cb3adca60f05df39eb058f2ab65d) · [perform](https://testnet.bscscan.com/tx/0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92) · [withdraw](https://testnet.bscscan.com/tx/0xafc0e7c9e4d2180169897304a2b3ee37d33c2464c11761fc212b80669bc5d350) |
+| Owner-signed swap from the browser ([report](docs/evidence/bsc-testnet.p7-owner-swap-success.json)) | The owner signed in MetaMask from the Perago console; the worker executed and the mandate finalized `SUCCEEDED` | [authorize](https://testnet.bscscan.com/tx/0x9b5a09f8ae977c1a2ab4bb7895709e1a0681362aedc44dbfb36a20bd1dcec122) · [begin](https://testnet.bscscan.com/tx/0xa6b7239683a07f77b64ea004c7767704ee6847f26e65e7ba9443636a5f5be620) · [perform](https://testnet.bscscan.com/tx/0x46baf2235648655a959dc0756539fac81755f2c966b0bfd28c5ba30c15e56b10) |
+| Wallet Policy on and off ([report](docs/evidence/bsc-testnet.p3-policy-live.json)) | One atomic root UserOperation each way changes the account permission and the executor policy together | [activate](https://testnet.bscscan.com/tx/0x2b255ce76af5e41168e2b9cf4d26d2b5d44d6547c6976b485aa284f252c17ebc) · [revoke](https://testnet.bscscan.com/tx/0xcd538ff065c6a36fc68aa2f12dbd9440f0901c97e661f66d39e4762bbb423f03) |
+| Bounded session ([report](docs/evidence/bsc-testnet.account-live.json)) | The session made its one allowed call and was rejected for an unrelated target, an unlisted selector, a module install, a self-call, an over-limit spend, an expired window, and after revocation | [session call](https://testnet.bscscan.com/tx/0xa085e0f0b4d65632fa2c5f5fb2382690034e98b337cce99ac823466dd9a641ed) · [revocation](https://testnet.bscscan.com/tx/0x2b2c180d9a0345458bad31e7cf65c39476d9c2fa20600ecac4e428987dc44574) |
+| ERC-8183 job lifecycle on the BNB APEX kernel ([report](docs/evidence/bsc-testnet.protocol-live.json)) | Completion paid the provider, an evaluator rejection refunded the client, and an expired job was refunded permissionlessly | [complete](https://testnet.bscscan.com/tx/0x57264534623660086dc3b2d01c427e90ccdb5c4f8ddcd0e83e2fe692df566b63) · [reject](https://testnet.bscscan.com/tx/0x149ab35670880f2870acb829284333424e07c84ee3323cde0303f573a11a3171) · [refund](https://testnet.bscscan.com/tx/0x9470fd0087f6ad8a04d7dc0069f798ee5774b4eee1e99ba66e6bc0793c234fd7) |
+| tBNB faucet ([report](docs/evidence/bsc-testnet.p7-faucet-claim.json)) | A rate-limited 0.02 tBNB claim so testers can fund a smart account without leaving Perago | [claim](https://testnet.bscscan.com/tx/0x7a0b1474b7ddbf61998f2299bb573c22127b4d7a5963ef7a758dbc53bbc0e99e) |
+
+### Tested before it touched a chain
+
+- The Foundry suite covers the 12 safety invariants with 13 named properties across 17 honest and adversarial actions, with a reachability check so the run cannot pass vacuously. Authorization and execution fuzz properties ran at 10,000 runs each.
+- Fork journeys on a local copy of chain 97 cover the browser flow end to end: wrong wallet or chain, stale quotes, provider outages, revocation, onchain expiry, verifier failure, and exact-signature replay ([report](docs/evidence/bsc-testnet.fork.phase7-browser.json)).
+- Outcome-linked payment is proven on a fork with the real APEX kernel: a payment outage leaves the execution pending, a restart settles it exactly once, and a failed execution refunds without paying the provider ([report](docs/evidence/bsc-testnet.fork.phase6-settlement-smoke.json)).
+
+## What is live and what is not
+
+| Capability | Status |
+| --- | --- |
+| Bounded swap and stake with verified receipts | Live on chain 97 through the `testnet-demo` executor |
+| Hosted web, API, and worker | Live at [perago-app.vercel.app](https://perago-app.vercel.app) |
+| Outcome-linked ERC-8183 payment to the agent | Built and fork-proven. Held back from the live demo by the owner's decision on 2026-09-29 until the live evaluator and job provisioning are proven |
+| Mainnet | Not deployed |
+
+## Safety rules the code enforces
+
+1. AI may narrow authority, never create or widen it.
+2. Protected assets are never valid spend inputs.
+3. Every target and function selector is explicit and allowlisted. No arbitrary calldata and no unlimited approvals.
+4. A mandate binds owner, executor, chain, nonce, expiry, action, spend bounds, recipient, and postcondition, and it can be consumed only once.
+5. Success, failure, expiry, or revocation ends authority permanently.
+6. Payment follows deterministic verification, never model judgment.
+7. Seed phrases and private keys never reach the model, the API, the logs, or this repository.
+8. Onchain truth wins over the database, and reconciliation is replay-safe.
+
+The full list and threat model are in the [smart-contract specification](docs/technical/SMART-CONTRACT.md).
+
+## Run it locally
+
+Requirements: Node 24.21.0, pnpm 12.4.2, Bun 1.3, PostgreSQL 16 or later, and Foundry for contract work.
+
+```bash
+pnpm install
+cp .env.example .env          # fill in local values; never commit this file
+pnpm --filter @perago/api db:migrate
+pnpm --filter @perago/api start          # API on http://127.0.0.1:8787
+pnpm --filter @perago/executor start     # worker
+pnpm run dev                             # web on http://localhost:3000
+```
+
+Use the labelled demo manifest for both the API and the worker: `PERAGO_DEPLOYMENT_MANIFEST=deployments/bsc-testnet.demo.perago.json`. This talks to live chain 97, so the faucet and executor spend real testnet funds.
+
+Checks: `pnpm run check` for lint, types, and unit tests, `pnpm --filter @perago/api test:db` for the PostgreSQL suites, and `forge test` in `packages/contracts`.
+
+## Deploy
+
+| Piece | Where | How |
+| --- | --- | --- |
+| Web | Vercel project `perago`, root `apps/web` | Git integration; public values in [`apps/web/.env.example`](apps/web/.env.example) |
+| API and worker | VPS, Docker compose behind Caddy | `pnpm deploy:vps` ships the committed `HEAD`, migrates, and swaps only after both containers report healthy. `pnpm deploy:vps --rollback <sha>` restores a previous release |
+| Database | Supabase PostgreSQL (Singapore) | Session pooler with `sslmode=verify-full` against the pinned Supabase root CA |
+
+Secrets for the VPS are described in [`deploy/vps/api.env.example`](deploy/vps/api.env.example) and [`deploy/vps/worker.env.example`](deploy/vps/worker.env.example). The API never receives the executor key.
+
+## Repository map
 
 ```text
 apps/
-  web/       Approved landing shell; policy/mandate/receipt console and faucet surface in progress
-  api/       Persistence, wallet auth, policy, compiler, simulation, signing, receipt query, execution queue
-  executor/  Constrained autonomous execution worker and existing probes
+  web/        Next.js console, landing page, and faucet
+  api/        Wallet auth, policy, planner, compiler, simulation, signing, receipts
+  executor/   The constrained worker that submits mandates
 packages/
-  sdk/       Shared schemas, ABIs, typed clients
-  contracts/ Foundry mandate, adapters, verifiers, settlement
-docs/        Product and technical sources of truth
+  sdk/        Shared schemas, hashes, EIP-712 types, ABIs
+  contracts/  MandateExecutor, adapters, verifiers, ERC-8183 evaluator and hook
+deploy/vps/   Docker image, compose file, Caddy block, deploy script
+deployments/  Pinned chain-97 addresses and code hashes
+docs/         Product and technical sources of truth, plus run evidence
 ```
-
-The SDK owns domain/account/action types, the evaluator ABI, and the public receipt schema; the API and worker reconcile against onchain mandate status and verification commitments. `P6-002` proves manual, receipt-bound settlement on a fork; `P6-003` proves automated payment/refund and finalized payment indexing on a fork using the production MandateExecutor. Live evaluator deployment, funded-job provisioning, browser binding, and hosted payment proof require a separately approved future task.
 
 ## Documentation
 
-- [Product requirements](docs/PRD.md)
-- [Architecture](docs/technical/ARCHITECTURE.md)
-- [Data model](docs/technical/ERD.md)
-- [Smart-contract and security specification](docs/technical/SMART-CONTRACT.md)
-- [BNB and protocol integrations](docs/technical/INTEGRATION.md)
-- [Technology decisions](docs/technical/TECH-STACK.md)
-- [Phased build plan](docs/BUILD-PLAN.md)
-- [Lessons and verified preferences](docs/LESSONS.md)
-- [Agent operating contract](AGENTS.md)
+[Product requirements](docs/PRD.md) · [Architecture](docs/technical/ARCHITECTURE.md) · [Data model](docs/technical/ERD.md) · [Smart contracts and security](docs/technical/SMART-CONTRACT.md) · [Integrations](docs/technical/INTEGRATION.md) · [Tech stack](docs/technical/TECH-STACK.md) · [Build plan and status](docs/BUILD-PLAN.md) · [Lessons](docs/LESSONS.md)
 
-## Honest limitations
+## Known limits
 
-- The production MandateExecutor is deployed on chain 97, but it requires a bound ERC-8183 job; successful swap/stake mandate journeys used the separately labelled `testnet-demo` executor. Public receipt queries are verified on a chain-97 fork, not a hosted production API.
-- ERC-8183 and ERC-8004 are draft standards; integration details can change. The immutable OutcomeEvaluator is fork-proven but not deployed; its APEX proxy can be upgraded by the upstream owner. `P6-003` automation has fork proof only, not a live bound settlement.
-- Session and staking paths have fork and testnet evidence; production job provisioning and live payment remain gated by the technical integration specification.
-- Simulation reduces execution risk but cannot guarantee future chain state.
-- The MVP deliberately supports only two closed action types and a minimal protocol allowlist.
+- The live app runs on testnet only, with one swap route (WBNB to CAKE on PancakeSwap V3) and one staking target (the CAKE Pool).
+- The production executor requires a bound ERC-8183 job, so live journeys use the separately labelled `testnet-demo` executor built from the same source.
+- ERC-8183 is a draft standard, and the upstream APEX proxy can be upgraded by its owner.
+- A simulation lowers execution risk but cannot guarantee future chain state. The signed minimum output is what protects you.
+- A smart account used before the hosted database existed may still have an active onchain policy. Reconcile it or change it with an owner-signed transition before relying on it in the hosted app.
+
+## AI disclosure
+
+AI coding assistants helped write code, tests, and documentation for this project. A human set the scope, made every product and security decision, reviewed and tested each change before it was committed, signed every owner transaction, and checked each piece of evidence before it went into this repository.
+
+Inside the product, the planner model only turns your text into a proposed plan. It never holds keys, never grants authority, and never decides whether an outcome succeeded.
