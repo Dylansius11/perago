@@ -10,6 +10,10 @@ x-logging: &logging
   driver: json-file
   options: { max-size: "10m", max-file: "3" }
 
+# Trust the pinned Supabase root CA for sslmode=verify-full (runtime only).
+x-db-tls: &db-tls
+  NODE_EXTRA_CA_CERTS: /app/deploy/vps/supabase-root-2021-ca.crt
+
 services:
   api:
     build:
@@ -20,6 +24,7 @@ services:
     restart: unless-stopped
     env_file: ["${PERAGO_SECRETS_DIR:?set PERAGO_SECRETS_DIR}/api.env"]
     environment:
+      <<: *db-tls
       PERAGO_API_HOST: 0.0.0.0
       PERAGO_API_PORT: "8787"
       PERAGO_API_VENUE: testnet
@@ -75,6 +80,7 @@ services:
     image: perago:${PERAGO_RELEASE:?set PERAGO_RELEASE}
     profiles: [tools]
     env_file: ["${PERAGO_SECRETS_DIR:?set PERAGO_SECRETS_DIR}/api.env"]
+    environment: *db-tls
     working_dir: /app/apps/api
     command: ["bun", "src/migrate.ts"]
     networks: [default]
