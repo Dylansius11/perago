@@ -1,4 +1,4 @@
-import { hashTypedData } from "viem";
+import { decodeFunctionData, erc20Abi, hashTypedData } from "viem";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -6,10 +6,14 @@ import {
   accountPolicyTypeString,
   accountPolicyTypes,
   confirmPolicyActivationRequestSchema,
+  deriveExecutorAllowances,
+  encodeAccountPolicyTransition,
   getAccountPolicyTypedData,
   hashMandateSessionPermission,
+  mandateExecutorAbi,
   mandateSessionPermissionSchema,
   walletChallengeRequestSchema,
+  walletPolicySchema,
 } from "../src/index.js";
 
 const account = "0x1111111111111111111111111111111111111111";
@@ -149,5 +153,156 @@ describe("P3-002 SDK policy API", () => {
         verifyingContract: executor,
       }),
     ).toThrow();
+  });
+});
+
+const batchAbi = [
+  {
+    type: "function",
+    name: "executeBatch",
+    inputs: [
+      {
+        name: "calls",
+        type: "tuple[]",
+        components: [
+          { name: "target", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "data", type: "bytes" },
+        ],
+      },
+    ],
+    outputs: [{ name: "results", type: "bytes[]" }],
+    stateMutability: "payable",
+  },
+] as const;
+
+const activeToken = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const protectedToken = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const unlistedToken = "0xcccccccccccccccccccccccccccccccccccccccc";
+/** Catalog order is unrelated to policy order, and callers may hand back any casing. */
+const catalogTokens = [unlistedToken, protectedToken, activeToken];
+const upperCasedTokens = catalogTokens.map(
+  (token) => token.toUpperCase().replace("0X", "0x") as `0x${string}`,
+);
+const executorPolicy = walletPolicySchema.parse({
+  account,
+  activeAssets: [
+    { maxInputPerTask: "7", rollingDailyCap: "500", token: activeToken },
+  ],
+  allowedRecipients: "SELF",
+  approvedAdapterIds: ["pancakeswap-v3"],
+  chainId: "97",
+  maxSlippageBps: "100",
+  maxTaskLifetimeSeconds: "1800",
+  protectedAssets: [protectedToken],
+  schemaVersion: "1",
+  services: ["SWAP"],
+  version: "3",
+});
+
+describe("standing MandateExecutor allowance", () => {
+  it("derives one allowance per catalog token: active cap, everything else zero", () => {
+    expect(deriveExecutorAllowances(executorPolicy, catalogTokens)).toEqual([
+      { token: unlistedToken, amount: 0n },
+      { token: protectedToken, amount: 0n },
+      { token: activeToken, amount: 500n },
+    ]);
+    // Policy and catalog are compared case-insensitively, and the catalog entry is what gets approved.
+    expect(deriveExecutorAllowances(executorPolicy, upperCasedTokens)).toEqual(
+      upperCasedTokens.map((token, index) => ({
+        token,
+        amount: index === 2 ? 500n : 0n,
+      })),
+    );
+    expect(
+      deriveExecutorAllowances(
+        {
+          ...executorPolicy,
+          activeAssets: [
+            {
+              maxInputPerTask: "7",
+              rollingDailyCap: "500",
+              token: upperCasedTokens[2],
+            },
+          ],
+        },
+        [activeToken],
+      ),
+    ).toEqual([{ token: activeToken, amount: 500n }]);
+  });
+
+  it("batches the install, the policy registration, and one bounded approve per token", () => {
+    const permissionCallData = `0x${"ab".repeat(4)}` as `0x${string}`;
+    const callData = encodeAccountPolicyTransition({
+      account,
+      allowances: deriveExecutorAllowances(executorPolicy, catalogTokens),
+      mandateExecutor: executor,
+      permissionCallData,
+      policy: {
+        account,
+        chainId: "97",
+        ownerEpoch: "1",
+        permissionHash: hashMandateSessionPermission(permission),
+        policyHash,
+        rootOwner: owner,
+        validUntil: "1700003600",
+      },
+      rootSignature: `0x${"11".repeat(65)}`,
+    });
+
+    const batch = decodeFunctionData({ abi: batchAbi, data: callData });
+    expect(batch.functionName).toBe("executeBatch");
+    const calls = batch.args[0];
+    expect(calls.map((call) => call.target.toLowerCase())).toEqual([
+      account,
+      executor,
+      ...catalogTokens,
+    ]);
+    expect(calls.map((call) => call.value)).toEqual([0n, 0n, 0n, 0n, 0n]);
+    expect(calls[0].data).toBe(permissionCallData);
+    expect(
+      decodeFunctionData({ abi: mandateExecutorAbi, data: calls[1].data })
+        .functionName,
+    ).toBe("setAccountPolicy");
+    expect(
+      calls
+        .slice(2)
+        .map(
+          (call) => decodeFunctionData({ abi: erc20Abi, data: call.data }).args,
+        ),
+    ).toEqual([
+      [executor, 0n],
+      [executor, 0n],
+      [executor, 500n],
+    ]);
+  });
+
+  it("keeps a zero approve for every catalog token when a policy is revoked", () => {
+    const callData = encodeAccountPolicyTransition({
+      account,
+      allowances: catalogTokens.map((entry) => ({ amount: 0n, token: entry })),
+      mandateExecutor: executor,
+      permissionCallData: `0x${"cd".repeat(4)}`,
+      policy: {
+        account,
+        chainId: "97",
+        ownerEpoch: "1",
+        permissionHash: hashMandateSessionPermission(permission),
+        policyHash,
+        rootOwner: owner,
+        validUntil: "1700003600",
+      },
+      rootSignature: `0x${"11".repeat(65)}`,
+    });
+
+    const calls = decodeFunctionData({ abi: batchAbi, data: callData }).args[0];
+    expect(calls).toHaveLength(2 + catalogTokens.length);
+    expect(
+      calls
+        .slice(2)
+        .map(
+          (call) => decodeFunctionData({ abi: erc20Abi, data: call.data }).args,
+        ),
+    ).toEqual(catalogTokens.map(() => [executor, 0n]));
   });
 });

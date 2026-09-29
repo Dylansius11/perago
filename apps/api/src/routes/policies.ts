@@ -1,3 +1,4 @@
+import type { ExecutorAllowance } from "@perago/sdk";
 import { Hono } from "hono";
 import type { Sql } from "postgres";
 
@@ -16,6 +17,14 @@ import {
   preparePolicyRevocation,
 } from "../services/policies.js";
 import { listPolicies } from "../services/views.js";
+
+/** Prepare responses carry the standing allowance as decimal strings. */
+function printableAllowances(allowances: readonly ExecutorAllowance[]) {
+  return allowances.map((allowance) => ({
+    amount: allowance.amount.toString(),
+    token: allowance.token,
+  }));
+}
 
 export function createPolicyRoutes(input: {
   authConfig: WalletAuthConfig;
@@ -50,6 +59,7 @@ export function createPolicyRoutes(input: {
     );
     return context.json({
       accountPolicy: prepared.accountPolicy,
+      allowances: printableAllowances(prepared.allowances),
       permissionCallData: prepared.permissionCallData,
       permissionHash: prepared.permissionHash,
       policyHash: prepared.policyHash,
@@ -78,6 +88,7 @@ export function createPolicyRoutes(input: {
     );
     return context.json({
       accountPolicy: prepared.accountPolicy,
+      allowances: printableAllowances(prepared.allowances),
       permissionCallData: prepared.permissionCallData,
       permissionHash: prepared.permissionHash,
       revocationHash: prepared.revocationHash,

@@ -1,6 +1,8 @@
 import {
   type Address,
   type CompiledPlan,
+  deriveExecutorAllowances,
+  type ExecutorAllowance,
   encodeInstallMandateSession,
   encodeSimulatedAction,
   getTaskMandateTypedData,
@@ -18,7 +20,11 @@ import {
 } from "@perago/sdk";
 import { hashTypedData, keccak256 } from "viem";
 
-/** Refuse an API-prepared root operation that differs from the owner's reviewed policy or session. */
+/**
+ * Refuse an API-prepared root operation that differs from the owner's reviewed
+ * policy or session, and return the standing allowances the operation may set:
+ * exactly the reviewed policy's rolling caps over the public token catalog.
+ */
 export function assertPreparedPolicy(input: {
   account: Address;
   owner: Address;
@@ -30,7 +36,8 @@ export function assertPreparedPolicy(input: {
     permission: MandateSessionPermissionDocument;
   };
   prepared: PolicyTransitionPrepared;
-}): void {
+  tokens: readonly Address[];
+}): ExecutorAllowance[] {
   const { accountPolicy, permissionCallData, permissionHash } = input.prepared;
   const expectedPermissionHash = hashMandateSessionPermission(
     input.transition.permission,
@@ -53,6 +60,22 @@ export function assertPreparedPolicy(input: {
       "Prepared policy differs from the reviewed owner limits or scoped session.",
     );
   }
+  const allowances = deriveExecutorAllowances(input.policy, input.tokens);
+  const prepared = input.prepared.allowances;
+  if (
+    prepared.length !== allowances.length ||
+    allowances.some(
+      (allowance, index) =>
+        prepared[index]?.token.toLowerCase() !==
+          allowance.token.toLowerCase() ||
+        prepared[index]?.amount !== allowance.amount.toString(),
+    )
+  ) {
+    throw new Error(
+      "Prepared allowances differ from the reviewed policy's rolling caps.",
+    );
+  }
+  return allowances;
 }
 
 /** Bind the API's EIP-712 payload to the exact plan and passing simulation shown to the owner. */

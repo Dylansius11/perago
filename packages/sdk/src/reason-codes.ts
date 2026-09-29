@@ -102,6 +102,10 @@ export const REASON_MESSAGES = {
     "This client has reached the faucet claim limit. Try again later.",
   FAUCET_UNAVAILABLE:
     "The faucet is temporarily unavailable. No additional claim was sent.",
+  SPONSORSHIP_REFUSED:
+    "This operation is not one the sponsored path may submit. Nothing was sent; the owner pays for it instead.",
+  SPONSORSHIP_UNAVAILABLE:
+    "The bundler would not sponsor this operation right now. Nothing was sent; retry or let the owner pay for it.",
 } as const;
 
 export type ReasonCode = keyof typeof REASON_MESSAGES;

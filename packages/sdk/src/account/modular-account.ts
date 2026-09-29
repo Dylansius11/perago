@@ -96,7 +96,8 @@ const accountFactoryAbi = [
   },
 ] as const;
 
-const modularAccountAbi = [
+/** The executed subset of the deployed semi-modular account's dispatcher. */
+export const modularAccountAbi = [
   {
     type: "function",
     name: "execute",

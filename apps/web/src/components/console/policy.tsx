@@ -21,7 +21,11 @@ import {
   writePendingPolicy,
 } from "@/lib/policy-pending";
 import type { Holdings } from "@/lib/queries";
-import { OperationFailedError, sendRootOperation } from "@/lib/root-operation";
+import {
+  OperationFailedError,
+  sendRootOperation,
+  sponsorFor,
+} from "@/lib/root-operation";
 import { useSession } from "@/lib/session";
 import { assertWalletVenue } from "@/lib/venue";
 import { wagmiConfig } from "@/lib/wagmi";
@@ -195,6 +199,7 @@ export function PolicyComposer({
         policy,
         transition,
         prepared,
+        tokens: config.tokens.map((token) => token.address),
       });
       setReview({ policyId, policy, prepared, transition });
     });
@@ -220,13 +225,14 @@ export function PolicyComposer({
           setReview(null);
           throw new Error("This policy review has expired; prepare it again.");
         }
-        assertPreparedPolicy({
+        const allowances = assertPreparedPolicy({
           account,
           owner,
           chainId: config.chainId,
           policy: review.policy,
           transition: review.transition,
           prepared: review.prepared,
+          tokens: config.tokens.map((token) => token.address),
         });
         await assertWalletVenue();
         advance("sign-policy");
@@ -239,6 +245,7 @@ export function PolicyComposer({
         });
         const callData = encodeAccountPolicyTransition({
           account,
+          allowances,
           mandateExecutor: config.mandateExecutor,
           permissionCallData: review.prepared.permissionCallData,
           policy: review.prepared.accountPolicy,
@@ -248,6 +255,7 @@ export function PolicyComposer({
           owner,
           account,
           callData,
+          sponsor: sponsorFor(config, session),
           onStage: (step, detail) => {
             advance(step);
             if (
@@ -530,6 +538,24 @@ export function PolicyComposer({
                 />
               );
             })}
+            {review.prepared.allowances.map((allowance) => {
+              const token = config.tokens.find(
+                (item) =>
+                  item.address.toLowerCase() === allowance.token.toLowerCase(),
+              );
+              return (
+                <Fact
+                  dark
+                  key={`allowance-${allowance.token}`}
+                  label={`${token?.symbol ?? allowance.token} allowance`}
+                  value={
+                    allowance.amount === "0"
+                      ? "0, the executor cannot pull it"
+                      : `${token ? formatUnits(BigInt(allowance.amount), token.decimals) : allowance.amount} in total until you revoke or change this policy`
+                  }
+                />
+              );
+            })}
             <Fact
               dark
               label="Protected"
@@ -556,10 +582,15 @@ export function PolicyComposer({
             />
           </dl>
           <p className="mt-5 text-sm text-paper/70">
-            Wallet prompt 1 signs this exact EIP-712 policy. Prompt 2 signs a
-            32-byte UserOperation hash; prompt 3 pays for EntryPoint.handleOps.
-            Session authority expires above; it cannot install modules, upgrade
-            the account, or spend native value.
+            MandateExecutor may pull an allowed token only for a mandate you
+            sign, and never more than the allowance above. Wallet prompt 1 signs
+            this EIP-712 policy. Prompt 2 signs the UserOperation that installs
+            the session, records the policy, and sets these allowances.{" "}
+            {config.sponsorship.enabled
+              ? "Perago's bundler pays the gas; a third prompt to pay it yourself appears only if sponsorship is refused."
+              : "Prompt 3 pays for EntryPoint.handleOps from your owner wallet."}{" "}
+            The session expires above and cannot install modules, upgrade the
+            account, or spend native value.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button
@@ -605,14 +636,18 @@ export function PolicyComposer({
                     id: "sign",
                     title: "Sign UserOperation hash",
                     detail:
-                      "Only installation of this session and policy registration.",
+                      "Session installation, policy registration, and the allowances above.",
                     prompt: true,
                   },
                   {
                     id: "send",
-                    title: "Send handleOps",
-                    detail: "Your owner wallet pays transaction gas.",
-                    prompt: true,
+                    title: config.sponsorship.enabled
+                      ? "Submit to the bundler"
+                      : "Send handleOps",
+                    detail: config.sponsorship.enabled
+                      ? "Gas is sponsored. If sponsorship is refused, your wallet sends the same signed operation and pays gas."
+                      : "Your owner wallet pays transaction gas.",
+                    prompt: !config.sponsorship.enabled,
                   },
                   {
                     id: "confirm",
@@ -640,7 +675,9 @@ export function PolicyComposer({
           ) : null}
         </div>
       ) : null}
-      {holdings && holdings.ownerNative === 0n ? (
+      {holdings &&
+      holdings.ownerNative === 0n &&
+      !config.sponsorship.enabled ? (
         <p className="text-sm text-fail-ink">
           Your owner wallet needs tBNB to pay for the activation transaction.
           The faucet only funds your smart account.

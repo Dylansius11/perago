@@ -28,9 +28,9 @@ Perago splits the two jobs. The AI only reads the goal and proposes a typed plan
 | | A typical agent wallet | Perago |
 | --- | --- | --- |
 | What the agent holds | A private key or a broad session that can move any asset | One signed mandate for one action, with hard limits |
-| How long an approval lasts | Until someone remembers to revoke it | One use. Success, failure, expiry, or revocation ends it for good |
+| How long an approval lasts | Until someone remembers to revoke it | A mandate is one use. Success, failure, expiry, or revocation ends it for good |
 | Who sets the limits | Prompt text and the model's judgment | Your Wallet Policy. The AI can narrow a plan but can never widen it |
-| What it can call | Often arbitrary calldata and unlimited token approvals | One allowlisted target and function selector, exact approvals only |
+| What it can call | Often arbitrary calldata and unlimited token approvals | One allowlisted target and function selector. Token allowance is capped by your policy and cleared when you revoke it |
 | Slippage and minimum output | Chosen by the agent at run time | Simulated at a pinned block, signed by you, checked onchain |
 | Proof of the outcome | A transaction hash, which only shows that something ran | An adapter-specific verifier checks the postcondition and writes a public receipt |
 | Replays | Up to the app | The contract refuses a consumed mandate. Replays were tried on testnet and refused |

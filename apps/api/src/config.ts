@@ -25,6 +25,8 @@ export type ApiConfig = {
   port: number;
   rpcUrl: string;
   venue: "fork" | "testnet";
+  /** Alchemy bundler sponsorship for root operations; null keeps the owner-paid path only. */
+  sponsorship: { bundlerRpc: string; policyId: string } | null;
   webOrigin: string;
   workerTokenHash: Buffer;
 };
@@ -55,6 +57,22 @@ function validUrl(value: string, name: string): string {
   } catch {
     throw new Error(`${name} must be an absolute URL`);
   }
+}
+
+/** Both sponsorship values or neither: half a configuration is a deployment mistake. */
+function sponsorship(env: NodeJS.ProcessEnv): ApiConfig["sponsorship"] {
+  const bundlerRpc = env.PERAGO_ALCHEMY_BUNDLER_RPC || undefined;
+  const policyId = env.PERAGO_ALCHEMY_GAS_MANAGER_POLICY_ID || undefined;
+  if (!bundlerRpc && !policyId) return null;
+  if (!bundlerRpc || !policyId) {
+    throw new Error(
+      "PERAGO_ALCHEMY_BUNDLER_RPC and PERAGO_ALCHEMY_GAS_MANAGER_POLICY_ID must be set together",
+    );
+  }
+  return {
+    bundlerRpc: validUrl(bundlerRpc, "PERAGO_ALCHEMY_BUNDLER_RPC"),
+    policyId,
+  };
 }
 
 function manifestPath(value: string): string {
@@ -105,6 +123,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       "PERAGO_API_RPC",
     ),
     venue,
+    sponsorship: sponsorship(env),
     webOrigin,
     workerTokenHash: createHash("sha256").update(workerToken, "utf8").digest(),
   };

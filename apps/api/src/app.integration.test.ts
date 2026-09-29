@@ -60,6 +60,7 @@ const policyConfig: PolicyServiceConfig = {
   mandateExecutor,
   now: () => now,
   performSelector: "0x12345678",
+  tokens: loadBscTestnetCatalog().tokens.map((token) => token.address),
 };
 const verifier: PolicyChainVerifier = {
   async verify(expectation) {
@@ -138,6 +139,7 @@ const app = createApiApp({
     executionWindowSeconds: "600",
     explorer: null,
     faucet: { enabled: false },
+    sponsorship: { enabled: false },
     mandateExecutor,
     performSelector: "0x12345678",
     quoteTtlSeconds: 120,
@@ -483,6 +485,7 @@ describe("P7 owner read routes", () => {
       {
         chainId: "97",
         faucet: { enabled: false },
+        sponsorship: { enabled: false },
         venue: "fork",
       },
     );

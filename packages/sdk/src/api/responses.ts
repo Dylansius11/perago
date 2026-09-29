@@ -3,7 +3,11 @@ import { z } from "zod";
 import { accountPolicySchema } from "../account/account-policy.js";
 import { compiledPlanSchema } from "../domain/compiled-plan.js";
 import { policyDecisionSchema } from "../domain/policy-decision.js";
-import { hashSchema } from "../domain/primitives.js";
+import {
+  addressSchema,
+  hashSchema,
+  uint256StringSchema,
+} from "../domain/primitives.js";
 import { simulationResultSchema } from "../domain/simulation-result.js";
 import { taskMandateSchema } from "../domain/task-mandate.js";
 import { mandateDomainSchema } from "../eip712.js";
@@ -37,6 +41,9 @@ export const walletPolicyCreatedSchema = z.strictObject({
 /** `POST /policies/:id/activation/prepare` and `/revocation/prepare` */
 export const policyTransitionPreparedSchema = z.object({
   accountPolicy: accountPolicySchema,
+  allowances: z.array(
+    z.strictObject({ amount: uint256StringSchema, token: addressSchema }),
+  ),
   permissionCallData: hexSchema,
   permissionHash: hashSchema,
 });

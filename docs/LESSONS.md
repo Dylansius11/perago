@@ -342,6 +342,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 
 ## User insight
 
+### 2026-09-29 - Count wallet prompts as product cost
+
+- Observed: after the hosted owner test, the user said one swap needed too many MetaMask prompts and warnings, and approved a policy-capped standing allowance, sponsored UserOperations, and an automatic task page to reach one prompt per task.
+- Application: when a flow adds a wallet prompt, name the prompt count per task in the design and prefer moving authority into the one-time policy transition, as long as an onchain bound still limits it and the change is written into the security specification first.
+
 ### 2026-09-29 - Shared VPS housekeeping has a hard boundary
 
 - Asked to delete the unused annona and tr4ce deployments from the shared VPS to free space, then clarified that anything connected to cadence must stay.

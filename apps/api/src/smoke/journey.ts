@@ -9,6 +9,7 @@ import { serve } from "@hono/node-server";
 import {
   type Address,
   accountPolicySchema,
+  addressSchema,
   buildUserOperation,
   buildUserOperationNonceKey,
   deriveSemiModularAccountAddress,
@@ -147,6 +148,7 @@ const sessionBody = z.object({ token: z.string() });
 const policyBody = z.object({ policyId: z.string(), policyHash: hashSchema });
 const activationBody = z.object({
   accountPolicy: accountPolicySchema,
+  allowances: z.array(z.object({ amount: z.string(), token: addressSchema })),
   permissionCallData: hexSchema,
 });
 const confirmationBody = z.looseObject({ status: z.string() });
@@ -721,6 +723,7 @@ export function createJourney(input: JourneyInput) {
         mandateExecutor: EXECUTOR,
         now: () => new Date(),
         performSelector,
+        tokens: catalog.tokens.map((token) => token.address),
       },
       policyVerifier,
       sql,
@@ -861,6 +864,12 @@ export function createJourney(input: JourneyInput) {
     const activation = await rootOperation(
       encodeAccountPolicyTransition({
         account,
+        allowances: prepared.body.allowances.map(
+          (allowance: { amount: string; token: Address }) => ({
+            amount: BigInt(allowance.amount),
+            token: allowance.token,
+          }),
+        ),
         mandateExecutor: EXECUTOR,
         permissionCallData: prepared.body.permissionCallData,
         policy: prepared.body.accountPolicy,

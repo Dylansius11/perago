@@ -104,6 +104,7 @@ const config: PolicyServiceConfig = {
   mandateExecutor,
   now: () => now,
   performSelector,
+  tokens: [inputToken, protectedToken],
 };
 
 function confirmedVerifier(input: {
@@ -168,6 +169,11 @@ describe("P3-002 wallet policy lifecycle", () => {
       config,
     );
     const rootSignature = await owner.signTypedData(prepared.typedData);
+    // The active asset gets its rolling daily cap; the protected asset stays at zero.
+    expect(prepared.allowances).toEqual([
+      { amount: 3_000_000_000_000_000_000n, token: inputToken },
+      { amount: 0n, token: protectedToken },
+    ]);
 
     const pending: PolicyChainVerifier = {
       async verify() {
@@ -221,6 +227,10 @@ describe("P3-002 wallet policy lifecycle", () => {
       { validUntil: "1789912800" },
       config,
     );
+    expect(revocation.allowances).toEqual([
+      { amount: 0n, token: inputToken },
+      { amount: 0n, token: protectedToken },
+    ]);
     const revocationSignature = await owner.signTypedData(revocation.typedData);
     const revoked = await confirmPolicyRevocation(
       sql,

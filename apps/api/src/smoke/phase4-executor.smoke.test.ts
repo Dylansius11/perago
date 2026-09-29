@@ -540,6 +540,7 @@ beforeAll(async () => {
       mandateExecutor: deployment.mandateExecutor.address,
       now: () => new Date(),
       performSelector,
+      tokens: catalog.tokens.map((token) => token.address),
     },
     policyVerifier: forkPolicyVerifier,
     sql,
@@ -674,6 +675,12 @@ describe("Phase 4 executor smoke on a chain-97 fork", {
     const activation = await rootOperation(
       encodeAccountPolicyTransition({
         account,
+        allowances: prepared.body.allowances.map(
+          (allowance: { amount: string; token: Address }) => ({
+            amount: BigInt(allowance.amount),
+            token: allowance.token,
+          }),
+        ),
         mandateExecutor: deployment.mandateExecutor.address,
         permissionCallData: prepared.body.permissionCallData,
         policy: prepared.body.accountPolicy,

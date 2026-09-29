@@ -10,7 +10,7 @@ import { ReasonError } from "./errors.js";
 import type { Planner } from "./planner/provider.js";
 import { createExecutionRoutes } from "./routes/executions.js";
 import { createFaucetRoutes, type FaucetRouteConfig } from "./routes/faucet.js";
-
+import { createOperationRoutes } from "./routes/operations.js";
 import { createPolicyRoutes } from "./routes/policies.js";
 import { createReceiptRoutes } from "./routes/receipts.js";
 import { createTaskRoutes } from "./routes/tasks.js";
@@ -20,6 +20,7 @@ import type {
   PolicyChainVerifier,
   PolicyServiceConfig,
 } from "./services/policies.js";
+import type { SponsorshipService } from "./services/sponsorship.js";
 import type { TaskServiceConfig } from "./services/tasks.js";
 import { isTransportError } from "./simulation/user-operation.js";
 
@@ -33,6 +34,7 @@ export function createApiApp(input: {
   policyConfig: PolicyServiceConfig;
   policyVerifier: PolicyChainVerifier;
   publicConfig?: PublicConfig;
+  sponsorship?: SponsorshipService;
   sql: Sql;
   taskConfig: TaskServiceConfig;
 }) {
@@ -75,6 +77,16 @@ export function createApiApp(input: {
       createFaucetRoutes({
         authConfig: input.authConfig,
         ...input.faucet,
+        sql: input.sql,
+      }),
+    );
+  }
+  if (input.sponsorship) {
+    app.route(
+      "/operations",
+      createOperationRoutes({
+        authConfig: input.authConfig,
+        sponsorship: input.sponsorship,
         sql: input.sql,
       }),
     );

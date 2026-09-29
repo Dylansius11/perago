@@ -1,6 +1,7 @@
 import {
   encodeAbiParameters,
   encodeFunctionData,
+  erc20Abi,
   type Hex,
   keccak256,
   stringToHex,
@@ -17,6 +18,7 @@ import {
   uint64StringSchema,
   uint256StringSchema,
 } from "../domain/primitives.js";
+import type { WalletPolicy } from "../domain/wallet-policy.js";
 import {
   encodeAccountExecuteBatch,
   encodeInstallMandateSession,
@@ -200,12 +202,39 @@ export function encodeSetAccountPolicy(
   });
 }
 
+/** One standing ERC-20 allowance the smart account grants MandateExecutor. */
+export type ExecutorAllowance = { token: Address; amount: bigint };
+
+/**
+ * The standing allowance a reviewed Wallet Policy grants MandateExecutor: one
+ * entry per catalog token, in catalog order. Only the policy's active asset is
+ * spendable, and only up to its rolling daily cap; protected, listed-off, and
+ * unknown tokens stay at zero. A policy and its catalog are compared
+ * case-insensitively, and the catalog address is what the batch approves.
+ */
+export function deriveExecutorAllowances(
+  policy: WalletPolicy,
+  tokens: readonly Address[],
+): ExecutorAllowance[] {
+  return tokens.map((token) => {
+    const active = policy.activeAssets.find(
+      (asset) => asset.token.toLowerCase() === token.toLowerCase(),
+    );
+    return { amount: active ? BigInt(active.rollingDailyCap) : 0n, token };
+  });
+}
+
+/**
+ * The root batch that installs or removes a session, records the policy in
+ * MandateExecutor, and sets the standing allowance for every catalog token.
+ */
 export function encodeAccountPolicyTransition(input: {
   account: Address;
   mandateExecutor: Address;
   permissionCallData: Hex;
   policy: AccountPolicy;
   rootSignature: Hex;
+  allowances: readonly ExecutorAllowance[];
 }) {
   return encodeAccountExecuteBatch([
     {
@@ -218,6 +247,15 @@ export function encodeAccountPolicyTransition(input: {
       target: input.mandateExecutor,
       value: 0n,
     },
+    ...input.allowances.map((allowance) => ({
+      data: encodeFunctionData({
+        abi: erc20Abi,
+        args: [input.mandateExecutor, allowance.amount],
+        functionName: "approve",
+      }),
+      target: allowance.token,
+      value: 0n,
+    })),
   ]);
 }
 

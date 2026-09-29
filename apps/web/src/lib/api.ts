@@ -1,5 +1,8 @@
 import {
+  type EstimateUserOperationRequest,
+  type EstimateUserOperationResponse,
   type ExecutionReceipt,
+  estimateUserOperationResponseSchema,
   executionReceiptSchema,
   type FaucetClaimResponse,
   type FaucetStatus,
@@ -14,12 +17,17 @@ import {
   policyTransitionPreparedSchema,
   publicConfigSchema,
   REASON_MESSAGES,
+  type SubmitUserOperationResponse,
   simulationCreatedSchema,
+  submitUserOperationResponseSchema,
   type TaskDetail,
   type TaskSummary,
   taskCompiledSchema,
   taskDetailSchema,
   taskListResponseSchema,
+  type UserOperationRequest,
+  type UserOperationStatus,
+  userOperationStatusSchema,
   type WalletSessionView,
   walletChallengeResponseSchema,
   walletPolicyCreatedSchema,
@@ -205,4 +213,27 @@ export const api = {
 
   claimFaucet: (token: string): Promise<FaucetClaimResponse> =>
     request(faucetClaimResponseSchema, "/faucet/claims", { token, body: {} }),
+
+  estimateOperation: (
+    token: string,
+    body: EstimateUserOperationRequest,
+  ): Promise<EstimateUserOperationResponse> =>
+    request(estimateUserOperationResponseSchema, "/operations/estimate", {
+      token,
+      body,
+    }),
+
+  submitOperation: (
+    token: string,
+    body: UserOperationRequest,
+  ): Promise<SubmitUserOperationResponse> =>
+    request(submitUserOperationResponseSchema, "/operations", { token, body }),
+
+  operationStatus: (
+    token: string,
+    userOperationHash: string,
+  ): Promise<UserOperationStatus> =>
+    request(userOperationStatusSchema, `/operations/${userOperationHash}`, {
+      token,
+    }),
 };

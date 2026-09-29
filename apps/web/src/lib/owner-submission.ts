@@ -1,8 +1,9 @@
 import { type Address, type Hash, hashSchema } from "@perago/sdk";
 import { type Hex, keccak256 } from "viem";
 
+/** A sponsored operation has no transaction hash until the bundler includes it. */
 export type PendingOwnerTransaction = {
-  transactionHash: Hash;
+  transactionHash: Hash | null;
   userOperationHash: Hash | null;
 };
 
@@ -20,7 +21,10 @@ function parsePending(value: string): PendingOwnerTransaction {
       "The pending owner transaction record is invalid; do not broadcast again.",
     );
   return {
-    transactionHash: hashSchema.parse(parsed.transactionHash),
+    transactionHash:
+      parsed.transactionHash === null
+        ? null
+        : hashSchema.parse(parsed.transactionHash),
     userOperationHash:
       parsed.userOperationHash === null
         ? null

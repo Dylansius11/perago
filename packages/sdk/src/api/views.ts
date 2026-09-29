@@ -45,6 +45,8 @@ export const publicConfigSchema = z.strictObject({
     .strictObject({ transaction: z.string().url(), address: z.string().url() })
     .nullable(),
   faucet: z.strictObject({ enabled: z.boolean() }),
+  /** True when the API can submit this account's root operations to a sponsored bundler. */
+  sponsorship: z.strictObject({ enabled: z.boolean() }),
 });
 
 export const walletSessionViewSchema = z.strictObject({
