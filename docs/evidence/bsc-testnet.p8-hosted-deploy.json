@@ -10,10 +10,14 @@
     "rootDirectory": "apps/web",
     "gitRepository": "Dylansius11/perago",
     "productionUrl": "https://perago-app.vercel.app",
-    "redirects": ["https://perago-chi.vercel.app -> https://perago-app.vercel.app (308)"],
+    "redirects": [
+      "https://perago-chi.vercel.app -> https://perago-app.vercel.app (308)"
+    ],
     "deployedCommit": "8468d5017737c1a68ba646abd2cca6ad4ebcfd2e",
     "deployedRef": "dev",
-    "publicEnv": { "NEXT_PUBLIC_PERAGO_API_URL": "https://perago-api.43-129-38-115.nip.io" },
+    "publicEnv": {
+      "NEXT_PUBLIC_PERAGO_API_URL": "https://perago-api.43-129-38-115.nip.io"
+    },
     "check": "Headless browser load of /app fetched GET /config from the hosted API with status 200 and recorded no page errors; /faucet rendered its owner-wallet step."
   },
   "api": {
@@ -50,7 +54,16 @@
     "connection": "session pooler aws-0-ap-southeast-1.pooler.supabase.com:5432, sslmode=verify-full, trusting deploy/vps/supabase-root-2021-ca.crt",
     "tlsNegativeCheck": "Without the Supabase root CA, Node and Bun both refused the pooler with SELF_SIGNED_CERT_IN_CHAIN",
     "migrations": {
-      "firstRun": ["0000_constrained_lifecycle.sql", "0001_wallet_auth_policy_lifecycle.sql", "0002_task_compilation.sql", "0003_mandate_signing.sql", "0004_execution_worker.sql", "0005_chain_event_reorg_versions.sql", "0006_commerce_settlement.sql", "0007_faucet_claims.sql"],
+      "firstRun": [
+        "0000_constrained_lifecycle.sql",
+        "0001_wallet_auth_policy_lifecycle.sql",
+        "0002_task_compilation.sql",
+        "0003_mandate_signing.sql",
+        "0004_execution_worker.sql",
+        "0005_chain_event_reorg_versions.sql",
+        "0006_commerce_settlement.sql",
+        "0007_faucet_claims.sql"
+      ],
       "rerun": []
     }
   },
