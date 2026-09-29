@@ -35,6 +35,12 @@ describe("loadApiConfig", () => {
   it("retains the browser origin without a URL path for CORS", () => {
     expect(loadApiConfig(required).webOrigin).toBe("http://localhost:3000");
   });
+  it("binds loopback unless a container host is set explicitly", () => {
+    expect(loadApiConfig(required).host).toBe("127.0.0.1");
+    expect(
+      loadApiConfig({ ...required, PERAGO_API_HOST: "0.0.0.0" }).host,
+    ).toBe("0.0.0.0");
+  });
   it("requires an OpenRouter key without accepting the retired Gemini key", () => {
     expect(loadApiConfig(required).openRouterApiKey).toBe("test-key");
     expect(() =>

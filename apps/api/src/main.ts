@@ -194,7 +194,7 @@ async function start(): Promise<void> {
   });
   const server = serve({
     fetch: app.fetch,
-    hostname: "127.0.0.1",
+    hostname: config.host,
     port: config.port,
   });
   const stop = () => {

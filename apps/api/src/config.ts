@@ -15,6 +15,8 @@ const DEFAULT_WEB_ORIGIN = "http://localhost:3000";
 
 export type ApiConfig = {
   authUri: string;
+  /** Listen address. Loopback by default; a container sets `0.0.0.0`. */
+  host: string;
   databaseUrl: string;
   executorAddress: Address;
   openRouterApiKey: string;
@@ -87,6 +89,7 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   ).origin;
   return {
     authUri,
+    host: env.PERAGO_API_HOST || "127.0.0.1",
     databaseUrl: required(env, "PERAGO_DATABASE_URL"),
     executorAddress: addressSchema.parse(
       required(env, "PERAGO_EXECUTOR_ADDRESS"),
