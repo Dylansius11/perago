@@ -31,7 +31,7 @@ Thumbs.db
 .vscode/
 .idea/
 .impeccable/
-graphify-out/*.sig
-graphify-out/20*/
+/docs/
+/graphify-out/
 
 /reference

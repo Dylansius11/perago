@@ -120,11 +120,11 @@ Onchain state wins over the database. The API rebuilds receipts from finalized c
 
 ## Onchain evidence
 
-Everything below is on BNB Smart Chain Testnet (chain 97). Per-run reports live in [`docs/evidence/`](docs/evidence/) and pinned addresses and code hashes in [`deployments/`](deployments/).
+Everything below is on BNB Smart Chain Testnet (chain 97). Pinned addresses and code hashes are in [`deployments/`](deployments/). The `docs/` evidence and specifications are local-only and are not included in a fresh clone.
 
 ### Deployed contracts
 
-None of these contracts has an owner, admin, or upgrade path. All seven are source-verified on Sourcify with a full creation and runtime bytecode match ([report](docs/evidence/bsc-testnet.sourcify-verification.json)).
+None of these contracts has an owner, admin, or upgrade path. All seven were source-verified on Sourcify with a full creation and runtime bytecode match; the public verification pages are linked below.
 
 | Contract | Address | Creation tx | Source |
 | --- | --- | --- | --- |
@@ -140,19 +140,19 @@ None of these contracts has an owner, admin, or upgrade path. All seven are sour
 
 | Run | What happened | Transactions |
 | --- | --- | --- |
-| Natural-language swap ([report](docs/evidence/bsc-testnet.phase4-swap-journey.json)) | "Swap 0.01 WBNB for CAKE": policy activated, mandate signed, one PancakeSwap V3 swap above the signed minimum, verified receipt. Replays and tampered spend, minimum, recipient, adapter, selector, target, or action were all refused | [authorize](https://testnet.bscscan.com/tx/0xf673c21a630b9b4a84be7090161a0ea60e86f99bbabb35473203c7bd35cc4278) · [begin](https://testnet.bscscan.com/tx/0x71076311f97375bd780770a964d1b00169734217df2f877e466520758a35626f) · [perform](https://testnet.bscscan.com/tx/0xa1a60d2fd56b3e5387026f7623b8bfb9f503c41d282e17a4f95ff9bd5ddfe64b) |
-| Natural-language stake ([report](docs/evidence/bsc-testnet.phase5-stake-journey.json)) | "Stake 1 CAKE": 24,271,418,072 CAKE Pool shares minted above the signed minimum. The worker was killed after persisting the submission and recovered without a second one. A stake simulated against an old position was refused `STALE_POSITION`. The owner then withdrew | [authorize](https://testnet.bscscan.com/tx/0x7232219c0df47c4216db18a35493523cedbf5382e07196474249301d98f9e159) · [begin](https://testnet.bscscan.com/tx/0x6ecbeea5bf4ded07be5a1780326504bc6d80cb3adca60f05df39eb058f2ab65d) · [perform](https://testnet.bscscan.com/tx/0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92) · [withdraw](https://testnet.bscscan.com/tx/0xafc0e7c9e4d2180169897304a2b3ee37d33c2464c11761fc212b80669bc5d350) |
-| Owner-signed swap from the browser ([report](docs/evidence/bsc-testnet.p7-owner-swap-success.json)) | The owner signed in MetaMask from the Perago console; the worker executed and the mandate finalized `SUCCEEDED` | [authorize](https://testnet.bscscan.com/tx/0x9b5a09f8ae977c1a2ab4bb7895709e1a0681362aedc44dbfb36a20bd1dcec122) · [begin](https://testnet.bscscan.com/tx/0xa6b7239683a07f77b64ea004c7767704ee6847f26e65e7ba9443636a5f5be620) · [perform](https://testnet.bscscan.com/tx/0x46baf2235648655a959dc0756539fac81755f2c966b0bfd28c5ba30c15e56b10) |
-| Wallet Policy on and off ([report](docs/evidence/bsc-testnet.p3-policy-live.json)) | One atomic root UserOperation each way changes the account permission and the executor policy together | [activate](https://testnet.bscscan.com/tx/0x2b255ce76af5e41168e2b9cf4d26d2b5d44d6547c6976b485aa284f252c17ebc) · [revoke](https://testnet.bscscan.com/tx/0xcd538ff065c6a36fc68aa2f12dbd9440f0901c97e661f66d39e4762bbb423f03) |
-| Bounded session ([report](docs/evidence/bsc-testnet.account-live.json)) | The session made its one allowed call and was rejected for an unrelated target, an unlisted selector, a module install, a self-call, an over-limit spend, an expired window, and after revocation | [session call](https://testnet.bscscan.com/tx/0xa085e0f0b4d65632fa2c5f5fb2382690034e98b337cce99ac823466dd9a641ed) · [revocation](https://testnet.bscscan.com/tx/0x2b2c180d9a0345458bad31e7cf65c39476d9c2fa20600ecac4e428987dc44574) |
-| ERC-8183 job lifecycle on the BNB APEX kernel ([report](docs/evidence/bsc-testnet.protocol-live.json)) | Completion paid the provider, an evaluator rejection refunded the client, and an expired job was refunded permissionlessly | [complete](https://testnet.bscscan.com/tx/0x57264534623660086dc3b2d01c427e90ccdb5c4f8ddcd0e83e2fe692df566b63) · [reject](https://testnet.bscscan.com/tx/0x149ab35670880f2870acb829284333424e07c84ee3323cde0303f573a11a3171) · [refund](https://testnet.bscscan.com/tx/0x9470fd0087f6ad8a04d7dc0069f798ee5774b4eee1e99ba66e6bc0793c234fd7) |
-| tBNB faucet ([report](docs/evidence/bsc-testnet.p7-faucet-claim.json)) | A rate-limited 0.02 tBNB claim so testers can fund a smart account without leaving Perago | [claim](https://testnet.bscscan.com/tx/0x7a0b1474b7ddbf61998f2299bb573c22127b4d7a5963ef7a758dbc53bbc0e99e) |
+| Natural-language swap | "Swap 0.01 WBNB for CAKE": policy activated, mandate signed, one PancakeSwap V3 swap above the signed minimum, verified receipt. Replays and tampered spend, minimum, recipient, adapter, selector, target, or action were all refused | [authorize](https://testnet.bscscan.com/tx/0xf673c21a630b9b4a84be7090161a0ea60e86f99bbabb35473203c7bd35cc4278) · [begin](https://testnet.bscscan.com/tx/0x71076311f97375bd780770a964d1b00169734217df2f877e466520758a35626f) · [perform](https://testnet.bscscan.com/tx/0xa1a60d2fd56b3e5387026f7623b8bfb9f503c41d282e17a4f95ff9bd5ddfe64b) |
+| Natural-language stake | "Stake 1 CAKE": 24,271,418,072 CAKE Pool shares minted above the signed minimum. The worker was killed after persisting the submission and recovered without a second one. A stake simulated against an old position was refused `STALE_POSITION`. The owner then withdrew | [authorize](https://testnet.bscscan.com/tx/0x7232219c0df47c4216db18a35493523cedbf5382e07196474249301d98f9e159) · [begin](https://testnet.bscscan.com/tx/0x6ecbeea5bf4ded07be5a1780326504bc6d80cb3adca60f05df39eb058f2ab65d) · [perform](https://testnet.bscscan.com/tx/0xeca34f4d59317da2c44606e5c369b71bd7e8844a75689c580f41d2b0aac98b92) · [withdraw](https://testnet.bscscan.com/tx/0xafc0e7c9e4d2180169897304a2b3ee37d33c2464c11761fc212b80669bc5d350) |
+| Owner-signed swap from the browser | The owner signed in MetaMask from the Perago console; the worker executed and the mandate finalized `SUCCEEDED` | [authorize](https://testnet.bscscan.com/tx/0x9b5a09f8ae977c1a2ab4bb7895709e1a0681362aedc44dbfb36a20bd1dcec122) · [begin](https://testnet.bscscan.com/tx/0xa6b7239683a07f77b64ea004c7767704ee6847f26e65e7ba9443636a5f5be620) · [perform](https://testnet.bscscan.com/tx/0x46baf2235648655a959dc0756539fac81755f2c966b0bfd28c5ba30c15e56b10) |
+| Wallet Policy on and off | One atomic root UserOperation each way changes the account permission and the executor policy together | [activate](https://testnet.bscscan.com/tx/0x2b255ce76af5e41168e2b9cf4d26d2b5d44d6547c6976b485aa284f252c17ebc) · [revoke](https://testnet.bscscan.com/tx/0xcd538ff065c6a36fc68aa2f12dbd9440f0901c97e661f66d39e4762bbb423f03) |
+| Bounded session | The session made its one allowed call and was rejected for an unrelated target, an unlisted selector, a module install, a self-call, an over-limit spend, an expired window, and after revocation | [session call](https://testnet.bscscan.com/tx/0xa085e0f0b4d65632fa2c5f5fb2382690034e98b337cce99ac823466dd9a641ed) · [revocation](https://testnet.bscscan.com/tx/0x2b2c180d9a0345458bad31e7cf65c39476d9c2fa20600ecac4e428987dc44574) |
+| ERC-8183 job lifecycle on the BNB APEX kernel | Completion paid the provider, an evaluator rejection refunded the client, and an expired job was refunded permissionlessly | [complete](https://testnet.bscscan.com/tx/0x57264534623660086dc3b2d01c427e90ccdb5c4f8ddcd0e83e2fe692df566b63) · [reject](https://testnet.bscscan.com/tx/0x149ab35670880f2870acb829284333424e07c84ee3323cde0303f573a11a3171) · [refund](https://testnet.bscscan.com/tx/0x9470fd0087f6ad8a04d7dc0069f798ee5774b4eee1e99ba66e6bc0793c234fd7) |
+| tBNB faucet | A rate-limited 0.02 tBNB claim so testers can fund a smart account without leaving Perago | [claim](https://testnet.bscscan.com/tx/0x7a0b1474b7ddbf61998f2299bb573c22127b4d7a5963ef7a758dbc53bbc0e99e) |
 
 ### Tested before it touched a chain
 
 - The Foundry suite covers the 12 safety invariants with 13 named properties across 17 honest and adversarial actions, with a reachability check so the run cannot pass vacuously. Authorization and execution fuzz properties ran at 10,000 runs each.
-- Fork journeys on a local copy of chain 97 cover the browser flow end to end: wrong wallet or chain, stale quotes, provider outages, revocation, onchain expiry, verifier failure, and exact-signature replay ([report](docs/evidence/bsc-testnet.fork.phase7-browser.json)).
-- Outcome-linked payment is proven on a fork with the real APEX kernel: a payment outage leaves the execution pending, a restart settles it exactly once, and a failed execution refunds without paying the provider ([report](docs/evidence/bsc-testnet.fork.phase6-settlement-smoke.json)).
+- Fork journeys on a local copy of chain 97 cover the browser flow end to end: wrong chain, wallet rejection, stale quotes, provider outages, revocation, onchain expiry, verifier failure, and exact-signature replay.
+- Outcome-linked payment was proven on a fork with the real APEX kernel: a payment outage left the execution pending, a restart settled it exactly once, and a failed execution refunded without paying the provider. Fork evidence is local-only.
 
 ## What is live and what is not
 
@@ -174,7 +174,7 @@ None of these contracts has an owner, admin, or upgrade path. All seven are sour
 7. Seed phrases and private keys never reach the model, the API, the logs, or this repository.
 8. Onchain truth wins over the database, and reconciliation is replay-safe.
 
-The full list and threat model are in the [smart-contract specification](docs/technical/SMART-CONTRACT.md).
+The full list and threat model are kept in the local-only smart-contract specification (`docs/technical/SMART-CONTRACT.md`).
 
 ## Run it locally
 
@@ -215,12 +215,12 @@ packages/
   contracts/  MandateExecutor, adapters, verifiers, ERC-8183 evaluator and hook
 deploy/vps/   Docker image, compose file, Caddy block, deploy script
 deployments/  Pinned chain-97 addresses and code hashes
-docs/         Product and technical sources of truth, plus run evidence
+docs/         Local-only product specifications and run evidence (not included in Git)
 ```
 
-## Documentation
+## Local documentation
 
-[Product requirements](docs/PRD.md) · [Architecture](docs/technical/ARCHITECTURE.md) · [Data model](docs/technical/ERD.md) · [Smart contracts and security](docs/technical/SMART-CONTRACT.md) · [Integrations](docs/technical/INTEGRATION.md) · [Tech stack](docs/technical/TECH-STACK.md) · [Build plan and status](docs/BUILD-PLAN.md) · [Lessons](docs/LESSONS.md)
+The `docs/` directory is intentionally not tracked. A fresh clone contains no specifications or evidence reports; keep a separate local backup if you need to review or continue work against them. Public chain transactions and source verification remain linked above.
 
 ## Known limits
 
