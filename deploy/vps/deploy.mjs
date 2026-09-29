@@ -24,11 +24,22 @@ function git(...args) {
   return result.stdout.trim();
 }
 
+/**
+ * Stores the script before running it: executed from stdin, `docker compose
+ * run` would read the rest of the script as its own input and skip it.
+ */
 function remote(script) {
   return new Promise((resolve, reject) => {
-    const ssh = spawn("ssh", ["-o", "BatchMode=yes", HOST, "bash -s"], {
-      stdio: ["pipe", "inherit", "inherit"],
-    });
+    const ssh = spawn(
+      "ssh",
+      [
+        "-o",
+        "BatchMode=yes",
+        HOST,
+        "umask 077; cat > perago/.deploy.sh && bash perago/.deploy.sh < /dev/null",
+      ],
+      { stdio: ["pipe", "inherit", "inherit"] },
+    );
     ssh.on("error", reject);
     ssh.on("exit", (code) =>
       code === 0 ? resolve() : reject(new Error(`remote step exited ${code}`)),
