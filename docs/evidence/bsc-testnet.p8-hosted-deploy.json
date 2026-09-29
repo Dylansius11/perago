@@ -1,0 +1,77 @@
+{
+  "task": "P8-001",
+  "recordedAt": "2026-09-29T04:10:00Z",
+  "label": "hosted testnet-demo",
+  "chainId": 97,
+  "web": {
+    "platform": "Vercel",
+    "project": "perago",
+    "team": "dylansiusputra-2773s-projects",
+    "rootDirectory": "apps/web",
+    "gitRepository": "Dylansius11/perago",
+    "productionUrl": "https://perago-app.vercel.app",
+    "redirects": [
+      "https://perago-chi.vercel.app -> https://perago-app.vercel.app (308)"
+    ],
+    "deployedCommit": "8468d5017737c1a68ba646abd2cca6ad4ebcfd2e",
+    "deployedRef": "dev",
+    "publicEnv": {
+      "NEXT_PUBLIC_PERAGO_API_URL": "https://perago-api.43-129-38-115.nip.io"
+    },
+    "check": "Headless browser load of /app fetched GET /config from the hosted API with status 200 and recorded no page errors; /faucet rendered its owner-wallet step."
+  },
+  "api": {
+    "host": "Ubuntu 24.04.4 VPS 43.129.38.115, Docker 29.6.1, Compose v5.3.1",
+    "publicUrl": "https://perago-api.43-129-38-115.nip.io",
+    "tls": "Let's Encrypt certificate issued to perago-api.43-129-38-115.nip.io by the shared Caddy 2.11.4 container",
+    "release": "477a31d038e9",
+    "image": "perago:477a31d038e9 (node:24.21.0-bookworm-slim, bun 1.3.14, pnpm 12.4.2)",
+    "manifest": "deployments/bsc-testnet.demo.perago.json",
+    "memoryLimits": { "api": "384m", "worker": "256m" },
+    "observedMemory": { "api": "86.4MiB", "worker": "71.4MiB" },
+    "runtimeUser": "node (uid 1000)",
+    "checks": {
+      "health": "GET /health -> 200 {\"status\":\"ok\"}",
+      "config": "GET /config -> deploymentLabel testnet-demo, venue testnet, chainId 97, mandateExecutor 0x5587896753ad6f65ad40ee812f4e1160f6691b7c, sessionSigner 0x5ad812b956a0cbfb6805b1f4102292b823415a18, faucet enabled, adapters SWAP and STAKE",
+      "internalRoutes": "POST /internal/executions/lease from the internet -> 404 at Caddy",
+      "cors": "OPTIONS from https://perago-app.vercel.app -> 204 with Access-Control-Allow-Origin; from https://evil.example -> no Access-Control-Allow-Origin",
+      "manifestToChain": "API startup asserts the pinned code hashes of the EntryPoint, the semi-modular account implementation, and the testnet-demo MandateExecutor against chain 97 before listening; the API started",
+      "walletLogin": "POST /auth/challenges -> 201 for account 0x2863167c8653b9369ef51de203742a3429ac57e2 with root owner 0x2E42E0FB693765715014934282b9A7d3cF0c3818 (the disposable manifest deployer); POST /auth/sessions -> 201; GET /auth/session -> 200; no token -> 401",
+      "challengeReplay": "Replaying the consumed challenge returned 500 INTERNAL_ERROR on release 8468d5017737; commit 477a31d maps it to 409 REQUEST_CONFLICT with a regression assertion in app.integration.test.ts",
+      "unknownReceipt": "GET /receipts/0x11...11 -> 404 NOT_FOUND"
+    }
+  },
+  "worker": {
+    "readyz": "{\"checks\":{\"api\":true,\"chain\":true,\"executorGas\":true,\"mandateExecutorCode\":true},\"ready\":true}",
+    "executor": "0x5ad812b956A0CbFB6805B1F4102292B823415A18",
+    "executorGasAtDeploy": "0.03221573 tBNB",
+    "crashRecovery": "sudo kill -9 of the worker's host PID; Docker restarted it (RestartCount 1) and /readyz returned ready"
+  },
+  "database": {
+    "provider": "Supabase",
+    "project": "pmmcliaefapvkuyybxkh (perago, ap-southeast-1)",
+    "serverVersion": "17.6",
+    "connection": "session pooler aws-0-ap-southeast-1.pooler.supabase.com:5432, sslmode=verify-full, trusting deploy/vps/supabase-root-2021-ca.crt",
+    "tlsNegativeCheck": "Without the Supabase root CA, Node and Bun both refused the pooler with SELF_SIGNED_CERT_IN_CHAIN",
+    "migrations": {
+      "firstRun": [
+        "0000_constrained_lifecycle.sql",
+        "0001_wallet_auth_policy_lifecycle.sql",
+        "0002_task_compilation.sql",
+        "0003_mandate_signing.sql",
+        "0004_execution_worker.sql",
+        "0005_chain_event_reorg_versions.sql",
+        "0006_commerce_settlement.sql",
+        "0007_faucet_claims.sql"
+      ],
+      "rerun": []
+    }
+  },
+  "rollback": "pnpm deploy:vps --rollback 8468d5017737 then --rollback 477a31d038e9; both swaps passed health checks and /health and /config answered after each",
+  "secretScan": "463 tracked files checked for every local and hosted secret value, OpenRouter and Alchemy key patterns, and PostgreSQL URLs with passwords: no hits",
+  "notProvenHere": [
+    "An owner-signed hosted mandate that is leased, executed, and finalized on Supabase data",
+    "Reconciliation of the existing owner account 0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944, whose onchain Wallet Policy predates the hosted database",
+    "Live ERC-8183 payment, deferred by the user on 2026-09-29"
+  ]
+}

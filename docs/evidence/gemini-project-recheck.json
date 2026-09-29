@@ -1,0 +1,34 @@
+{
+  "recordedAtUtc": "2026-09-28T15:05:46Z",
+  "updatedAtUtc": "2026-09-28T15:09:15Z",
+  "venue": "Google AI Studio Gemini API, direct REST from local host",
+  "operatorReportedProjectResource": "projects/635539768402",
+  "projectBinding": "Not independently established: the Gemini models endpoint authenticates the key but does not identify its Google Cloud project.",
+  "credential": "Current PERAGO_GEMINI_API_KEY read from ignored .env; value and fingerprint not recorded",
+  "checks": [
+    {
+      "method": "GET /v1beta/models with current key",
+      "httpStatus": 200,
+      "generateContentListed": ["gemini-3.8-flash", "gemini-3.7-flash"]
+    },
+    {
+      "method": "createGeminiPlanner with the real closed schema and one synthetic 0.005 WBNB-to-CAKE goal",
+      "attempts": [
+        { "model": "gemini-3.8-flash", "httpStatus": 503 },
+        { "model": "gemini-3.7-flash", "httpStatus": 503 }
+      ],
+      "result": "PlannerUnavailableError; no candidate or plan"
+    },
+    {
+      "method": "one schema-free Reply OK request to gemini-3.8-flash using the current key",
+      "httpStatus": 503,
+      "errorStatus": "UNAVAILABLE"
+    },
+    {
+      "method": "restart local testnet-demo API with --env-file=../../.env and GET /health",
+      "httpStatus": 200
+    }
+  ],
+  "conclusion": "Current key authenticates for model enumeration, but neither selected model generated a response. Planner completion and project attribution remain unproven.",
+  "primarySource": "https://ai.google.dev/gemini-api/docs/troubleshooting"
+}

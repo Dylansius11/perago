@@ -83,6 +83,10 @@ function chainWith(overrides: Partial<ChainView> = {}): ChainView {
     allowance: MAX_INPUT,
     balance: MAX_INPUT,
     executorNonce: 5n,
+    executorGas: {
+      balance: 10_000_000_000_000_000n,
+      price: 1_000_000_000n,
+    },
     commerce: null,
     pending: null,
     ...overrides,
@@ -196,6 +200,21 @@ describe("decide", () => {
       });
     });
 
+    it("keeps a signed mandate unconsumed when executor gas cannot cover the operation", () => {
+      expect(
+        decide(
+          jobWith(),
+          chainWith({
+            executorGas: {
+              balance: 2_834_071_000_000_000n,
+              price: 1_000_000_000n,
+            },
+          }),
+          WINDOW,
+        ),
+      ).toEqual({ kind: "DEFER", code: "EXECUTOR_GAS_SHORT" });
+    });
+
     it("never authorizes at or after expiry", () => {
       expect(
         decide(jobWith(), chainWith({ timestamp: EXPIRES_AT }), WINDOW).kind,
@@ -235,6 +254,21 @@ describe("decide", () => {
         decide(job, chainWith({ allowance: 0n, record: authorized }), WINDOW)
           .kind,
       ).toBe("DEFER");
+    });
+    it("does not begin when gas became insufficient after authorization", () => {
+      expect(
+        decide(
+          job,
+          chainWith({
+            record: authorized,
+            executorGas: {
+              balance: 2_834_071_000_000_000n,
+              price: 1_000_000_000n,
+            },
+          }),
+          WINDOW,
+        ),
+      ).toEqual({ kind: "DEFER", code: "EXECUTOR_GAS_SHORT" });
     });
   });
 

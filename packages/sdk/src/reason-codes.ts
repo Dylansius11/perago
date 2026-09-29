@@ -80,6 +80,8 @@ export const REASON_MESSAGES = {
     "The smart account has not approved MandateExecutor for this task's exact input yet.",
   INPUT_BALANCE_SHORT:
     "The smart account holds less than this task's signed input.",
+  EXECUTOR_GAS_SHORT:
+    "The executor needs more testnet gas before it can safely authorize or begin this mandate.",
   TRANSACTION_REVERTED:
     "An execution transaction was included but reverted; the chain state decides the next step.",
   ONCHAIN_SUCCEEDED:

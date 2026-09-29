@@ -76,7 +76,7 @@ The stable product states from the PRD are `SIGNED`, `AUTHORIZED`, `EXECUTING`, 
 
 `QUEUED | LEASED | AUTHORIZING | AUTHORIZED | EXECUTING | VERIFYING | SETTLING | RETRY_WAIT | TERMINAL | REJECTED`
 
-This is operational state only. Chain-derived mandate and receipt status wins. `REJECTED` (migration `0004`) ends a job whose mandate `authorize` reverts at a finalized block, so the mandate never gained authority. `RETRY_WAIT` parks a job only on a precondition the chain may still satisfy (`APPROVAL_MISSING`, `INPUT_BALANCE_SHORT`, `CHAIN_UNAVAILABLE`).
+This is operational state only. Chain-derived mandate and receipt status wins. `REJECTED` (migration `0004`) ends a job whose mandate `authorize` reverts at a finalized block, so the mandate never gained authority. `RETRY_WAIT` parks a job only on a precondition the chain may still satisfy (`APPROVAL_MISSING`, `INPUT_BALANCE_SHORT`, `EXECUTOR_GAS_SHORT`, `CHAIN_UNAVAILABLE`, `COMMERCE_JOB_INVALID`).
 
 ### `execution_transaction_kind`
 

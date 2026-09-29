@@ -1,0 +1,22 @@
+# Secrets and machine-local state never enter an image.
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/.vercel
+.git
+graphify-out
+cache
+reference
+docs
+.agents
+.impeccable
+# The web client ships on Vercel and contracts are not built here; keep only
+# their manifests so the frozen workspace lockfile still resolves.
+apps/web/*
+!apps/web/package.json
+packages/contracts/*
+!packages/contracts/package.json

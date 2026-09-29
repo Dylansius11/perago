@@ -1,0 +1,25 @@
+# Perago API site block, appended once to the shared VPS Caddyfile
+# (/opt/annona/deploy/vps/Caddyfile, mounted into vps-caddy-1). Nothing else in
+# that file is edited. Validate and reload without downtime:
+#   docker exec vps-caddy-1 caddy validate --config /etc/caddy/Caddyfile
+#   docker exec vps-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+# nip.io resolves to the embedded IP, so Let's Encrypt can issue a real
+# certificate without a purchased domain.
+perago-api.43-129-38-115.nip.io {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	# The worker reaches /internal over the private compose network only.
+	respond /internal/* 404
+	reverse_proxy perago-api-1:8787 {
+		transport http {
+			dial_timeout 5s
+			# The planner call is bounded at 60 s.
+			response_header_timeout 90s
+		}
+	}
+}

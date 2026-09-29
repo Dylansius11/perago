@@ -284,12 +284,21 @@ describe("P4-002 execution queue", () => {
     expect((await leaseExecution(sql, "worker", config)).job?.mandateHash).toBe(
       hex(unbound.mandateHash),
     );
-    await deferExecution(
+    const deferred = await deferExecution(
       sql,
       hex(unbound.mandateHash),
-      { workerId: "worker", code: "CHAIN_UNAVAILABLE", retryAfterSeconds: 60 },
+      {
+        workerId: "worker",
+        code: "EXECUTOR_GAS_SHORT",
+        retryAfterSeconds: 60,
+      },
       config,
     );
+    expect(deferred.job).toMatchObject({
+      status: "RETRY_WAIT",
+      lastError: { code: "EXECUTOR_GAS_SHORT" },
+      pending: null,
+    });
     expect((await leaseExecution(sql, "other", config)).job).toBeNull();
   });
 

@@ -247,6 +247,7 @@ export async function deferExecution(
     code:
       | "APPROVAL_MISSING"
       | "INPUT_BALANCE_SHORT"
+      | "EXECUTOR_GAS_SHORT"
       | "CHAIN_UNAVAILABLE"
       | "COMMERCE_JOB_INVALID";
     retryAfterSeconds: number;

@@ -66,7 +66,16 @@ export async function readChainView(input: {
     });
   }
 
-  const [record, allowance, balance, executorNonce, commerceView] =
+  const executorGas =
+    job.pending === null &&
+    (job.mandateStatus === "SIGNED" || job.mandateStatus === "AUTHORIZED")
+      ? Promise.all([
+          client.getBalance({ address: executor, ...at }),
+          client.getGasPrice(),
+        ]).then(([balance, price]) => ({ balance, price }))
+      : Promise.resolve(null);
+
+  const [record, allowance, balance, executorNonce, commerceView, gasView] =
     await Promise.all([
       client.readContract({
         ...at,
@@ -91,6 +100,7 @@ export async function readChainView(input: {
       }),
       client.getTransactionCount({ address: executor, ...at }),
       commerce,
+      executorGas,
     ]);
 
   const status = MANDATE_RECORD_STATUSES[record.status];
@@ -123,6 +133,7 @@ export async function readChainView(input: {
     allowance,
     balance,
     executorNonce: BigInt(executorNonce),
+    executorGas: gasView,
     commerce: commerceView,
     pending,
   };

@@ -22,7 +22,7 @@ import { createApiApp } from "./app.js";
 import { loadBscTestnetCatalog } from "./compiler/catalog.js";
 import { apiAuthDomain, loadApiConfig } from "./config.js";
 import { loadDeployment } from "./deployment.js";
-import { createGroqPlanner } from "./planner/provider.js";
+import { createOpenRouterPlanner } from "./planner/provider.js";
 import {
   assertFaucetChain,
   createViemFaucetTransport,
@@ -137,9 +137,8 @@ async function start(): Promise<void> {
       now: () => new Date(),
       quoteTtlSeconds: 120,
     },
-    planner: createGroqPlanner({
-      apiKey: config.groqApiKey,
-      model: "openai/gpt-oss-120b",
+    planner: createOpenRouterPlanner({
+      apiKey: config.openRouterApiKey,
       timeoutMs: 60_000,
     }),
     policyConfig: {
@@ -195,7 +194,7 @@ async function start(): Promise<void> {
   });
   const server = serve({
     fetch: app.fetch,
-    hostname: "127.0.0.1",
+    hostname: config.host,
     port: config.port,
   });
   const stop = () => {

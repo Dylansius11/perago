@@ -131,12 +131,9 @@ function AccountConsole() {
               </Panel>
             ) : null}
             {ready.deployed &&
-            ready.funded &&
-            !ready.policy &&
             wbnb &&
             holdings.data &&
-            holdings.data.accountNative > 0n &&
-            holdings.data.tokens.WBNB?.balance === 0n ? (
+            holdings.data.accountNative > 0n ? (
               <Panel label="03 / Prepare input" className="!border-0">
                 <div className="p-5 md:p-8">
                   <h2 className="mb-3 text-2xl font-semibold">

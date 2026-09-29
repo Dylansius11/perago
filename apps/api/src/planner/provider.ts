@@ -1,68 +1,93 @@
-import Groq from "groq-sdk";
-
 import type { PlannerPrompt } from "./prompt.js";
 
-/**
- * The whole planner surface: one call that returns untrusted JSON. Transport
- * failure throws `PlannerUnavailableError`; any response, including a
- * malformed one, is returned for strict parsing by the compiler.
- */
+/** Returns untrusted JSON for deterministic validation; transport failures are retryable. */
 export type Planner = (prompt: PlannerPrompt) => Promise<unknown>;
 
 export class PlannerUnavailableError extends Error {}
 
-export type GroqPlannerConfig = {
+export type OpenRouterPlannerConfig = {
   apiKey: string;
-  model: string;
   timeoutMs: number;
 };
 
-export function createGroqPlanner(config: GroqPlannerConfig): Planner {
-  if (config.apiKey.length === 0) {
-    throw new RangeError("a Groq API key is required for the planner");
+/** One bounded request; malformed output remains untrusted and fails closed in the compiler. */
+export function createOpenRouterPlanner(
+  config: OpenRouterPlannerConfig,
+): Planner {
+  if (!config.apiKey.trim()) {
+    throw new RangeError("an OpenRouter API key is required for the planner");
   }
-  const client = new Groq({
-    apiKey: config.apiKey,
-    maxRetries: 1,
-    timeout: config.timeoutMs,
-  });
 
   return async (prompt) => {
-    let completion: Groq.Chat.ChatCompletion;
+    let response: Response;
     try {
-      completion = await client.chat.completions.create({
-        model: config.model,
-        messages: [
-          { role: "system", content: prompt.system },
-          { role: "user", content: prompt.user },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "perago_plan_candidate",
-            strict: true,
-            schema: prompt.schema,
-          },
+      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          "Content-Type": "application/json",
         },
-        include_reasoning: false,
-        max_completion_tokens: 4_096,
-        reasoning_effort: "medium",
-        temperature: 0,
+        body: JSON.stringify({
+          model: "stealth/space-bunny-alpha",
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "perago_plan_candidate",
+              strict: true,
+              schema: prompt.schema,
+            },
+          },
+          reasoning: { effort: "low" },
+          max_tokens: 2048,
+          temperature: 0,
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(config.timeoutMs),
       });
-    } catch (error) {
-      // Provider errors can echo request details; keep only the status class.
-      const status = error instanceof Groq.APIError ? error.status : undefined;
+    } catch {
+      throw new PlannerUnavailableError("planner request failed");
+    }
+
+    // Provider payloads can contain the key or goal; never read them on error.
+    if (!response.ok) {
       throw new PlannerUnavailableError(
-        `planner request failed${status === undefined ? "" : ` with HTTP ${status}`}`,
+        `planner request failed with HTTP ${response.status}`,
       );
     }
 
-    const choice = completion.choices[0];
-    if (choice?.finish_reason !== "stop" || !choice.message.content) {
+    let result: unknown;
+    try {
+      result = await response.json();
+    } catch {
       return null;
     }
+    if (typeof result !== "object" || result === null || !("choices" in result))
+      return null;
+    const choices = result.choices;
+    if (!Array.isArray(choices)) return null;
+    const choice: unknown = choices[0];
+    if (
+      typeof choice !== "object" ||
+      choice === null ||
+      !("finish_reason" in choice) ||
+      choice.finish_reason !== "stop" ||
+      !("message" in choice)
+    )
+      return null;
+    const message: unknown = choice.message;
+    if (
+      typeof message !== "object" ||
+      message === null ||
+      !("content" in message) ||
+      typeof message.content !== "string"
+    )
+      return null;
     try {
-      return JSON.parse(choice.message.content) as unknown;
+      return JSON.parse(message.content) as unknown;
     } catch {
       return null;
     }

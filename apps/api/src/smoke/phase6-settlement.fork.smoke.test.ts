@@ -56,7 +56,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
 import { loadDeployment, type PeragoDeployment } from "../deployment.js";
-import { createGroqPlanner } from "../planner/provider.js";
+import { createOpenRouterPlanner } from "../planner/provider.js";
 import { registerDeploymentAdapters } from "../services/mandates.js";
 import { createViemPolicyChainVerifier } from "../services/policy-chain.js";
 import {
@@ -82,7 +82,7 @@ import {
 const SMOKE = "Phase 6 settlement";
 const RPC = requiredEnv("PERAGO_BSC_TESTNET_RPC", SMOKE);
 const DATABASE_URL = requiredEnv("TEST_DATABASE_URL", SMOKE);
-const GROQ_KEY = requiredEnv("PERAGO_GROQ_API_KEY", SMOKE);
+const OPENROUTER_KEY = requiredEnv("PERAGO_OPENROUTER_API_KEY", SMOKE);
 const ANVIL = process.env.ANVIL_BIN || "anvil";
 const FORGE = process.env.FORGE_BIN || "forge";
 const PORT = 8551;
@@ -884,9 +884,8 @@ beforeAll(async () => {
       now: () => new Date(),
       quoteTtlSeconds: 120,
     },
-    planner: createGroqPlanner({
-      apiKey: GROQ_KEY,
-      model: "openai/gpt-oss-120b",
+    planner: createOpenRouterPlanner({
+      apiKey: OPENROUTER_KEY,
       timeoutMs: 60_000,
     }),
     policyConfig: {

@@ -1,0 +1,51 @@
+{
+  "venue": "bsc-testnet",
+  "chainId": 97,
+  "deployment": "testnet-demo",
+  "mandateExecutor": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
+  "account": "0x17fcce2b0c0cc44c4f88c6c09b6364a766ee7944",
+  "expiredUnsignedMandate": {
+    "hash": "0x6f73b1af0386ed646e7a6da9cb02297791570937d19ec014a5a6a57e166df797",
+    "workerResult": "REJECTED",
+    "reason": "AUTHORIZATION_REJECTED/ExpiredMandate",
+    "submissionAttempts": 0
+  },
+  "signedOwnerTask": {
+    "taskId": "535994b4-9b55-427d-93b8-e7125f0429fc",
+    "mandateHash": "0xd65662f05e7e4b0950f9a77506802be92ade68454dd55c65f2894619e60e1f11",
+    "authorize": {
+      "tx": "0xe91969c0df3445d44226b79d11f8701c634b5f628a0801a1148a29b083a90051",
+      "block": "133709693"
+    },
+    "begin": {
+      "tx": "0x17ae516ea115f77efc69bd9c7722def0c89c0a7574c7db0205e4ed5fbc74b87e",
+      "block": "133709705"
+    },
+    "perform": null,
+    "finalizeStalledExecution": {
+      "tx": "0x5f354e44c3049ad892d5701aa24343c1ac4f398287c7f0d840e5e13375bedef1",
+      "block": "133711056"
+    },
+    "receipt": "FAILED",
+    "reasonCode": "ONCHAIN_FAILED",
+    "authorityConsumed": true,
+    "verification": "NOT_VERIFIED",
+    "publicReceipt": "http://127.0.0.1:8787/receipts/0xd65662f05e7e4b0950f9a77506802be92ade68454dd55c65f2894619e60e1f11",
+    "explorer": "https://testnet.bscscan.com/tx/0x5f354e44c3049ad892d5701aa24343c1ac4f398287c7f0d840e5e13375bedef1"
+  },
+  "operationalDiagnosis": {
+    "failedStage": "PERFORM transaction estimation",
+    "entryPointError": "AA95 out of gas",
+    "executorBalanceTbnbAtBlock133709966": "0.00288766",
+    "gasPriceWeiAtBlock133709966": "1000000000",
+    "affordableGasAtBlock133709966": "2887660",
+    "declaredUserOperationGas": "4100000",
+    "source": "https://raw.githubusercontent.com/eth-infinitism/account-abstraction/v0.7.0/contracts/core/EntryPoint.sol",
+    "note": "The account did not swap: no perform UserOperation or success receipt was observed; finalizeStalledExecution was the terminal transaction."
+  },
+  "unsignedReplacementTask": {
+    "taskId": "c4a96b59-905c-42d6-8a65-12ac548dc98e",
+    "statusObserved": "READY_TO_SIMULATE",
+    "note": "Do not submit a second same-goal mandate before gas funding and owner review."
+  }
+}

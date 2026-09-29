@@ -1,0 +1,59 @@
+{
+  "venue": "bsc-testnet",
+  "chainId": 97,
+  "label": "testnet-demo",
+  "observation": "2026-09-29",
+  "source": "read-only Viem eth_getBlockByHash, eth_getTransactionReceipt, eth_call against the configured chain-97 RPC; user-provided screenshot of localhost browser was inspected but is not committed",
+  "contracts": {
+    "mandateExecutor": "0x5587896753ad6f65ad40ee812f4e1160f6691b7c",
+    "entryPoint": "0x0000000071727de22e5e9d8baf0edac6f37da032",
+    "account": "0x17fcCe2B0C0cc44c4F88C6C09b6364a766Ee7944",
+    "cake": "0xFa60D973F7642B748046464e165A65B7323b0DEE",
+    "pool": "0xeaf78e3AA2C19dF9495318Cd9EA2aD83Be7D5015"
+  },
+  "taskId": "c4a96b59-905c-42d6-8a65-12ac548dc98e",
+  "mandateHash": "0x8816882df3acd4e24feb1a37b534ee4d8398f97b751e3991feaebfdfc321dbde",
+  "authorization": {
+    "block": "133716113",
+    "blockHash": "0xd851c9727b024819f2fd479266fe75bf80e41c4880cf8f5213ca9a1000b54b08",
+    "transactionHash": "0x9b5a09f8ae977c1a2ab4bb7895709e1a0681362aedc44dbfb36a20bd1dcec122",
+    "receiptStatus": "success",
+    "event": "MandateAuthorized"
+  },
+  "begin": {
+    "block": "133716127",
+    "transactionHash": "0xa6b7239683a07f77b64ea004c7767704ee6847f26e65e7ba9443636a5f5be620",
+    "receiptStatus": "success",
+    "event": "ExecutionBegun"
+  },
+  "perform": {
+    "block": "133716142",
+    "blockHash": "0x4527b0d3e9136e548db8ef1b0f1c61629c2c1974377e6214437ccb3c0cd04cfe",
+    "transactionHash": "0x46baf2235648655a959dc0756539fac81755f2c966b0bfd28c5ba30c15e56b10",
+    "receiptStatus": "success",
+    "userOperationHash": "0x01fecbc28a501136b0dd726d26ad685a031d4f5604eec06a25e51267a009a38c",
+    "userOperationSucceeded": true,
+    "mandateReceiptStatus": "SUCCEEDED",
+    "verificationHash": "0xb901c055de1f52e6545d5f7e8a71b4807dae6977b643c45cdde95ec9204971e1",
+    "failureReasonHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "accountWbnbBefore": "0.015",
+    "accountWbnbAfter": "0.01",
+    "spentWbnb": "0.005",
+    "cakeDecimalsOnchain": 18,
+    "accountCakeBeforeRaw": "0",
+    "accountCakeAfterRaw": "175123703151939341038588566306",
+    "cakeTransferToAccountRaw": "175123703151939341038588566306",
+    "receivedCake": "175123703151.939341038588566306",
+    "poolWbnbBalanceAtBlock": "2.386117753678546299",
+    "poolCakeBalanceAtBlock": "16897429297177.493642698484901581"
+  },
+  "finality": {
+    "readAtFinalizedBlock": "133718310",
+    "localPostgresMandateStatus": "SUCCEEDED",
+    "localPostgresExecutionStatus": "TERMINAL",
+    "localPostgresReceiptStatus": "SUCCEEDED",
+    "authorityConsumed": true,
+    "localPostgresVerificationHashMatchedOnchain": true
+  },
+  "scope": "Owner-operated localhost web flow with real chain-97 RPC and local PostgreSQL; no hosted Supabase/Vercel/VPS proof, no bound ERC-8183 settlement. Large CAKE output reflects live testnet pool balances, not a decimal conversion error or mainnet market valuation."
+}

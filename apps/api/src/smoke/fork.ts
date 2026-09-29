@@ -6,24 +6,13 @@ import { fileURLToPath } from "node:url";
 import type { Address, Hash } from "@perago/sdk";
 import type { Sql } from "postgres";
 import { createPublicClient, createTestClient, http, keccak256 } from "viem";
-
+import { applyMigrations } from "../db/migrations.js";
 import type { PeragoDeployment } from "../deployment.js";
 
 /**
  * Local-fork plumbing shared by the phase smokes. Every write goes to a local
  * anvil fork of BSC Testnet; nothing here can reach chain 97.
  */
-
-export const MIGRATIONS = [
-  "0000_constrained_lifecycle.sql",
-  "0001_wallet_auth_policy_lifecycle.sql",
-  "0002_task_compilation.sql",
-  "0003_mandate_signing.sql",
-  "0004_execution_worker.sql",
-  "0005_chain_event_reorg_versions.sql",
-  "0006_commerce_settlement.sql",
-  "0007_faucet_claims.sql",
-] as const;
 
 /** Anvil's first well-known development key: public, funded only on the local fork. */
 export const ANVIL_KEY =
@@ -174,17 +163,10 @@ export async function deployUnboundExecutor(input: {
   };
 }
 
-/** Drops the schema and applies every migration in order. */
+/** Drops the schema and applies every checked-in migration in order. */
 export async function resetDatabase(sql: Sql): Promise<void> {
   await sql.unsafe("drop schema public cascade; create schema public");
-  for (const migration of MIGRATIONS) {
-    await sql.unsafe(
-      await readFile(
-        new URL(`../../drizzle/${migration}`, import.meta.url),
-        "utf8",
-      ),
-    );
-  }
+  await applyMigrations(sql);
 }
 
 /** The disposable deployer that holds testnet CAKE (`bsc-testnet.perago.json`). */

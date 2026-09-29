@@ -86,7 +86,7 @@ const taskConfig: TaskServiceConfig = {
   intentKey: Buffer.alloc(32, 7),
   now: () => now,
 };
-/** Scripted provider seam; the real Groq path is smoked separately. */
+/** Scripted provider seam; the real OpenRouter path is smoked separately. */
 const plannerQueue: unknown[] = [];
 let plannerCalls = 0;
 const planner: Planner = async () => {
@@ -217,6 +217,16 @@ describe("P3-002 API route smoke", () => {
     expect(sessionResponse.status).toBe(201);
     const session = (await sessionResponse.json()) as { token: string };
     authorization = `Bearer ${session.token}`;
+
+    const replayResponse = await app.request("/auth/sessions", {
+      body: JSON.stringify({ challengeId: challenge.challengeId, signature }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(replayResponse.status).toBe(409);
+    expect(await replayResponse.json()).toMatchObject({
+      error: { code: "REQUEST_CONFLICT" },
+    });
 
     const policyResponse = await app.request("/policies", {
       body: JSON.stringify({

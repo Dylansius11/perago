@@ -1,0 +1,46 @@
+{
+  "recordedAtUtc": "2026-09-28T14:49:51Z",
+  "venue": "Google AI Studio Gemini API, direct REST from local API host",
+  "credential": "rotated server-only PERAGO_GEMINI_API_KEY from ignored .env; value not recorded",
+  "checks": [
+    {
+      "request": "GET /v1beta/models with rotated project key",
+      "httpStatus": 200,
+      "models": ["gemini-3.8-flash", "gemini-3.7-flash"],
+      "generateContentListedForBoth": true
+    },
+    {
+      "request": "one synthetic WBNB-to-CAKE goal through createGeminiPlanner and its real closed schema",
+      "primary": {
+        "model": "gemini-3.8-flash",
+        "httpStatus": 503,
+        "errorStatus": "UNAVAILABLE"
+      },
+      "fallback": {
+        "model": "gemini-3.7-flash",
+        "httpStatus": 503,
+        "errorStatus": "UNAVAILABLE"
+      },
+      "result": "PlannerUnavailableError; no candidate or plan"
+    },
+    {
+      "request": "one trivial generateContent request to gemini-3.8-flash, without structured schema",
+      "httpStatus": 503,
+      "errorStatus": "UNAVAILABLE"
+    },
+    {
+      "request": "GET http://127.0.0.1:8787/health and /config",
+      "httpStatus": 200,
+      "deploymentLabel": "testnet-demo",
+      "chainId": 97,
+      "venue": "testnet"
+    },
+    {
+      "request": "Chrome relay at http://localhost:3000/app: connect Injected wallet",
+      "result": "Provider not found; window.ethereum absent in relay profile"
+    }
+  ],
+  "conclusion": "The live project key can list both selected models, but generation currently returns 503 even for a schema-free request. No live planner completion or testnet wrap was proved.",
+  "primarySource": "https://ai.google.dev/gemini-api/docs/troubleshooting",
+  "liveChainBroadcast": false
+}

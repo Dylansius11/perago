@@ -69,7 +69,7 @@ import { z } from "zod";
 import { createApiApp } from "../app.js";
 import { loadBscTestnetCatalog } from "../compiler/catalog.js";
 import { loadDeployment } from "../deployment.js";
-import { createGroqPlanner } from "../planner/provider.js";
+import { createOpenRouterPlanner } from "../planner/provider.js";
 import { registerDeploymentAdapters } from "../services/mandates.js";
 import { createViemPolicyChainVerifier } from "../services/policy-chain.js";
 import {
@@ -87,7 +87,7 @@ import {
 /**
  * The shared end-to-end journey harness behind the P4-003 swap journey and the
  * P5-002 stake journey. One natural-language task goes through the real API
- * (HTTP, PostgreSQL, Groq planner, real policy-chain verifier) and the real
+ * (HTTP, PostgreSQL, OpenRouter planner, real policy-chain verifier) and the real
  * executor process against the `testnet-demo` MandateExecutor (`SC-D-006`).
  * The harness owns the venue, the keys, the API and worker processes, and
  * every kind-agnostic step; a journey adds only its action-specific steps.
@@ -287,7 +287,7 @@ export function createJourney(input: JourneyInput) {
   const SMOKE = `${input.title} (${input.venue})`;
   const RPC = requiredEnv("PERAGO_BSC_TESTNET_RPC", SMOKE);
   const DATABASE_URL = requiredEnv("TEST_DATABASE_URL", SMOKE);
-  const GROQ_KEY = requiredEnv("PERAGO_GROQ_API_KEY", SMOKE);
+  const OPENROUTER_KEY = requiredEnv("PERAGO_OPENROUTER_API_KEY", SMOKE);
   const EVIDENCE_PATH = fileURLToPath(
     new URL(
       `../../../../docs/evidence/${input.evidence[input.venue]}`,
@@ -713,9 +713,8 @@ export function createJourney(input: JourneyInput) {
         now: () => new Date(),
         quoteTtlSeconds: 120,
       },
-      planner: createGroqPlanner({
-        apiKey: GROQ_KEY,
-        model: "openai/gpt-oss-120b",
+      planner: createOpenRouterPlanner({
+        apiKey: OPENROUTER_KEY,
         timeoutMs: 60_000,
       }),
       policyConfig: {

@@ -1,0 +1,35 @@
+{
+  "venue": "bsc-testnet",
+  "chainId": 97,
+  "blockNumber": "133715052",
+  "deployment": "testnet-demo",
+  "executor": "0x5ad812b956A0CbFB6805B1F4102292B823415A18",
+  "readOnlyProbe": {
+    "method": "checkReadiness plus getBlockNumber, getBalance, getGasPrice via configured chain-97 RPC",
+    "checks": {
+      "api": true,
+      "chain": true,
+      "executorGas": false,
+      "mandateExecutorCode": true
+    },
+    "ready": false,
+    "executorBalanceTbnb": "0.002834071",
+    "gasPriceWei": "1000000000",
+    "requiredGasReserve": "6720000",
+    "requiredTbnbAtObservedGasPrice": "0.00672",
+    "elapsedMs": 265,
+    "note": "Concurrent latest reads; the block number identifies the observed chain head, not an atomic snapshot of every value. No transfer or mandate transaction was sent."
+  },
+  "earlierIsolatedRead": {
+    "methods": "getBalance and getGasPrice in parallel while worker remained running",
+    "elapsedMs": 342,
+    "note": "This observation does not establish the cause of every prior slow RPC operation."
+  },
+  "regression": {
+    "red": "Two decide tests originally submitted AUTHORIZE and BEGIN at 0.002834071 tBNB; readChainView test had no executorGas observation; checkReadiness returned ready=true on the same insufficient balance.",
+    "green": "pnpm --filter @perago/executor exec vitest run src/reconcile.test.ts src/chain.test.ts src/health.test.ts (34 passed); pnpm run check (executor 43, API 96 tests; no errors)",
+    "apiPersistence": "node --env-file-if-exists=../../.env ../../node_modules/vitest/vitest.mjs run --maxWorkers=1 --no-file-parallelism src/services/executions.integration.test.ts (from apps/api, isolated perago_test database: 11 passed); SDK deferExecutionRequestSchema parsed EXECUTOR_GAS_SHORT",
+    "liveMandateGuard": "not exercised; fresh root-signed task requires executor funding and owner wallet review"
+  },
+  "entryPointV07Source": "https://raw.githubusercontent.com/eth-infinitism/account-abstraction/v0.7.0/contracts/core/EntryPoint.sol"
+}
