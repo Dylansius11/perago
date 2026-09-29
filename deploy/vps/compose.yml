@@ -1,0 +1,88 @@
+# Perago on the shared VPS: the API and the executor worker. The database is
+# Supabase PostgreSQL; nothing here stores state on the host.
+#
+# Secrets live outside every release in $PERAGO_SECRETS_DIR (api.env,
+# worker.env, mode 600). The API never receives the executor key.
+# `pnpm deploy:vps` sets PERAGO_RELEASE and PERAGO_SECRETS_DIR.
+name: perago
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/Dockerfile
+    image: perago:${PERAGO_RELEASE:?set PERAGO_RELEASE}
+    container_name: perago-api-1
+    restart: unless-stopped
+    env_file: ["${PERAGO_SECRETS_DIR:?set PERAGO_SECRETS_DIR}/api.env"]
+    environment:
+      PERAGO_API_HOST: 0.0.0.0
+      PERAGO_API_PORT: "8787"
+      PERAGO_API_VENUE: testnet
+      PERAGO_DEPLOYMENT_MANIFEST: deployments/bsc-testnet.demo.perago.json
+      # Caddy replaces any client-sent X-Forwarded-For with the peer address.
+      PERAGO_TRUST_PROXY: "true"
+    working_dir: /app/apps/api
+    command: ["bun", "src/main.ts"]
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:8787/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    # No host port. Caddy reaches it over its own Docker network only.
+    networks: [default, edge]
+    mem_limit: 384m
+    logging: *logging
+
+  worker:
+    image: perago:${PERAGO_RELEASE:?set PERAGO_RELEASE}
+    container_name: perago-worker-1
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    env_file: ["${PERAGO_SECRETS_DIR:?set PERAGO_SECRETS_DIR}/worker.env"]
+    environment:
+      PERAGO_API_URL: http://api:8787
+      PERAGO_DEPLOYMENT_MANIFEST: deployments/bsc-testnet.demo.perago.json
+      PERAGO_EXECUTOR_HEALTH_PORT: "8081"
+    working_dir: /app/apps/executor
+    command: ["node", "src/main.ts"]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8081/readyz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks: [default]
+    mem_limit: 256m
+    logging: *logging
+
+  # One-shot, non-destructive schema migration: `docker compose run --rm migrate`.
+  migrate:
+    image: perago:${PERAGO_RELEASE:?set PERAGO_RELEASE}
+    profiles: [tools]
+    env_file: ["${PERAGO_SECRETS_DIR:?set PERAGO_SECRETS_DIR}/api.env"]
+    working_dir: /app/apps/api
+    command: ["bun", "src/migrate.ts"]
+    networks: [default]
+    logging: *logging
+
+networks:
+  # The shared Caddy's network, owned by another compose project on this host.
+  # External, so nothing here creates, renames, or removes it.
+  edge:
+    external: true
+    name: vps_annona
