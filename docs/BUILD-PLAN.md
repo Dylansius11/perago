@@ -391,9 +391,9 @@ This record tracks live work without marking a task complete before all of its a
 
 ### `P7-002` Implement policy, mandate, and receipt journey
 
-- **Requirements:** PRD-F-001–017, PRD-S-001, PRD-S-008–009, PRD-S-013.
+- **Requirements:** current-demo PRD-F-001–013, PRD-F-015–017, PRD-S-001, PRD-S-008–009, PRD-S-013. The implemented `PRD-F-014` payment contract remains gated for future live activation.
 - **Files/symbols:** approved web surfaces using SDK/API/native Wagmi hooks.
-- **Acceptance:** deterministic facts—not model prose—drive signing display; root signature and UserOperation prompts show exact account/limits; pending/terminal/failure/revoke/expiry/settlement states reconcile from API/chain; no secret enters client logs.
+- **Acceptance:** deterministic facts—not model prose—drive signing display; root signature and UserOperation prompts show exact account/limits; pending/terminal/failure/revoke/expiry states reconcile from API/chain; an unbound receipt is never presented as paid; no secret enters client logs. Bound settlement display remains implemented but live payment is not a current-demo gate.
 - **Verification:** browser journey with wallet rejection, wrong chain, stale simulation, successful swap/stake, failed verification, replay, revoke, and provider outage.
 - **Commit:** coherent journey checkpoints after design approval.
 
@@ -413,13 +413,15 @@ Added 2026-09-23 at the user's request so testers can fund a smart account witho
 
 ## 11. Phase 8 — end-to-end demo and deployment
 
-**Dependencies:** all prior gates.
-**Goal:** deploy reproducibly and prove the complete judge story.
+**Dependencies:** all prior gates for release; the user authorized Phase 8 preparation out of order. ERC-8183 live payment is deferred by explicit user decision on 2026-09-29, not claimed complete.
+**Goal:** deploy reproducibly and prove the current unbound swap/stake demo with deterministic receipts; retain the fork-proven payment path for a separately approved future live journey.
 **Preparation opened by the user on 2026-09-29 despite the open `P7-002` gate:** Supabase CLI 2.118.0 is authenticated to organization `semper.vincere` (`dohibuglqbrsaykjjazs`); its three listed projects are inactive and none is Perago. The repository is not linked to a Supabase project, and the CLI listing does not establish the signed-in email. Vercel CLI 60.1.3 `whoami` returns `febrinirwanacode-8211`; no Perago Vercel project is linked. OpenSSH for Windows 9.5 is available, but no VPS host, SSH login, port, or authorized public key has been supplied, so no VPS connection or deployment is claimed. Preparation can proceed; `P8-001` acceptance still requires the missing hosted resources and the reviewed deployment run.
 
-**Deployment boundary:** Put the Next.js web client on Vercel and the long-lived API and worker on the VPS; use a newly selected Supabase PostgreSQL project rather than any existing unrelated project. The API defaults to the labelled demo manifest while the worker defaults to the production manifest, so production must set `PERAGO_DEPLOYMENT_MANIFEST` explicitly to the *same reviewed path* in both processes before startup. For the existing PostgreSQL driver, prefer a direct IPv6 connection when supported or the session pooler on an IPv4-only VPS; do not use the transaction pooler with its default prepared statements. Store the private database URL, API RPC, worker key/token, and encryption key only in the respective deployment secret stores; Vercel receives public browser endpoints, not the private RPC or Supabase database credentials. Never run the schema-dropping local test/dev commands on hosted PostgreSQL.
+**Deployment boundary:** Put the Next.js web client on Vercel and the long-lived API and worker on the VPS; use a newly selected Supabase PostgreSQL project rather than any existing unrelated project. The API defaults to the labelled demo manifest while the worker defaults to the production manifest, so set `PERAGO_DEPLOYMENT_MANIFEST=deployments/bsc-testnet.demo.perago.json` explicitly in *both* hosted processes for the current unbound demo. Do not silently start the production worker against the demo API. For the existing PostgreSQL driver, prefer a direct IPv6 connection when supported or the session pooler on an IPv4-only VPS; do not use the transaction pooler with its default prepared statements. Store the private database URL, API RPC, worker key/token, and encryption key only in the respective deployment secret stores; Vercel receives public browser endpoints, not the private RPC or Supabase database credentials. Never run the schema-dropping local test/dev commands on hosted PostgreSQL.
 
 **Owner-provided deployment prerequisites (non-secret in chat):** new Supabase project reference and region; intended Vercel team/project or approval to create one; VPS public hostname/IP, non-root SSH username, SSH port, operating system, and confirmation that the chosen deployment public key is installed for that user; the web/API DNS names and HTTPS termination plan. Database password/URL and all signing/API keys must be entered directly into protected platform environment variables or an approved secret channel, never pasted into chat or committed. Operator work then covers checked-in migrations, health/restart/rollback, manifest-to-chain verification, and hosted smoke evidence. The bound ERC-8183 browser-payment path remains a separate open product/evidence gate: this owner-signed demo swap used an unbound `testnet-demo` mandate, while the live evaluator and upstream job-provisioning journey have not been deployed/proven.
+
+**Clean hosted data decision (user, 2026-09-29):** provision a new, empty Supabase project and apply checked-in migrations there; leave the local database, receipts, sessions, wallet identities, and evidence untouched. No schema drop, table truncation, or deletion of onchain history is authorized. New hosted wallet sessions start empty; browser tab sessions must be signed out separately. A previously used smart account can still have an active onchain policy and permission even when its hosted database has no wallet or policy row. Before promising that existing owner works unchanged, prove an explicit chain-to-database policy reconciliation or an owner-authorized policy transition against the selected new project; a fresh disposable owner smoke alone is not proof for the existing wallet.
 
 ### `P8-001` Deploy reviewed environment
 
@@ -434,9 +436,9 @@ Added 2026-09-23 at the user's request so testers can fund a smart account witho
 
 ### `P8-002` Run judge-verifiable scenario matrix
 
-- **Requirements:** every PRD requirement; SC-001–007.
+- **Requirements:** current-demo PRD requirements and SC-001–007 as revised on 2026-09-29; `PRD-F-014` live payment activation and bound-payment proof remain a separately approved future gate.
 - **Files/symbols:** concise operator runbook/evidence index in the existing docs only if the user requests documentation update; no giant historical diary.
-- **Acceptance:** swap success + payment; stake success; excess amount/lower minimum/changed recipient/selector/replay/expiry/revoke rejection; forced verifier failure + withheld payment; restart/duplicate delivery; explorer-linked evidence; honest fork/test labels.
+- **Acceptance:** unbound swap success with verified public receipt; stake success; excess amount/lower minimum/changed recipient/selector/replay/expiry/revoke rejection; forced verifier failure without false success; restart/duplicate delivery; explorer-linked evidence; honest fork/test labels. No ERC-8183 payout is claimed.
 - **Verification:** run the deployed product, capture exact URLs/transactions/blocks/results, and independently recompute at least one receipt commitment.
 - **Commit:** `chore: verify end-to-end hackathon demo`.
 
@@ -501,4 +503,4 @@ No LP, lending/borrowing, leverage, bridge, arbitrary calldata, marketplace, ERC
 
 ### Non-negotiable scope
 
-The bounded swap, bounded stake, one-use terminal authority, deterministic verification, public receipt, and outcome-linked payment are the accepted MVP. Schedule pressure does not silently remove them. Any reduction requires explicit user approval and corresponding PRD/build-plan change before implementation.
+The bounded swap, bounded stake, one-use terminal authority, deterministic verification, and public receipt are the accepted current-demo scope after the user's 2026-09-29 deferral of live ERC-8183 payment. The existing fork-proven evaluator and settlement code are retained; their live deployment, funded/submitted job provisioning, browser binding, and provider payout require separately approved proof. Any future payment remains subject to the unchanged outcome-linked payment security invariants.

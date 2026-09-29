@@ -323,6 +323,11 @@ This file is the canonical lessons log for the Perago repository, with entries o
 - Rule: redact URLs before logging caught provider errors, and rotate a leaked credential before any retry.
 
 ## User insight
+### 2026-09-29 - Keep the first hosted demo unpaid and its database fresh
+
+- Asked to prioritize the already working swap/stake journey, defer live ERC-8183 provider payment to future development, and start a clean Supabase-hosted app without erasing local proof or onchain history.
+- Application: label current mandates unbound and unpaid, retain the fork-proven settlement path without claiming live payout, provision a new empty Supabase database, and reconcile any previously used owner's active onchain policy before promising unchanged behavior.
+
 ### 2026-09-28 - Use OpenRouter and let the owner test MetaMask
 
 - Asked to replace the Gemini planner with OpenRouter Space Bunny Alpha, strengthen its system prompt instead of relaxing validation, and let the owner perform the connected MetaMask journey.

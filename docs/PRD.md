@@ -6,7 +6,7 @@
 
 ## 1. Executive summary
 
-Perago is a bounded execution layer for onchain agents. A user states an outcome, receives a typed and simulated plan, and signs one Task Mandate whose authority is limited by asset, amount, protocol, action, recipient, chain, executor, expiry, nonce, and deterministic postcondition. An executor can optimize only inside those bounds. The system records whether the requested outcome was achieved and releases agent payment only after deterministic verification.
+Perago is a bounded execution layer for onchain agents. A user states an outcome, receives a typed and simulated plan, and signs one Task Mandate whose authority is limited by asset, amount, protocol, action, recipient, chain, executor, expiry, nonce, and deterministic postcondition. An executor can optimize only inside those bounds. The system records whether the requested outcome was achieved. When a funded ERC-8183 job is explicitly bound in the future payment journey, agent payment may release only after deterministic verification; the current swap/stake demo does not pay an agent.
 
 The category is **intent-based, policy-constrained agent execution**. Perago is not a wallet, chatbot, portfolio manager, marketplace, or general-purpose transaction signer.
 
@@ -35,7 +35,7 @@ A self-custodial BNB Smart Chain user who understands swaps and staking but does
 ### Secondary users
 
 - A protocol or agent developer integrating a bounded execution SDK.
-- A hackathon judge verifying that the AI cannot exceed the signed authority and that payment follows objective completion.
+- A hackathon judge verifying that the AI cannot exceed the signed authority and that current demo outcomes follow objective verification; outcome-linked payment is a separately gated future demonstration.
 
 ## 4. Thesis and differentiation
 
@@ -46,7 +46,7 @@ Perago separates four concerns that are often collapsed:
 | Interpret the user's language and explain choices | AI planner |
 | Determine whether a plan is inside persistent wallet policy | Deterministic policy engine |
 | Authorize and execute a one-time action | User signature plus mandate enforcement path |
-| Decide whether the outcome earns payment | Adapter-specific deterministic verifier |
+| Decide whether a bound outcome earns payment | Adapter-specific deterministic verifier; payment journey deferred |
 
 The moat is not natural-language transaction generation. It is **bounded authority with outcome evidence**:
 
@@ -56,7 +56,7 @@ The moat is not natural-language transaction generation. It is **bounded authori
 - one-use consumption prevents replay;
 - a verifier checks the action's postconditions;
 - an Execution Receipt makes the evidence auditable;
-- ERC-8183 settlement links payment to the verified receipt.
+- the fork-proven ERC-8183 settlement path can link payment to a verified receipt when the future bound-job journey is enabled.
 
 ## 5. Canonical domain concepts
 
@@ -195,8 +195,9 @@ The smart-account session permission is transport authority only: it may submit 
 - EIP-712 Task Mandate, one-use authorization, revocation, expiry, and terminal failure.
 - Constrained executor with idempotent UserOperation/transaction reconciliation.
 - Adapter-specific verification and public Execution Receipt.
-- ERC-8183 job linkage and settlement after successful verification.
 - A BSC Testnet-only tBNB faucet in the web client, so a tester can fund a smart account's gas and swap input without leaving Perago (`PRD-F-018`).
+
+**Current hosted-demo scope (user decision, 2026-09-29):** ship the existing labelled `testnet-demo` unbound swap/stake and verified public receipts without agent payment. The already implemented ERC-8183 contract, API, and worker path stays intact but its live evaluator deployment, job provisioning, browser binding, and payout proof are deferred to a separately authorized future task. Do not portray an unbound receipt as a paid job or run the production MandateExecutor without a reviewed submitted job. `PRD-F-014`, `PRD-S-007`, and `PRD-S-012` remain the mandatory contract for any later bound-payment journey, not criteria silently satisfied by the current demo.
 
 ### Explicit non-goals
 
@@ -269,10 +270,10 @@ The smart-account session permission is transport authority only: it may submit 
 
 | ID | Criterion |
 | --- | --- |
-| SC-001 | In the judge demo, one swap mandate completes from intent to paid ERC-8183 job with a public receipt and explorer-linked transaction evidence. |
+| SC-001 | In the current judge demo, one unbound swap mandate completes from intent to deterministically verified public receipt with explorer-linked execution evidence; no agent payment is claimed. A paid ERC-8183 job is a separately gated future scenario. |
 | SC-002 | One stake mandate completes from intent to verified position/receipt-token increase with consumed authority. |
 | SC-003 | Attempts to exceed max input, reduce minimum output, change recipient, call another selector/adapter, replay a nonce, or execute after expiry/revoke all fail deterministically. |
-| SC-004 | A forced adapter or verifier failure reaches terminal `FAILED`, withholds ERC-8183 payment, and cannot be retried under the same mandate. |
+| SC-004 | A forced adapter or verifier failure reaches terminal `FAILED` and cannot be retried under the same mandate; a later bound-payment journey must additionally prove payment is withheld or refunded. |
 | SC-005 | Duplicate executor delivery after a confirmed terminal event causes no additional onchain action. |
 | SC-006 | A fresh environment can reproduce the documented demo using only checked-in non-secret configuration and operator-supplied credentials. |
 | SC-007 | Every public integration claim is backed by an official source or labeled as testnet/fork/local evidence. |
@@ -287,18 +288,18 @@ Perago should compete on a single claim: **an AI agent can carry intent through 
 2. Ask: “Swap up to X into Y when the route guarantees at least Z; send it back to me before expiry.”
 3. Show the typed plan, policy intersection, simulation block, max spend, minimum result, target adapter, recipient, and expiry.
 4. Sign one mandate.
-5. Show autonomous execution, verifier evidence, consumed nonce, public receipt, and ERC-8183 completion/payment.
+5. Show autonomous execution, verifier evidence, consumed nonce, and public receipt; label payment as not bound, not as completed.
 6. Replay the same signed mandate and show deterministic rejection.
 7. Attempt a modified recipient or excess amount and show signature/bound failure.
 8. Run a stake mandate and verify receipt-token/position increase.
-9. Force a failed postcondition and show terminal failure plus withheld payment.
+9. Force a failed postcondition and show terminal failure without claiming a provider payment.
 
 ### Track strategy
 
 - **BNB Chain:** real BSC execution, official chain tooling, explorer evidence, and a constrained agent runtime.
 - **Agent/AI:** AI is useful but visibly subordinate to deterministic policy and verification.
 - **DeFi:** exact-input swap and staking demonstrate materially different adapter postconditions.
-- **Standards:** ERC-712 authorization and ERC-8183 outcome-linked settlement create a legible end-to-end trust story.
+- **Standards:** EIP-712 authorization makes the current one-use trust story legible. The implemented ERC-8183 outcome-linked payment path has fork evidence but is not a claim of this hosted demo; enable it only after a separately reviewed live journey.
 
 Do not add ERC-8004 solely for category coverage. It enters scope only if a target track requires identity discovery and its integration does not displace mandate safety or demo reliability.
 

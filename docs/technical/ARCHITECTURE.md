@@ -9,6 +9,8 @@
 
 Carry one user intent through planning, constrained authorization, execution, deterministic verification, and outcome-linked settlement without giving an AI or worker reusable wallet authority.
 
+The 2026-09-29 hosted-demo cut uses the already deployed labelled `testnet-demo` executor for unbound swap/stake and public receipts; ERC-8183 outcome-linked payment remains a conditional, fork-proven extension, not a live feature or current release gate. The production MandateExecutor still requires a bound submitted job. This scope cut never permits payment without the deterministic evaluator checks below.
+
 The architecture therefore optimizes for:
 
 1. closed action schemas over arbitrary calls;
