@@ -5,6 +5,7 @@ import {
   confirmPolicyActivationRequestSchema,
   confirmPolicyRevocationRequestSchema,
   createWalletPolicyRequestSchema,
+  deriveExecutorAllowances,
   encodeAccountPolicyTransition,
   encodeInstallMandateSession,
   encodeUninstallMandateSession,
@@ -20,6 +21,7 @@ import {
   preparePolicyTransitionRequestSchema,
   type Selector,
   toMandateSessionPermission,
+  walletPolicySchema,
 } from "@perago/sdk";
 import type { JSONValue, Sql } from "postgres";
 import { verifyTypedData } from "viem";
@@ -32,6 +34,8 @@ export type PolicyServiceConfig = {
   mandateExecutor: Address;
   now: () => Date;
   performSelector: Selector;
+  /** Catalog token addresses in public config order: the standing allowance set. */
+  tokens: readonly Address[];
 };
 
 export type PolicyChainExpectation = {
@@ -238,6 +242,7 @@ export async function preparePolicyActivation(
   if (request.ownerEpoch !== ownerEpoch) {
     throw new Error(`policy owner epoch must be ${ownerEpoch}`);
   }
+  const policy = walletPolicySchema.parse(row.policy_document);
   const permission = assertActivationPermission(
     request.permission,
     identity,
@@ -258,6 +263,7 @@ export async function preparePolicyActivation(
 
   return {
     accountPolicy,
+    allowances: deriveExecutorAllowances(policy, config.tokens),
     permissionCallData: encodeInstallMandateSession(
       toMandateSessionPermission(permission),
     ),
@@ -320,6 +326,7 @@ export async function confirmPolicyActivation(
 
   const transitionCallData = encodeAccountPolicyTransition({
     account: identity.account,
+    allowances: prepared.allowances,
     mandateExecutor: config.mandateExecutor,
     permissionCallData: prepared.permissionCallData,
     policy: prepared.accountPolicy,
@@ -429,6 +436,7 @@ export async function preparePolicyRevocation(
 
   return {
     accountPolicy,
+    allowances: config.tokens.map((token) => ({ amount: 0n, token })),
     permissionCallData: encodeUninstallMandateSession(
       toMandateSessionPermission(permission),
     ),
@@ -467,6 +475,7 @@ export async function confirmPolicyRevocation(
 
   const transitionCallData = encodeAccountPolicyTransition({
     account: identity.account,
+    allowances: prepared.allowances,
     mandateExecutor: config.mandateExecutor,
     permissionCallData: prepared.permissionCallData,
     policy: prepared.accountPolicy,

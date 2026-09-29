@@ -166,6 +166,7 @@ async function start(): Promise<void> {
       mandateExecutor: deployment.mandateExecutor.address,
       now: () => new Date(),
       performSelector,
+      tokens: catalogTokens,
     },
     policyVerifier: createViemPolicyChainVerifier({
       client,

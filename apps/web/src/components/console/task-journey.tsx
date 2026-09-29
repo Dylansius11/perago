@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type Address,
   type ExecutionReceipt,
   encodeAccountExecute,
   getTaskMandateTypedData,
@@ -16,19 +17,38 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { encodeFunctionData, erc20Abi, formatUnits } from "viem";
 import { getPublicClient, signTypedData } from "wagmi/actions";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { assertPreparedMandate } from "@/lib/authority";
 import { toFailure } from "@/lib/failure";
 import { duration, utc } from "@/lib/format";
-import { useHoldings, usePublicConfig, useTask } from "@/lib/queries";
-import { sendRootOperation } from "@/lib/root-operation";
+import {
+  type AutomaticStepInput,
+  allowanceReady,
+  automaticStep,
+  mandateStale,
+  type PromptCount,
+  promptCount,
+  restoreAmount,
+  rollingCap,
+} from "@/lib/journey";
+import {
+  useHoldings,
+  usePolicies,
+  usePublicConfig,
+  useTask,
+} from "@/lib/queries";
+import {
+  type RootStage,
+  sendRootOperation,
+  sponsorFor,
+} from "@/lib/root-operation";
 import { useSession } from "@/lib/session";
 import { assertWalletVenue } from "@/lib/venue";
 import { CHAIN_ID, wagmiConfig } from "@/lib/wagmi";
-import { StepList, useStagedAction } from "./action";
+import { type Step, StepList, useStagedAction } from "./action";
 import {
   Button,
   Fact,
@@ -88,6 +108,267 @@ function tokenAmount(
   return token
     ? `${formatUnits(BigInt(value), token.decimals)} ${token.symbol}`
     : `${value} base units`;
+}
+
+/*
+ * The allowance story in one place: what the smart account already lets the
+ * executor pull for this task's input token, what the active wallet policy may
+ * restore, and how many wallet prompts that honestly costs.
+ */
+type AllowanceStatus = {
+  token: Address | null;
+  symbol: string | null;
+  current: bigint | null;
+  needed: bigint | null;
+  covered: boolean;
+  needsRestore: boolean;
+  restore: bigint | null;
+  cap: bigint | null;
+  policyLoaded: boolean;
+  blockedByPolicy: boolean;
+  prompts: PromptCount;
+};
+
+/** One plain sentence for the allowance, shared by the summary and the review. */
+function allowanceSentence(allowance: AllowanceStatus): string {
+  if (allowance.current === null)
+    return "Reading the smart account's allowance to the executor.";
+  if (allowance.covered)
+    return "Covers what this task spends, so nothing extra is approved.";
+  if (allowance.restore !== null)
+    return "Short, so signing first restores the active wallet policy's rolling cap for this token.";
+  if (!allowance.policyLoaded)
+    return "Short, and the active wallet policy is still loading.";
+  return "Short, and the active wallet policy's cap for this token cannot cover this task. Change the plan or raise the cap.";
+}
+
+/** Restore progress uses its own step ids so the mandate signature keeps its own position. */
+function restoreStepId(stage: RootStage, sponsored: boolean): string {
+  if (stage === "confirm") return "restore-confirm";
+  if (stage === "send" && !sponsored) return "restore-send";
+  return "restore-sign";
+}
+
+/** Every prompt and wait of one signature, restore included, listed before the first prompt appears. */
+function signSteps(input: { restore: boolean; sponsored: boolean }): Step[] {
+  return [
+    ...(input.restore
+      ? [
+          {
+            id: "restore-sign",
+            title: "Sign the allowance UserOperation",
+            detail:
+              "The smart account approves the active wallet policy's rolling cap for this token to the executor.",
+            prompt: true,
+          },
+          {
+            id: "restore-send",
+            title: input.sponsored
+              ? "Submit through the sponsored bundler"
+              : "Send through EntryPoint",
+            detail: input.sponsored
+              ? "The API submits the signed UserOperation to the bundler. No wallet prompt."
+              : "Your owner wallet pays network gas.",
+            prompt: !input.sponsored,
+          },
+          {
+            id: "restore-confirm",
+            title: "Confirm the restored allowance",
+            detail:
+              "The token allowance is read from chain again before anything is signed.",
+          },
+        ]
+      : []),
+    {
+      id: "sign",
+      title: "Sign the exact EIP-712 TaskMandate",
+      detail: "Your wallet signs the displayed root-owner mandate terms.",
+      prompt: true,
+    },
+    {
+      id: "submit",
+      title: "Submit signature to the API",
+      detail:
+        "The API rechecks the exact path and MandateExecutor authorization before queuing.",
+    },
+    {
+      id: "queue",
+      title: "Read queue state",
+      detail:
+        "Queued is not execution success; this page continues polling the API.",
+    },
+  ];
+}
+
+/** The top line answer: what leaves the account, what comes back, when, and what the wallet is asked. */
+function JourneySummary({
+  task,
+  prepared,
+  allowance,
+}: {
+  task: TaskDetail;
+  prepared: PreparedMandate | null;
+  allowance: AllowanceStatus;
+}) {
+  const config = usePublicConfig();
+  const mandate = prepared?.mandate ?? task.mandate?.mandate ?? null;
+  const simulation = prepared?.simulation ?? task.simulation?.result ?? null;
+  const action = simulation?.action ?? null;
+  const planned = task.plan?.action ?? null;
+  const spend =
+    mandate?.maxInput ?? simulation?.maxInput ?? planned?.inputAmount ?? null;
+  const spendToken =
+    mandate?.inputToken ??
+    simulation?.inputToken ??
+    planned?.inputToken ??
+    null;
+  const minimum =
+    mandate?.minOutput ??
+    (action
+      ? action.kind === "SWAP"
+        ? action.minAmountOut
+        : action.minPositionOut
+      : null);
+  const outputToken =
+    mandate?.outputToken ??
+    simulation?.outputToken ??
+    (planned?.kind === "SWAP" ? planned.outputToken : null) ??
+    null;
+  const recipient =
+    mandate?.recipient ?? simulation?.recipient ?? planned?.recipient ?? null;
+  const deadline = action?.deadline ?? null;
+  const expiresAt = mandate?.expiresAt ?? simulation?.mandate.expiresAt ?? null;
+  const prompts = allowance.prompts;
+  return (
+    <Panel
+      label="Summary"
+      aside={
+        <Status tone={prompts.total === 1 ? "ok" : "signal"}>
+          {prompts.total} wallet prompt{prompts.total === 1 ? "" : "s"}
+        </Status>
+      }
+    >
+      <dl>
+        <Fact
+          label="you spend"
+          emphasis
+          value={
+            spend !== null && spendToken !== null
+              ? tokenAmount(spend, spendToken, config.data)
+              : "waiting for a compiled plan"
+          }
+          note={spend !== null ? `at most ${spend} base units` : undefined}
+        />
+        <Fact
+          label="minimum you receive"
+          emphasis
+          value={
+            minimum === null
+              ? "waiting for a simulation"
+              : simulation?.outcomeUnit === "POOL_SHARES"
+                ? `${minimum} pool shares`
+                : outputToken !== null
+                  ? tokenAmount(minimum, outputToken, config.data)
+                  : `${minimum} base units`
+          }
+          note={
+            simulation?.outcomeUnit === "POOL_SHARES"
+              ? "New position shares, not an amount of the staked token."
+              : "Committed by the signature, never taken from the quote."
+          }
+        />
+        <Fact
+          label="recipient"
+          value={
+            recipient !== null ? (
+              <Hash value={recipient} full />
+            ) : (
+              "waiting for a compiled plan"
+            )
+          }
+        />
+        <Fact
+          label="deadline"
+          value={
+            deadline !== null
+              ? utc(Number(deadline))
+              : "waiting for a simulation"
+          }
+          note={
+            expiresAt !== null
+              ? `mandate expires ${utc(Number(expiresAt))}`
+              : "no mandate prepared"
+          }
+        />
+        <Fact
+          label="allowance to executor"
+          value={
+            allowance.current !== null && allowance.token !== null
+              ? tokenAmount(
+                  allowance.current.toString(),
+                  allowance.token,
+                  config.data,
+                )
+              : "reading chain"
+          }
+          note={allowanceSentence(allowance)}
+        />
+        <Fact
+          label="this task uses"
+          value={
+            allowance.needed !== null && allowance.token !== null
+              ? tokenAmount(
+                  allowance.needed.toString(),
+                  allowance.token,
+                  config.data,
+                )
+              : "waiting for a compiled plan"
+          }
+          note="The executor may pull no more than this for the task."
+        />
+        {allowance.restore !== null && allowance.token !== null ? (
+          <Fact
+            label="restore amount"
+            value={tokenAmount(
+              allowance.restore.toString(),
+              allowance.token,
+              config.data,
+            )}
+            note="The active wallet policy's rolling cap, never more."
+          />
+        ) : null}
+        <Fact
+          label="wallet prompts"
+          value={`${prompts.total} wallet prompt${prompts.total === 1 ? "" : "s"}`}
+          note={
+            prompts.restore === 0
+              ? "Sign the mandate once. No other prompt is needed."
+              : prompts.restore === 1
+                ? "One to restore the allowance through the sponsored bundler, one to sign the mandate."
+                : "Two to restore the allowance through EntryPoint, one to sign the mandate."
+          }
+        />
+      </dl>
+    </Panel>
+  );
+}
+
+/** Runs the one automatic step of the journey, at most once per task and simulation. */
+function AutoPilot({
+  input,
+  onRun,
+}: {
+  input: AutomaticStepInput;
+  onRun: (step: "simulate" | "prepare") => void;
+}) {
+  const attempted = useRef(new Set<string>());
+  useEffect(() => {
+    const next = automaticStep({ ...input, attempted: attempted.current });
+    if (!next) return;
+    attempted.current.add(next.key);
+    onRun(next.step);
+  });
+  return null;
 }
 
 function Plan({ task }: { task: TaskDetail }) {
@@ -398,7 +679,7 @@ function SimulationPanel({
 function MandatePanel({
   task,
   prepared,
-  approvalReady,
+  allowance,
   preparing,
   signing,
   owner,
@@ -407,27 +688,32 @@ function MandatePanel({
 }: {
   task: TaskDetail;
   prepared: PreparedMandate | null;
-  approvalReady: boolean;
+  allowance: AllowanceStatus;
   preparing: boolean;
   signing: boolean;
   owner: string | null;
   onPrepare: () => void;
   onSign: () => void;
 }) {
+  const config = usePublicConfig();
   const until = useSecondsUntil(
     prepared ? Number(prepared.simulation.quoteExpiresAt) : null,
   );
   const signerMatches =
     prepared !== null &&
     owner?.toLowerCase() === prepared.mandate.rootOwner.toLowerCase();
+  const stale = mandateStale({
+    preparedQuoteExpiresAt: prepared?.simulation.quoteExpiresAt ?? null,
+    preparedSimulationHash: prepared?.simulationHash ?? null,
+    simulation: task.simulation,
+    nowSeconds: Math.floor(Date.now() / 1_000),
+  });
   const usable =
     prepared !== null &&
-    until !== null &&
-    until > 0 &&
+    !stale &&
     signerMatches &&
-    approvalReady &&
-    task.simulation?.status === "PASSED" &&
-    task.simulation.simulationHash === prepared.simulationHash;
+    allowance.current !== null &&
+    (allowance.covered || allowance.restore !== null);
   if (task.mandate) {
     return (
       <Panel
@@ -456,13 +742,15 @@ function MandatePanel({
   }
   return (
     <Panel
-      label="Prepare and sign mandate"
+      label="Sign mandate"
       aside={
         <Status tone={prepared ? (usable ? "signal" : "fail") : "idle"}>
           {prepared
             ? usable
-              ? "Ready to sign"
-              : "Re-prepare required"
+              ? allowance.needsRestore
+                ? "Restore then sign"
+                : "Ready to sign"
+              : "Waiting"
             : "Not prepared"}
         </Status>
       }
@@ -472,7 +760,7 @@ function MandatePanel({
           <p className="max-w-[60ch] text-fog">
             The API must freshly prepare the mandate before the wallet is asked
             to sign. Preparation rechecks the simulation against current chain
-            state.
+            state. It runs on its own as soon as a simulation passes.
           </p>
           <div className="mt-6">
             <Button
@@ -499,17 +787,56 @@ function MandatePanel({
               outcomeUnit={prepared.simulation.outcomeUnit}
             />
           </div>
+          <dl className="mt-6 border-t border-rule pt-1">
+            <Fact
+              label="allowance to executor"
+              value={
+                allowance.current !== null && allowance.token !== null
+                  ? tokenAmount(
+                      allowance.current.toString(),
+                      allowance.token,
+                      config.data,
+                    )
+                  : "reading chain"
+              }
+              note={allowanceSentence(allowance)}
+            />
+            <Fact
+              label="this mandate uses"
+              value={tokenAmount(
+                prepared.mandate.maxInput,
+                prepared.mandate.inputToken,
+                config.data,
+              )}
+              note="The executor may pull no more than this signed input."
+            />
+            {allowance.restore !== null && allowance.token !== null ? (
+              <Fact
+                label="restore amount"
+                value={tokenAmount(
+                  allowance.restore.toString(),
+                  allowance.token,
+                  config.data,
+                )}
+                note="The active wallet policy's rolling cap, never more."
+              />
+            ) : null}
+          </dl>
           <div className="mt-6 border-l-2 border-signal py-2 pl-4 text-[13px]">
             <p className="font-medium">
-              Fresh API preparation{" "}
-              {until !== null && until > 0
-                ? `expires in ${duration(until)}`
-                : "has expired"}
+              {stale
+                ? "This preparation is stale"
+                : `Fresh API preparation${
+                    until !== null && until > 0
+                      ? ` expires in ${duration(until)}`
+                      : " has expired"
+                  }`}
               .
             </p>
             <p className="mt-1 text-fog">
-              Signature stays disabled after expiry. Re-prepare so the API can
-              verify the actual chain state again.
+              Signing prepares a fresh mandate first when this one expired or
+              its simulation moved, so no manual re-prepare is needed. If the
+              API refuses, re-simulate the task.
             </p>
           </div>
           {!signerMatches ? (
@@ -521,10 +848,12 @@ function MandatePanel({
               wallets before signing.
             </p>
           ) : null}
-          {!approvalReady ? (
-            <p className="mt-4 font-mono text-[12px] text-fog">
-              Your smart account must approve the executor for exactly this
-              signed input before this signature is enabled.
+          {allowance.blockedByPolicy ? (
+            <p
+              role="alert"
+              className="mt-4 font-mono text-[12px] text-fail-ink"
+            >
+              {allowanceSentence(allowance)}
             </p>
           ) : null}
           <div className="mt-6 flex flex-wrap gap-4">
@@ -532,7 +861,9 @@ function MandatePanel({
               Re-prepare
             </Button>
             <Button arrow busy={signing} disabled={!usable} onClick={onSign}>
-              Sign exact mandate
+              {allowance.needsRestore
+                ? "Restore allowance and sign"
+                : "Sign exact mandate"}
             </Button>
           </div>
         </>
@@ -540,127 +871,8 @@ function MandatePanel({
     </Panel>
   );
 }
-function ExactApproval({
-  prepared,
-  executor,
-  allowance,
-}: {
-  prepared: PreparedMandate;
-  executor: `0x${string}`;
-  allowance: bigint | null;
-}) {
-  const { owner, account } = useSession();
-  const queryClient = useQueryClient();
-  const action = useStagedAction<`0x${string}`>();
-  const exact = BigInt(prepared.mandate.maxInput);
-  const approved = allowance === exact;
-
-  const approve = () =>
-    void action.run(async (advance) => {
-      if (!owner || !account)
-        throw new Error("Connect the owner wallet first.");
-      const callData = encodeAccountExecute({
-        target: prepared.mandate.inputToken,
-        value: 0n,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [executor, exact],
-        }),
-      });
-      const result = await sendRootOperation({
-        owner,
-        account,
-        callData,
-        onStage: (stage) => advance(stage),
-      });
-      await queryClient.invalidateQueries({ queryKey: ["chain"] });
-      return result.transactionHash;
-    });
-
-  return (
-    <Panel
-      label="Exact token approval"
-      aside={
-        <Status tone={approved ? "ok" : "pending"}>
-          {approved ? "Exact allowance on chain" : "Root approval required"}
-        </Status>
-      }
-    >
-      <p className="max-w-[65ch] text-fog">
-        The executor must be able to pull only this mandate&apos;s exact input.
-        Your owner wallet signs a UserOperation for the smart account to set
-        that token allowance; unlimited approval is never requested.
-      </p>
-      <dl className="mt-5">
-        <Fact
-          label="Token"
-          value={<Hash value={prepared.mandate.inputToken} full />}
-        />
-        <Fact label="Spender" value={<Hash value={executor} full />} />
-        <Fact
-          label="Exact allowance"
-          value={prepared.mandate.maxInput}
-          note="integer base units, no increase beyond this mandate"
-        />
-        <Fact
-          label="Current allowance"
-          value={allowance === null ? "reading chain" : allowance.toString()}
-        />
-      </dl>
-      {!approved ? (
-        <div className="mt-6">
-          <Button
-            arrow
-            busy={action.busy}
-            disabled={allowance === null}
-            onClick={approve}
-          >
-            Approve exact input
-          </Button>
-          {action.state.phase !== "idle" ? (
-            <div className="mt-5">
-              <StepList
-                state={action.state}
-                steps={[
-                  {
-                    id: "sign",
-                    title: "Sign account UserOperation",
-                    detail:
-                      "Exactly one token.approve(executor, signed maxInput).",
-                    prompt: true,
-                  },
-                  {
-                    id: "send",
-                    title: "Send through EntryPoint",
-                    detail: "Your owner wallet pays network gas.",
-                    prompt: true,
-                  },
-                  {
-                    id: "confirm",
-                    title: "Confirm exact allowance",
-                    detail:
-                      "EntryPoint must report success; the token allowance is read again from chain.",
-                  },
-                ]}
-              />
-            </div>
-          ) : null}
-          {action.state.phase === "failed" ? (
-            <div className="mt-4">
-              <FailureNotice
-                failure={action.state.failure}
-                onRetry={() => action.reset()}
-              />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </Panel>
-  );
-}
 function RevokeMandate({ task }: { task: TaskDetail }) {
-  const { owner, account } = useSession();
+  const { owner, account, session } = useSession();
   const config = usePublicConfig();
   const queryClient = useQueryClient();
   const action = useStagedAction<`0x${string}`>();
@@ -713,6 +925,7 @@ function RevokeMandate({ task }: { task: TaskDetail }) {
           }),
         }),
         onStage: (stage) => advance(stage),
+        sponsor: sponsorFor(config.data, session),
       });
       await queryClient.invalidateQueries({
         queryKey: ["session", owner, `task:${task.taskId}`],
@@ -773,9 +986,13 @@ function RevokeMandate({ task }: { task: TaskDetail }) {
                 },
                 {
                   id: "send",
-                  title: "Send through EntryPoint",
-                  detail: "Your owner wallet pays network gas.",
-                  prompt: true,
+                  title: config.data?.sponsorship.enabled
+                    ? "Submit to the bundler"
+                    : "Send through EntryPoint",
+                  detail: config.data?.sponsorship.enabled
+                    ? "Gas is sponsored. If sponsorship is refused, your wallet sends the same signed operation and pays."
+                    : "Your owner wallet pays network gas.",
+                  prompt: !config.data?.sponsorship.enabled,
                 },
                 {
                   id: "confirm",
@@ -1122,6 +1339,7 @@ function Journey({ taskId }: { taskId: string }) {
   const queryClient = useQueryClient();
   const config = usePublicConfig();
   const holdings = useHoldings(config.data);
+  const policies = usePolicies();
   const task = useTask(taskId);
   const [prepared, setPrepared] = useState<PreparedMandate | null>(null);
   const simulate = useStagedAction<void>();
@@ -1167,14 +1385,18 @@ function Journey({ taskId }: { taskId: string }) {
   if (!task.data) return null;
 
   const current = task.data;
-  const assertReview = (next: MandatePrepared) => {
+  /** Checks a preparation against the reviewed plan and the simulation it must bind. */
+  const assertReview = (
+    next: MandatePrepared,
+    simulationHash = current.simulation?.simulationHash,
+  ) => {
     if (
       !owner ||
       !account ||
       !config.data ||
       !current.plan ||
       !current.planHash ||
-      !current.simulation
+      !simulationHash
     )
       throw new Error(
         "The reviewed plan, simulation, owner, and deployment must be available before signing.",
@@ -1184,7 +1406,7 @@ function Journey({ taskId }: { taskId: string }) {
       plan: current.plan,
       planHash: current.planHash,
       intentHash: current.intentHash,
-      simulationHash: current.simulation.simulationHash,
+      simulationHash,
       owner,
       account,
       executor: config.data.sessionSigner,
@@ -1192,16 +1414,52 @@ function Journey({ taskId }: { taskId: string }) {
       mandateExecutor: config.data.mandateExecutor,
     });
   };
-  const input = config.data?.tokens.find(
-    (token) =>
-      token.address.toLowerCase() ===
-      prepared?.mandate.inputToken.toLowerCase(),
-  );
-  const allowance = input
-    ? (holdings.data?.tokens[input.symbol]?.allowance ?? null)
+  const inputToken =
+    prepared?.mandate.inputToken ??
+    current.simulation?.result.inputToken ??
+    current.plan?.action.inputToken ??
+    null;
+  const neededAmount =
+    prepared?.mandate.maxInput ??
+    current.simulation?.result.maxInput ??
+    current.plan?.action.inputAmount ??
+    null;
+  const tokenEntry = inputToken
+    ? (config.data?.tokens.find(
+        (entry) => entry.address.toLowerCase() === inputToken.toLowerCase(),
+      ) ?? null)
     : null;
-  const approvalReady =
-    prepared !== null && allowance === BigInt(prepared.mandate.maxInput);
+  const currentAllowance = tokenEntry
+    ? (holdings.data?.tokens[tokenEntry.symbol]?.allowance ?? null)
+    : null;
+  const covered =
+    neededAmount !== null && allowanceReady(currentAllowance, neededAmount);
+  const activePolicy =
+    policies.data?.find((entry) => entry.status === "ACTIVE") ?? null;
+  const cap =
+    activePolicy && inputToken
+      ? rollingCap(activePolicy.policy, inputToken)
+      : null;
+  const needsRestore =
+    currentAllowance !== null && neededAmount !== null && !covered;
+  const allowance: AllowanceStatus = {
+    token: inputToken,
+    symbol: tokenEntry?.symbol ?? null,
+    current: currentAllowance,
+    needed: neededAmount === null ? null : BigInt(neededAmount),
+    covered,
+    needsRestore,
+    restore: needsRestore ? restoreAmount(cap, neededAmount) : null,
+    cap,
+    policyLoaded: policies.data !== undefined,
+    blockedByPolicy: needsRestore && restoreAmount(cap, neededAmount) === null,
+    prompts: promptCount({
+      needsRestore,
+      sponsorshipEnabled: config.data?.sponsorship.enabled === true,
+    }),
+  };
+  const sponsorship = config.data?.sponsorship.enabled === true;
+
   const runSimulation = () =>
     void simulate.run(async (advance) => {
       setPrepared(null);
@@ -1222,27 +1480,90 @@ function Journey({ taskId }: { taskId: string }) {
     });
   const signMandate = () =>
     void sign.run(async (advance) => {
-      if (!prepared || !owner)
-        throw new Error("Prepare a fresh mandate before signing.");
-      if (!approvalReady)
+      if (!prepared || !owner || !account || !config.data)
         throw new Error(
-          "Approve exactly the mandate input from your smart account before signing.",
+          "Connect the owner wallet and prepare a fresh mandate before signing.",
         );
+      let next = prepared;
       if (
-        Number(prepared.simulation.quoteExpiresAt) <=
-        Math.floor(Date.now() / 1000)
+        mandateStale({
+          preparedQuoteExpiresAt: prepared.simulation.quoteExpiresAt,
+          preparedSimulationHash: prepared.simulationHash,
+          simulation: current.simulation,
+          nowSeconds: Math.floor(Date.now() / 1_000),
+        })
       ) {
-        setPrepared(null);
-        throw new Error(
-          "The prepared quote expired. Re-simulate and prepare a fresh mandate.",
-        );
-      }
-      assertReview(prepared);
+        // One click still ends in one mandate prompt: a stale preparation is
+        // refreshed here, re-simulating once when the API says the simulation
+        // itself went stale. Any other refusal stops before a prompt.
+        advance("freshness");
+        let simulationHash = current.simulation?.simulationHash;
+        const resimulate = async () => {
+          simulationHash = (await api.simulate(token(), taskId)).simulationHash;
+        };
+        if (current.simulation?.status !== "PASSED") await resimulate();
+        try {
+          next = await api.prepareMandate(token(), taskId);
+        } catch (error) {
+          if (!(error instanceof ApiError && error.code.startsWith("STALE_")))
+            throw error;
+          await resimulate();
+          next = await api.prepareMandate(token(), taskId);
+        }
+        assertReview(next, simulationHash);
+        setPrepared(next);
+        await invalidate();
+      } else assertReview(next);
       await assertWalletVenue();
+      const client = getPublicClient(wagmiConfig, { chainId: CHAIN_ID });
+      if (!client) throw new Error("Chain client unavailable.");
+      const executor = config.data.mandateExecutor;
+      const readAllowance = () =>
+        client.readContract({
+          abi: erc20Abi,
+          address: next.mandate.inputToken,
+          functionName: "allowance",
+          args: [account, executor],
+        });
+      if (!allowanceReady(await readAllowance(), next.mandate.maxInput)) {
+        const active =
+          policies.data?.find((entry) => entry.status === "ACTIVE") ?? null;
+        const cap = active
+          ? rollingCap(active.policy, next.mandate.inputToken)
+          : null;
+        const amount = restoreAmount(cap, next.mandate.maxInput);
+        if (amount === null)
+          throw new Error(
+            policies.data === undefined
+              ? "The active wallet policy is still loading. Try signing again in a moment."
+              : "This task spends more than the active wallet policy's rolling 24-hour cap for its input token. Change the plan or raise the cap before signing.",
+          );
+        advance("restore-sign");
+        await sendRootOperation({
+          owner,
+          account,
+          callData: encodeAccountExecute({
+            target: next.mandate.inputToken,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [executor, amount],
+            }),
+          }),
+          onStage: (stage) => advance(restoreStepId(stage, sponsorship)),
+          sponsor: sponsorFor(config.data, session),
+        });
+        await queryClient.invalidateQueries({ queryKey: ["chain"] });
+        if (!allowanceReady(await readAllowance(), next.mandate.maxInput))
+          throw new Error(
+            "The allowance is still short after the restore UserOperation. Nothing else was signed.",
+          );
+      }
       advance("sign");
       const signature = await signTypedData(wagmiConfig, {
         account: owner,
-        ...getTaskMandateTypedData(prepared.mandate, prepared.domain),
+        ...getTaskMandateTypedData(next.mandate, next.domain),
       });
       advance("submit");
       await api.submitMandate(token(), taskId, signature);
@@ -1274,6 +1595,31 @@ function Journey({ taskId }: { taskId: string }) {
           </dl>
         </div>
       </header>
+
+      <AutoPilot
+        input={{
+          taskId,
+          planPresent: current.plan !== null,
+          decisionPassed: current.decision?.outcome === "PASS",
+          simulation: current.simulation
+            ? {
+                simulationId: current.simulation.simulationId,
+                status: current.simulation.status,
+              }
+            : null,
+          mandateSigned: current.mandate !== null,
+          prepared: prepared !== null,
+        }}
+        onRun={(step) => {
+          if (step === "simulate") runSimulation();
+          else prepareMandate();
+        }}
+      />
+      <JourneySummary
+        task={current}
+        prepared={prepared}
+        allowance={allowance}
+      />
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <Plan task={current} />
@@ -1313,18 +1659,10 @@ function Journey({ taskId }: { taskId: string }) {
           ) : null}
         </Panel>
       ) : null}
-      {prepared && config.data && !current.mandate ? (
-        <ExactApproval
-          key={prepared.mandateHash}
-          prepared={prepared}
-          executor={config.data.mandateExecutor}
-          allowance={allowance}
-        />
-      ) : null}
       <MandatePanel
         task={current}
         prepared={prepared}
-        approvalReady={approvalReady}
+        allowance={allowance}
         preparing={prepare.busy}
         signing={sign.busy}
         owner={owner}
@@ -1363,27 +1701,12 @@ function Journey({ taskId }: { taskId: string }) {
       {sign.state.phase !== "idle" && sign.state.phase !== "done" ? (
         <Panel label="Mandate signature">
           <StepList
-            steps={[
-              {
-                id: "sign",
-                title: "Sign the exact EIP-712 TaskMandate",
-                detail:
-                  "Your wallet signs the displayed root-owner mandate terms.",
-                prompt: true,
-              },
-              {
-                id: "submit",
-                title: "Submit signature to the API",
-                detail:
-                  "The API rechecks the exact path and MandateExecutor authorization before queuing.",
-              },
-              {
-                id: "queue",
-                title: "Read queue state",
-                detail:
-                  "Queued is not execution success; this page continues polling the API.",
-              },
-            ]}
+            steps={signSteps({
+              restore:
+                allowance.needsRestore ||
+                sign.state.step.startsWith("restore-"),
+              sponsored: sponsorship,
+            })}
             state={sign.state}
           />
           {sign.state.phase === "failed" ? (

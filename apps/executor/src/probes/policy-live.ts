@@ -6,6 +6,7 @@ import type {
   WalletPolicy,
 } from "@perago/sdk";
 import {
+  deriveExecutorAllowances,
   deriveSemiModularAccountAddress,
   encodeAccountPolicyTransition,
   encodeInstallMandateSession,
@@ -309,8 +310,17 @@ async function main() {
     transition === "activate"
       ? encodeInstallMandateSession(toMandateSessionPermission(permission))
       : encodeUninstallMandateSession(toMandateSessionPermission(permission));
+  // Same standing allowance set as the API: the pinned WBNB and CAKE catalog.
+  const catalogTokens = [
+    getAddress(protocols.contracts.wbnb?.address ?? "0x"),
+    getAddress(protocols.contracts.cake?.address ?? "0x"),
+  ];
   const transitionCallData = encodeAccountPolicyTransition({
     account,
+    allowances:
+      transition === "activate"
+        ? deriveExecutorAllowances(policy, catalogTokens)
+        : catalogTokens.map((token) => ({ amount: 0n, token })),
     mandateExecutor,
     permissionCallData,
     policy: accountPolicy,

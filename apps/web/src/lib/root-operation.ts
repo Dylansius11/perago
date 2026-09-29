@@ -9,7 +9,7 @@ import {
   packUserOperationSignature,
   ROOT_OWNER_ENTITY_ID,
 } from "@perago/sdk";
-import { type Hex, parseEventLogs } from "viem";
+import { type Hex, numberToHex, parseEventLogs } from "viem";
 import { entryPoint07Abi } from "viem/account-abstraction";
 import {
   readContract,
@@ -17,22 +17,31 @@ import {
   signMessage,
   waitForTransactionReceipt,
 } from "wagmi/actions";
-import { ownerSubmissionKey, submitOwnerOnce } from "./owner-submission";
+import { ApiError, api } from "./api";
+import {
+  ownerSubmissionKey,
+  type PendingOwnerTransaction,
+  submitOwnerOnce,
+} from "./owner-submission";
 import { assertWalletVenue } from "./venue";
 import { CHAIN_ID, wagmiConfig } from "./wagmi";
 
 /*
- * One owner-paid root UserOperation, the only way the console changes the
- * smart account: policy activation, wrapping, the exact approval, revoke, and
- * cancel all go through here. Two wallet prompts, always in this order:
+ * One root UserOperation, the only way the console changes the smart account:
+ * policy activation, wrapping, restoring the allowance, and mandate revocation
+ * all go through here. The operation always carries zero fees, so the same
+ * owner signature is valid on both submission paths:
  *
- *   1. sign   the 32-byte ERC-4337 hash of the exact UserOperation
- *   2. send   EntryPoint.handleOps([op], owner) from the owner wallet
+ *   sponsored   the owner signs the 32-byte EntryPoint hash (one prompt); the
+ *               API submits it to Alchemy's bundler, whose gas policy pays.
+ *   owner-paid  the owner signs the hash, then sends EntryPoint.handleOps from
+ *               the owner wallet and pays gas (two prompts). This runs when
+ *               sponsorship is off, or refuses the already signed operation,
+ *               in which case only the send prompt is added.
  *
- * Fees inside the UserOperation are zero (packages/sdk PERAGO_USER_OPERATION_GAS):
- * the owner's transaction pays gas, and the account never prefunds anything.
- * Success is read from the EntryPoint's `UserOperationEvent`, not assumed
- * from a mined transaction.
+ * Success is read from the EntryPoint's `UserOperationEvent` in the mined
+ * receipt on both paths, never assumed from a bundler answer. A reload while a
+ * submission is pending resumes the stored hash instead of submitting again.
  */
 
 export type RootStage = "sign" | "send" | "confirm";
@@ -49,10 +58,57 @@ export type RootOperationResult = {
   userOperationHash: Hash;
 };
 
+/** `sponsor` is the wallet session when the API offers sponsorship, else null. */
+export type Sponsor = { token: string } | null;
+
+const INCLUSION_POLLS = 60;
+const INCLUSION_POLL_MS = 3_000;
+
+/** The sponsor argument for a caller holding the public config and wallet session. */
+export function sponsorFor(
+  config: { sponsorship: { enabled: boolean } },
+  session: { token: string } | null,
+): Sponsor {
+  return config.sponsorship.enabled && session
+    ? { token: session.token }
+    : null;
+}
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+type UserOperationRpc = Parameters<typeof api.submitOperation>[1];
+
+function sponsorshipRefused(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.code === "SPONSORSHIP_UNAVAILABLE" ||
+      error.code === "SPONSORSHIP_REFUSED")
+  );
+}
+
+/** The bundler reports the transaction that included the operation. */
+async function includedTransaction(
+  sponsor: { token: string },
+  userOperationHash: Hash,
+): Promise<Hash> {
+  for (let attempt = 0; attempt < INCLUSION_POLLS; attempt += 1) {
+    const status = await api.operationStatus(sponsor.token, userOperationHash);
+    if (status.status === "INCLUDED") return status.transactionHash;
+    await delay(INCLUSION_POLL_MS);
+  }
+  throw new Error(
+    "The bundler has not included this operation yet. Retry to keep waiting; nothing will be submitted again.",
+  );
+}
+
 export async function sendRootOperation(input: {
   owner: Address;
   account: Address;
   callData: Hex;
+  sponsor: Sponsor;
   onStage?: (
     stage: RootStage,
     detail: { userOperationHash?: Hash; transactionHash?: Hash },
@@ -69,7 +125,7 @@ export async function sendRootOperation(input: {
         callData: input.callData,
       }),
       store: sessionStorage,
-      send: async () => {
+      send: async (): Promise<PendingOwnerTransaction> => {
         const nonce = await readContract(wagmiConfig, {
           abi: entryPoint07Abi,
           address: entryPoint,
@@ -83,26 +139,75 @@ export async function sendRootOperation(input: {
           chainId: CHAIN_ID,
           functionName: "getNonce",
         });
-        const unsigned = buildUserOperation({
+        let unsigned = buildUserOperation({
           callData: input.callData,
           nonce,
           sender: input.account,
         });
+        // The bundler rejects over-provisioned limits, so a sponsored operation
+        // uses its measured estimate. Without one, the owner-paid limits stay.
+        let sponsor = input.sponsor;
+        if (sponsor) {
+          try {
+            const gas = await api.estimateOperation(sponsor.token, {
+              callData: input.callData,
+              nonce: nonce.toString(),
+            });
+            unsigned = {
+              ...unsigned,
+              callGasLimit: BigInt(gas.callGasLimit),
+              preVerificationGas: BigInt(gas.preVerificationGas),
+              verificationGasLimit: BigInt(gas.verificationGasLimit),
+            };
+          } catch (error) {
+            if (!sponsorshipRefused(error)) throw error;
+            sponsor = null;
+          }
+        }
         const userOperationHash = hashUserOperation(unsigned, CHAIN_ID);
         input.onStage?.("sign", { userOperationHash });
-        const signature = await signMessage(wagmiConfig, {
-          account: input.owner,
-          message: { raw: userOperationHash },
-        });
+        const signed = {
+          ...unsigned,
+          signature: packUserOperationSignature(
+            await signMessage(wagmiConfig, {
+              account: input.owner,
+              message: { raw: userOperationHash },
+            }),
+          ),
+        };
         await assertWalletVenue();
         input.onStage?.("send", { userOperationHash });
+        if (sponsor) {
+          const rpc: UserOperationRpc = {
+            callData: signed.callData,
+            callGasLimit: numberToHex(signed.callGasLimit),
+            maxFeePerGas: numberToHex(signed.maxFeePerGas),
+            maxPriorityFeePerGas: numberToHex(signed.maxPriorityFeePerGas),
+            nonce: numberToHex(signed.nonce),
+            preVerificationGas: numberToHex(signed.preVerificationGas),
+            sender: signed.sender,
+            signature: signed.signature,
+            verificationGasLimit: numberToHex(signed.verificationGasLimit),
+          };
+          try {
+            const submitted = await api.submitOperation(sponsor.token, rpc);
+            if (
+              submitted.userOperationHash.toLowerCase() !==
+              userOperationHash.toLowerCase()
+            ) {
+              throw new OperationFailedError(
+                "The bundler accepted a different operation than the one you signed.",
+              );
+            }
+            return { transactionHash: null, userOperationHash };
+          } catch (error) {
+            if (!sponsorshipRefused(error)) throw error;
+          }
+        }
         const transactionHash = await sendTransaction(wagmiConfig, {
           account: input.owner,
           chainId: CHAIN_ID,
-          data: encodeHandleOps(
-            [{ ...unsigned, signature: packUserOperationSignature(signature) }],
-            input.owner,
-          ),
+          data: encodeHandleOps([signed], input.owner),
           to: entryPoint,
         });
         return { transactionHash, userOperationHash };
@@ -112,17 +217,28 @@ export async function sendRootOperation(input: {
           throw new OperationFailedError(
             "The pending owner transaction has no UserOperation hash.",
           );
+        let transactionHash = pending.transactionHash;
+        if (transactionHash === null) {
+          if (!input.sponsor)
+            throw new OperationFailedError(
+              "A sponsored operation is pending; sign in again to follow it.",
+            );
+          transactionHash = await includedTransaction(
+            input.sponsor,
+            pending.userOperationHash,
+          );
+        }
         input.onStage?.("confirm", {
-          transactionHash: pending.transactionHash,
+          transactionHash,
           userOperationHash: pending.userOperationHash,
         });
         const receipt = await waitForTransactionReceipt(wagmiConfig, {
           chainId: CHAIN_ID,
-          hash: pending.transactionHash,
+          hash: transactionHash,
         });
         return {
           receipt,
-          transactionHash: pending.transactionHash,
+          transactionHash,
           userOperationHash: pending.userOperationHash,
         };
       },

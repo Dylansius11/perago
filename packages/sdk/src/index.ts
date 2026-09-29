@@ -19,6 +19,8 @@ export {
   accountPolicySchema,
   accountPolicyTypeString,
   accountPolicyTypes,
+  deriveExecutorAllowances,
+  type ExecutorAllowance,
   encodeAccountPolicyTransition,
   encodeSetAccountPolicy,
   getAccountPolicyTypedData,

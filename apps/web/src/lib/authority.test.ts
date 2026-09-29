@@ -26,6 +26,7 @@ const owner: Address = "0x2222222222222222222222222222222222222222";
 const executor: Address = "0x3333333333333333333333333333333333333333";
 const signer: Address = "0x4444444444444444444444444444444444444444";
 const token: Address = "0x5555555555555555555555555555555555555555";
+const otherToken: Address = "0x7777777777777777777777777777777777777777";
 const permission: MandateSessionPermissionDocument = {
   account,
   entityId: 7,
@@ -60,6 +61,10 @@ const prepared: PolicyTransitionPrepared = {
     rootOwner: owner,
     validUntil: permission.validUntil,
   },
+  allowances: [
+    { amount: "200", token },
+    { amount: "0", token: otherToken },
+  ],
   permissionCallData: encodeInstallMandateSession(
     toMandateSessionPermission(permission),
   ),
@@ -76,6 +81,7 @@ const review: Parameters<typeof assertPreparedPolicy>[0] = {
     permission,
   },
   prepared,
+  tokens: [token, otherToken],
 };
 
 describe("owner policy preparation", () => {
@@ -111,6 +117,34 @@ describe("owner policy preparation", () => {
         },
       }),
     ).toThrow(/prepared policy/i);
+  });
+
+  it("returns only the reviewed policy caps as the standing allowance", () => {
+    expect(assertPreparedPolicy(review)).toEqual([
+      { amount: 200n, token },
+      { amount: 0n, token: otherToken },
+    ]);
+    for (const allowances of [
+      // A widened cap on the active asset.
+      [
+        { amount: "201", token },
+        { amount: "0", token: otherToken },
+      ],
+      // A spend allowance on an asset the policy does not make active.
+      [
+        { amount: "200", token },
+        { amount: "1", token: otherToken },
+      ],
+      // A token dropped from the batch, which would leave a stale allowance.
+      [{ amount: "200", token }],
+    ]) {
+      expect(() =>
+        assertPreparedPolicy({
+          ...review,
+          prepared: { ...prepared, allowances },
+        }),
+      ).toThrow(/allowances differ/i);
+    }
   });
 });
 

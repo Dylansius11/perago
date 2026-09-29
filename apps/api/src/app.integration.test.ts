@@ -60,6 +60,7 @@ const policyConfig: PolicyServiceConfig = {
   mandateExecutor,
   now: () => now,
   performSelector: "0x12345678",
+  tokens: loadBscTestnetCatalog().tokens.map((token) => token.address),
 };
 const verifier: PolicyChainVerifier = {
   async verify(expectation) {

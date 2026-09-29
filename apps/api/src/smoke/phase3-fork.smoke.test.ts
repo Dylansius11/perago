@@ -376,6 +376,7 @@ beforeAll(async () => {
       mandateExecutor: deployment.mandateExecutor.address,
       now: () => new Date(),
       performSelector,
+      tokens: catalog.tokens.map((token) => token.address),
     },
     policyVerifier: forkPolicyVerifier,
     sql,

@@ -447,6 +447,7 @@ async function activatePolicy() {
   };
   const prepared = await api<{
     accountPolicy: AccountPolicy;
+    allowances: { amount: string; token: Address }[];
     permissionCallData: Hex;
   }>(`/policies/${policy.body.policyId}/activation/prepare`, transition);
   expect(prepared.status, JSON.stringify(prepared.body)).toBe(200);
@@ -461,6 +462,12 @@ async function activatePolicy() {
     account,
     encodeAccountPolicyTransition({
       account,
+      allowances: prepared.body.allowances.map(
+        (allowance: { amount: string; token: Address }) => ({
+          amount: BigInt(allowance.amount),
+          token: allowance.token,
+        }),
+      ),
       mandateExecutor: production.mandateExecutor.address,
       permissionCallData: prepared.body.permissionCallData,
       policy: prepared.body.accountPolicy,
@@ -892,6 +899,7 @@ beforeAll(async () => {
       mandateExecutor: production.mandateExecutor.address,
       now: () => new Date(),
       performSelector: PERFORM_SELECTOR,
+      tokens: catalog.tokens.map((token) => token.address),
     },
     policyVerifier,
     sql,

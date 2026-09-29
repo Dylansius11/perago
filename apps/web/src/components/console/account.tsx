@@ -14,8 +14,8 @@ import { encodeFunctionData, parseAbi, parseEther } from "viem";
 import { sendTransaction, waitForTransactionReceipt } from "wagmi/actions";
 import { amount } from "@/lib/format";
 import { ownerSubmissionKey, submitOwnerOnce } from "@/lib/owner-submission";
-import type { Holdings } from "@/lib/queries";
-import { sendRootOperation } from "@/lib/root-operation";
+import { type Holdings, usePublicConfig } from "@/lib/queries";
+import { sendRootOperation, sponsorFor } from "@/lib/root-operation";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { assertWalletVenue } from "@/lib/venue";
@@ -311,11 +311,16 @@ export function CreateAccount({
                 },
                 confirm: async (pending) => {
                   advance("confirm");
+                  const hash = pending.transactionHash;
+                  if (!hash)
+                    throw new Error(
+                      "The pending account creation has no transaction hash.",
+                    );
                   const receipt = await waitForTransactionReceipt(wagmiConfig, {
                     chainId: CHAIN_ID,
-                    hash: pending.transactionHash,
+                    hash,
                   });
-                  return { receipt, hash: pending.transactionHash };
+                  return { receipt, hash };
                 },
               });
               if (receipt.status !== "success")
@@ -362,6 +367,9 @@ export function WrapNative({
 }) {
   const queryClient = useQueryClient();
   const action = useStagedAction<string>();
+  const { session } = useSession();
+  const config = usePublicConfig();
+  const sponsored = config.data?.sponsorship.enabled === true;
   const [value, setValue] = useState(() =>
     suggested ? amount(suggested, 18, 18).replaceAll(",", "") : "0.01",
   );
@@ -384,10 +392,13 @@ export function WrapNative({
     },
     {
       id: "send",
-      title: "Send it through the EntryPoint",
-      detail:
-        "Your wallet submits handleOps and pays the fee; the account pays nothing.",
-      prompt: true,
+      title: sponsored
+        ? "Submit it to the bundler"
+        : "Send it through the EntryPoint",
+      detail: sponsored
+        ? "Perago's bundler pays the gas. If it refuses, your wallet sends the same signed operation and pays."
+        : "Your wallet submits handleOps and pays the fee; the account pays nothing.",
+      prompt: !sponsored,
     },
     {
       id: "confirm",
@@ -427,6 +438,7 @@ export function WrapNative({
           onClick={() =>
             void action.run(async (advance) => {
               if (parsed === null) throw new Error("Enter an amount.");
+              if (!config.data) throw new Error("Configuration is loading.");
               const result = await sendRootOperation({
                 owner,
                 account,
@@ -439,6 +451,7 @@ export function WrapNative({
                   value: parsed,
                 }),
                 onStage: (stage) => advance(stage),
+                sponsor: sponsorFor(config.data, session),
               });
               await queryClient.invalidateQueries({ queryKey: ["chain"] });
               return result.transactionHash;
