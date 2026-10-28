@@ -15,13 +15,31 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_URL = "https://perago-app.vercel.app";
+const TITLE = "Perago · Give the goal, not the wallet";
+const DESCRIPTION =
+  "State a goal, sign one mandate. Perago swaps or stakes within your limits, verifies the result onchain, then ends its authority. BNB Smart Chain Testnet.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Perago",
-    template: "%s | Perago",
+    default: TITLE,
+    template: "%s · Perago",
   },
-  description:
-    "A bounded execution layer for onchain agents. Give the goal, not the wallet.",
+  description: DESCRIPTION,
+  applicationName: "Perago",
+  openGraph: {
+    type: "website",
+    siteName: "Perago",
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
