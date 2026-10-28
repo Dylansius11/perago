@@ -48,6 +48,7 @@ import {
 import { useSession } from "@/lib/session";
 import { assertWalletVenue } from "@/lib/venue";
 import { CHAIN_ID, wagmiConfig } from "@/lib/wagmi";
+import { PublicReceiptLink } from "../receipt/receipt-link";
 import { type Step, StepList, useStagedAction } from "./action";
 import { PolicyDecisionPanel } from "./task/decision";
 import {
@@ -1193,6 +1194,7 @@ function ReceiptPanel({
   const terminal = task.receipt;
   if (!terminal) return null;
   const state = standingOf(task);
+  const mandateHash = task.mandate?.mandateHash ?? receipt.data?.mandateHash;
   return (
     <Panel
       label="Receipt"
@@ -1215,6 +1217,7 @@ function ReceiptPanel({
         submitted signature or transaction is never shown as a successful
         execution.
       </p>
+      {mandateHash ? <PublicReceiptLink mandateHash={mandateHash} /> : null}
       {receipt.isPending ? (
         <p className="mt-6">
           <Status tone="pending">Loading public receipt</Status>
