@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type Address,
   encodeAccountPolicyTransition,
   getAccountPolicyTypedData,
   MAX_SESSION_ENTITY_ID,
@@ -10,11 +11,13 @@ import {
   walletPolicySchema,
 } from "@perago/sdk";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { formatUnits, parseUnits } from "viem";
+import { useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { parseUnits } from "viem";
 import { signTypedData } from "wagmi/actions";
 import { api } from "@/lib/api";
 import { assertPreparedPolicy } from "@/lib/authority";
+import { compact } from "@/lib/format";
 import {
   clearPendingPolicy,
   readPendingPolicy,
@@ -29,70 +32,153 @@ import {
 import { useSession } from "@/lib/session";
 import { assertWalletVenue } from "@/lib/venue";
 import { wagmiConfig } from "@/lib/wagmi";
-import { StepList, useStagedAction } from "./action";
-import { Button, Fact, FailureNotice, Label, Status } from "./ui";
+import { useStagedAction } from "./action";
+import {
+  ActivationReview,
+  type PendingActivation,
+  type Review,
+} from "./policy/activation-review";
+import { percentOfBps } from "./policy/describe";
+import { diffPolicies } from "./policy/diff";
+import {
+  AmountField,
+  DiffSummary,
+  ModeControl,
+  Presets,
+} from "./policy/editor";
+import {
+  type AssetChoice,
+  type EditorState,
+  hasErrors,
+  initialEditorState,
+  secondsFromMinutes,
+  validateEditor,
+} from "./policy/editor-model";
+import { PolicyReadout } from "./policy/readout";
+import { RevokeAccess } from "./policy/revoke";
+import { Button, FailureNotice, Panel, Status } from "./ui";
 
-/* One policy is the owner's standing envelope, not a blanket session. */
-type Mode = "active" | "protected" | "off";
-type AssetChoice = { mode: Mode; max: string; daily: string };
-type Review = {
-  policyId: string;
-  policy: WalletPolicy;
-  prepared: Awaited<ReturnType<typeof api.prepareActivation>>;
-  transition: {
-    ownerEpoch: string;
-    validUntil: string;
-    permission: {
-      account: `0x${string}`;
-      entityId: number;
-      nativeSpendLimit: string;
-      selectors: `0x${string}`[];
-      sessionSigner: `0x${string}`;
-      target: `0x${string}`;
-      validAfter: string;
-      validUntil: string;
-    };
-  };
-};
-type PendingActivation = {
-  policyId: string;
-  body: Review["transition"] & {
-    rootSignature: `0x${string}`;
-    transactionHash: `0x${string}`;
-    userOperationHash: `0x${string}`;
-  };
-};
+/*
+ * The policy section: what the active policy allows (the readout), the one
+ * way to revoke all of it, and the editor that proposes a replacement. One
+ * policy is the owner's standing envelope, not a blanket session. Editing
+ * never changes anything on its own: a replacement takes effect only after
+ * the owner signs it and the chain confirms it.
+ */
 
-function initialChoice(symbol: string): AssetChoice {
-  return {
-    mode: symbol === "WBNB" ? "active" : "protected",
-    max: "0.01",
-    daily: "0.05",
-  };
+const SLIPPAGE_PRESETS = [
+  { value: "50", text: "0.5%" },
+  { value: "100", text: "1%" },
+  { value: "300", text: "3%" },
+];
+
+const LIFETIME_PRESETS = [
+  { value: "5", text: "5 min" },
+  { value: "15", text: "15 min" },
+  { value: "30", text: "30 min" },
+  { value: "60", text: "60 min" },
+];
+
+const newest = (rows: PolicyView[]): PolicyView | null =>
+  rows.reduce<PolicyView | null>(
+    (best, row) =>
+      best === null || BigInt(row.version) > BigInt(best.version) ? row : best,
+    null,
+  );
+
+/** The policy document a validated editor state means. Throws if the schema refuses it. */
+function buildPolicy(input: {
+  account: Address;
+  config: PublicConfig;
+  policies: PolicyView[];
+  state: EditorState;
+}): WalletPolicy {
+  const { account, config, policies, state } = input;
+  const lifetime = secondsFromMinutes(state.lifetimeMinutes);
+  if (lifetime === null) throw new Error("Enter the task lifetime in minutes.");
+  const latest = policies.reduce(
+    (highest, row) => Math.max(highest, Number(row.version)),
+    0,
+  );
+  return walletPolicySchema.parse({
+    schemaVersion: "1",
+    account,
+    chainId: config.chainId,
+    version: String(latest + 1),
+    protectedAssets: config.tokens
+      .filter((token) => state.assets[token.symbol]?.mode === "protected")
+      .map((token) => token.address.toLowerCase()),
+    activeAssets: config.tokens.flatMap((token) => {
+      const choice = state.assets[token.symbol];
+      if (choice?.mode !== "active") return [];
+      return [
+        {
+          token: token.address.toLowerCase() as `0x${string}`,
+          maxInputPerTask: parseUnits(choice.max, token.decimals).toString(),
+          rollingDailyCap: parseUnits(choice.daily, token.decimals).toString(),
+        },
+      ];
+    }),
+    services: [...new Set(config.adapters.map((adapter) => adapter.kind))],
+    approvedAdapterIds: config.adapters.map((adapter) => adapter.id),
+    maxSlippageBps: state.slippageBps.trim(),
+    allowedRecipients: "SELF",
+    maxTaskLifetimeSeconds: String(lifetime),
+  });
 }
 
-export function PolicyComposer({
+export function PolicySection({
   config,
   policies,
   holdings,
+  number,
 }: {
   config: PublicConfig;
   policies: PolicyView[];
   holdings: Holdings | undefined;
+  /** Section number, e.g. "04", shared with the in-page navigation. */
+  number: string;
 }) {
   const { owner, account, session } = useSession();
   const queryClient = useQueryClient();
-  const [assets, setAssets] = useState<Record<string, AssetChoice>>({});
-  const [slippage, setSlippage] = useState("100");
-  const [lifetime, setLifetime] = useState("1800");
+  const reduced = useReducedMotion();
+  const editor = useRef<HTMLDivElement>(null);
+  const active = newest(policies.filter((row) => row.status === "ACTIVE"));
+  const confirming = newest(
+    policies.filter((row) => row.status === "ACTIVATING"),
+  );
+  const revoked = active
+    ? null
+    : newest(policies.filter((row) => row.status === "REVOKED"));
+  const draft = newest(
+    policies.filter(
+      (row) =>
+        row.status === "DRAFT" &&
+        (!active || BigInt(row.version) > BigInt(active.version)),
+    ),
+  );
+  const baseline = active?.policy ?? null;
+
+  const [state, setState] = useState<EditorState>(() =>
+    initialEditorState(baseline, config),
+  );
+  const [editing, setEditing] = useState(false);
   const [review, setReview] = useState<Review | null>(null);
   const [submitted, setSubmitted] = useState<PendingActivation | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [resume, setResume] = useState<PolicyView | null>(null);
   const prepare = useStagedAction<void>();
   const activate = useStagedAction<void>();
-  const draft = policies.find((entry) => entry.status === "DRAFT") ?? null;
-  const active = policies.find((entry) => entry.status === "ACTIVE") ?? null;
+
+  // A newly active policy is the new baseline for the next edit. Keyed on the
+  // policy's identity so a background refetch never resets what is being typed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when the active policy changes
+  useEffect(() => {
+    setState(initialEditorState(active?.policy ?? null, config));
+    setEditing(false);
+    setResume(null);
+  }, [active?.policyId, config]);
+
   useEffect(() => {
     if (!owner || !account) return;
     const identity = { owner, account, chainId: Number(config.chainId) };
@@ -111,49 +197,64 @@ export function PolicyComposer({
       );
     }
   }, [owner, account, config.chainId, active?.policyId]);
-  const choiceOf = (symbol: string) => assets[symbol] ?? initialChoice(symbol);
-  const change = (symbol: string, next: AssetChoice) => {
-    setAssets((current) => ({ ...current, [symbol]: next }));
+
+  const showEditor =
+    !active ||
+    editing ||
+    review !== null ||
+    submitted !== null ||
+    resume !== null;
+  useEffect(() => {
+    if (editing || resume) {
+      editor.current?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "start",
+      });
+    }
+  }, [editing, resume, reduced]);
+
+  const locked = resume !== null || review !== null;
+  const shown = useMemo(
+    () => (resume ? initialEditorState(resume.policy, config) : state),
+    [resume, state, config],
+  );
+  const errors = useMemo(() => validateEditor(shown, config), [shown, config]);
+  const valid = !hasErrors(errors);
+
+  const edit = (next: EditorState) => {
+    setState(next);
     setReview(null);
     setResume(null);
     prepare.reset();
   };
+  const changeAsset = (symbol: string, patch: Partial<AssetChoice>) => {
+    const current = state.assets[symbol];
+    if (!current) return;
+    edit({
+      ...state,
+      assets: { ...state.assets, [symbol]: { ...current, ...patch } },
+    });
+  };
 
   const policyOf = (): WalletPolicy => {
     if (!account) throw new Error("Connect a wallet first.");
-    const activeAssets = config.tokens
-      .filter((token) => choiceOf(token.symbol).mode === "active")
-      .map((token) => ({
-        token: token.address.toLowerCase() as `0x${string}`,
-        maxInputPerTask: parseUnits(
-          choiceOf(token.symbol).max,
-          token.decimals,
-        ).toString(),
-        rollingDailyCap: parseUnits(
-          choiceOf(token.symbol).daily,
-          token.decimals,
-        ).toString(),
-      }));
-    const latest = policies.reduce(
-      (highest, row) => Math.max(highest, Number(row.version)),
-      0,
-    );
-    return walletPolicySchema.parse({
-      schemaVersion: "1",
-      account,
-      chainId: config.chainId,
-      version: String(latest + 1),
-      protectedAssets: config.tokens
-        .filter((token) => choiceOf(token.symbol).mode === "protected")
-        .map((token) => token.address.toLowerCase()),
-      activeAssets,
-      services: [...new Set(config.adapters.map((adapter) => adapter.kind))],
-      approvedAdapterIds: config.adapters.map((adapter) => adapter.id),
-      maxSlippageBps: slippage,
-      allowedRecipients: "SELF",
-      maxTaskLifetimeSeconds: lifetime,
-    });
+    return buildPolicy({ account, config, policies, state: shown });
   };
+
+  const candidate = useMemo((): WalletPolicy | null => {
+    if (resume) return resume.policy;
+    if (!valid || !account) return null;
+    try {
+      return buildPolicy({ account, config, policies, state: shown });
+    } catch {
+      // The same input fails loudly in reviewPolicy; a preview just has no diff.
+      return null;
+    }
+  }, [resume, valid, account, shown, policies, config]);
+  const diffLines = useMemo(
+    () => (candidate ? diffPolicies(baseline, candidate, config) : []),
+    [candidate, baseline, config],
+  );
 
   const reviewPolicy = () => {
     void prepare.run(async (advance) => {
@@ -323,7 +424,9 @@ export function PolicyComposer({
         if (result.status !== "PENDING") {
           throw new Error(`Unexpected policy confirmation: ${result.status}`);
         }
-        await new Promise((resolve) => setTimeout(resolve, 1_500));
+        const wait = Promise.withResolvers<void>();
+        setTimeout(wait.resolve, 1_500);
+        await wait.promise;
       }
       throw new Error(
         "Policy confirmation is still pending. Retry checks the same onchain transaction without another wallet signature.",
@@ -331,358 +434,321 @@ export function PolicyComposer({
     });
   };
 
+  const adapterNames = config.adapters
+    .map((adapter) => adapter.protocol)
+    .join(" and ");
+  const slippageValid = errors.slippage === undefined;
+  const lifetimeSeconds = secondsFromMinutes(shown.lifetimeMinutes);
+
   return (
-    <div className="space-y-7">
-      {active ? (
-        <div className="border-l-2 border-ok-ink pl-4">
-          <Status tone="ok">Policy v{active.version} active</Status>
-          <p className="mt-2 text-sm text-fog">
-            A new policy supersedes it on chain only after your root signature
-            and a confirmed UserOperation.
-          </p>
-        </div>
-      ) : null}
-      {draft && !review && !resume ? (
-        <div className="flex flex-wrap items-center justify-between gap-4 border border-rule p-4">
-          <div>
-            <Status tone="pending">Draft v{draft.version}</Status>
-            <p className="mt-1 text-sm text-fog">
-              A previous review stopped before activation.
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setResume(draft);
-              setReview(null);
-            }}
-          >
-            Resume this draft
-          </Button>
-        </div>
-      ) : null}
-      {resume ? (
-        <p className="font-mono text-xs text-signal-ink">
-          Resuming saved draft v{resume.version}; choices below are not editable
-          until its review finishes.
-        </p>
-      ) : null}
-      <div className="grid gap-px bg-rule md:grid-cols-2">
-        {config.tokens.map((token) => {
-          const choice = choiceOf(token.symbol);
-          return (
-            <fieldset
-              key={token.address}
-              disabled={!!resume || !!review}
-              className="min-w-0 bg-paper p-5"
-            >
-              <legend className="font-semibold">{token.symbol}</legend>
-              <Label className="block">
-                {token.address.slice(0, 10)}… · {token.decimals} decimals
-              </Label>
-              <div className="mt-4 flex flex-wrap gap-3 font-mono text-xs">
-                {(["active", "protected", "off"] as const).map((mode) => (
-                  <label
-                    key={mode}
-                    className="inline-flex cursor-pointer items-center gap-1.5"
-                  >
-                    <input
-                      type="radio"
-                      name={`asset-${token.address}`}
-                      checked={choice.mode === mode}
-                      onChange={() => change(token.symbol, { ...choice, mode })}
-                    />
-                    {mode}
-                  </label>
-                ))}
-              </div>
-              {choice.mode === "active" ? (
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {(["max", "daily"] as const).map((field) => (
-                    <label key={field} className="space-y-1">
-                      <Label className="block">
-                        {field === "max" ? "Max per task" : "24h cap"}
-                      </Label>
-                      <input
-                        inputMode="decimal"
-                        aria-label={`${token.symbol} ${field === "max" ? "maximum input per task" : "rolling 24-hour cap"}`}
-                        className="w-full border border-rule bg-paper px-2 py-2 font-mono text-sm focus:border-ink focus:outline-none"
-                        value={choice[field]}
-                        onChange={(event) =>
-                          change(token.symbol, {
-                            ...choice,
-                            [field]: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-              ) : null}
-            </fieldset>
-          );
-        })}
-      </div>
-      <div className="grid gap-5 md:grid-cols-2">
-        <label className="space-y-2">
-          <Label className="block">Maximum slippage (basis points)</Label>
-          <input
-            type="number"
-            min="0"
-            max="10000"
-            value={slippage}
-            disabled={!!resume || !!review}
-            onChange={(event) => {
-              setSlippage(event.target.value);
-              setReview(null);
-            }}
-            className="w-full border border-rule bg-paper px-3 py-2 font-mono focus:border-ink focus:outline-none"
-          />
-        </label>
-        <label className="space-y-2">
-          <Label className="block">Maximum task lifetime (seconds)</Label>
-          <input
-            type="number"
-            min="1"
-            value={lifetime}
-            disabled={!!resume || !!review}
-            onChange={(event) => {
-              setLifetime(event.target.value);
-              setReview(null);
-            }}
-            className="w-full border border-rule bg-paper px-3 py-2 font-mono focus:border-ink focus:outline-none"
-          />
-        </label>
-      </div>
-      <p className="max-w-[70ch] text-sm text-fog">
-        Only the pinned{" "}
-        {config.adapters.map((adapter) => adapter.protocol).join(" and ")}{" "}
-        adapters are enabled. The recipient is always this smart account.
-        Protected tokens can never be spent; switching them to “off” removes
-        that protection.
-      </p>
-      {recoveryError ? (
-        <p
-          role="alert"
-          className="border-l-2 border-fail-ink pl-4 text-sm text-fail-ink"
-        >
-          {recoveryError}
-        </p>
-      ) : null}
-      {submitted && !review ? (
-        <div className="border border-rule p-5">
-          <Status tone="pending">Owner transaction submitted</Status>
-          <p className="mt-3 text-sm text-fog">
-            The signed policy transition is already on chain or awaiting its
-            receipt. Resume only the API finality check; no wallet prompt or new
-            transaction.
-          </p>
-          <Button busy={activate.busy} onClick={activatePolicy}>
-            Continue confirmation
-          </Button>
-          {activate.state.phase === "failed" ? (
-            <FailureNotice
-              failure={activate.state.failure}
-              onRetry={activatePolicy}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {!review && !submitted && !recoveryError ? (
-        <Button arrow busy={prepare.busy} onClick={reviewPolicy}>
-          Review exact limits
-        </Button>
-      ) : null}
-      {prepare.state.phase === "failed" ? (
-        <FailureNotice
-          failure={prepare.state.failure}
-          onRetry={() => prepare.reset()}
-        />
-      ) : null}
-      {review ? (
-        <div className="border border-ruleinvert bg-ink p-5 text-paper md:p-8">
-          <Label dark>What your wallet signs</Label>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
-            One account policy. One scoped session.
-          </h3>
-          <dl className="mt-5">
-            <Fact dark label="Root owner" value={owner} />
-            <Fact dark label="Account" value={account} />
-            <Fact
-              dark
-              label="Chain"
-              value={`BSC Testnet · ${config.chainId} · ${config.venue}`}
-            />
-            <Fact dark label="Executor" value={config.mandateExecutor} />
-            <Fact dark label="Session signer" value={config.sessionSigner} />
-            <Fact dark label="Only call" value={config.performSelector} />
-            <Fact dark label="Native spend" value="0" />
-            <Fact
-              dark
-              label="Expires"
-              value={new Date(
-                Number(review.transition.validUntil) * 1000,
-              ).toLocaleString()}
-            />
-            {review.policy.activeAssets.map((asset) => {
-              const token = config.tokens.find(
-                (item) =>
-                  item.address.toLowerCase() === asset.token.toLowerCase(),
-              );
-              return (
-                <Fact
-                  dark
-                  key={asset.token}
-                  label={`${token?.symbol ?? asset.token} spend`}
-                  value={`${token ? formatUnits(BigInt(asset.maxInputPerTask), token.decimals) : asset.maxInputPerTask} per task · ${token ? formatUnits(BigInt(asset.rollingDailyCap), token.decimals) : asset.rollingDailyCap} per 24h`}
-                />
-              );
-            })}
-            {review.prepared.allowances.map((allowance) => {
-              const token = config.tokens.find(
-                (item) =>
-                  item.address.toLowerCase() === allowance.token.toLowerCase(),
-              );
-              return (
-                <Fact
-                  dark
-                  key={`allowance-${allowance.token}`}
-                  label={`${token?.symbol ?? allowance.token} allowance`}
-                  value={
-                    allowance.amount === "0"
-                      ? "0, the executor cannot pull it"
-                      : `${token ? formatUnits(BigInt(allowance.amount), token.decimals) : allowance.amount} in total until you revoke or change this policy`
-                  }
-                />
-              );
-            })}
-            <Fact
-              dark
-              label="Protected"
-              value={
-                review.policy.protectedAssets
-                  .map(
-                    (address) =>
-                      config.tokens.find(
-                        (token) => token.address.toLowerCase() === address,
-                      )?.symbol ?? address,
-                  )
-                  .join(", ") || "none"
+    <>
+      <PolicyReadout
+        id="policy"
+        label={`${number} / Your policy`}
+        config={config}
+        active={active}
+        revoked={revoked}
+        draft={draft}
+        confirming={confirming}
+        holdings={holdings}
+        resumeDisabled={review !== null || submitted !== null}
+        onResumeDraft={() => {
+          if (!draft) return;
+          setResume(draft);
+          setReview(null);
+        }}
+        actions={
+          active ? (
+            <RevokeAccess
+              config={config}
+              policy={active}
+              holdings={holdings}
+              leading={
+                <Button
+                  variant="ghost"
+                  aria-expanded={showEditor}
+                  aria-controls="policy-editor"
+                  disabled={showEditor}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit limits
+                </Button>
               }
             />
-            <Fact
-              dark
-              label="Policy hash"
-              value={review.prepared.accountPolicy.policyHash}
-            />
-            <Fact
-              dark
-              label="Permission hash"
-              value={review.prepared.accountPolicy.permissionHash}
-            />
-          </dl>
-          <p className="mt-5 text-sm text-paper/70">
-            MandateExecutor may pull an allowed token only for a mandate you
-            sign, and never more than the allowance above. Wallet prompt 1 signs
-            this EIP-712 policy. Prompt 2 signs the UserOperation that installs
-            the session, records the policy, and sets these allowances.{" "}
-            {config.sponsorship.enabled
-              ? "Perago's bundler pays the gas; a third prompt to pay it yourself appears only if sponsorship is refused."
-              : "Prompt 3 pays for EntryPoint.handleOps from your owner wallet."}{" "}
-            The session expires above and cannot install modules, upgrade the
-            account, or spend native value.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              variant="signal"
-              busy={activate.busy}
-              onClick={activatePolicy}
-            >
-              {submitted ? "Continue confirmation" : "Sign and activate"}
-            </Button>
-            {!submitted ? (
-              <Button
-                variant="ghost-dark"
-                disabled={activate.busy}
-                onClick={() => {
+          ) : null
+        }
+      />
+
+      {showEditor ? (
+        <Panel
+          id="policy-editor"
+          label={active ? "Edit limits" : "Set the boundary"}
+          className="scroll-mt-28 !border-0"
+          aside={
+            resume ? (
+              <Status tone="pending">Draft v{resume.version}</Status>
+            ) : active ? (
+              <Status tone="idle">Replaces v{active.version}</Status>
+            ) : null
+          }
+        >
+          <div ref={editor} className="scroll-mt-28 space-y-7">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
+                {active
+                  ? "Propose different limits."
+                  : "Set the boundary first."}
+              </h2>
+              <p className="mt-2 max-w-[64ch] text-fog">
+                Your policy limits what may be proposed. Only a later signature
+                over a specific simulated mandate can authorize one action.
+                {active
+                  ? ` Nothing here changes policy v${active.version} until you sign and the chain confirms.`
+                  : ""}
+              </p>
+            </div>
+
+            {resume ? (
+              <p className="border-l-2 border-statuspending pl-4 font-mono text-xs text-pending-ink">
+                Resuming saved draft v{resume.version}. Its values are shown
+                below and cannot be edited here. Cancel to propose different
+                limits.
+              </p>
+            ) : null}
+
+            <div className="grid gap-px border border-rule bg-rule md:grid-cols-2">
+              {config.tokens.map((token) => {
+                const choice = shown.assets[token.symbol];
+                const own = errors.assets[token.symbol];
+                const entry = holdings?.tokens[token.symbol];
+                if (!choice) return null;
+                return (
+                  <fieldset
+                    key={token.address}
+                    disabled={locked}
+                    className="min-w-0 space-y-4 bg-paper p-5"
+                  >
+                    <legend className="sr-only">{token.symbol}</legend>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <h3 className="text-xl font-semibold tracking-[-0.02em]">
+                        {token.symbol}
+                      </h3>
+                      <span className="font-mono text-[11px] text-fog">
+                        {token.address.slice(0, 8)}…{token.address.slice(-4)} ·{" "}
+                        {token.decimals} decimals
+                      </span>
+                    </div>
+                    <p className="font-mono text-[12px] text-fog">
+                      {entry
+                        ? `Account holds ${compact(entry.balance, token.decimals)} ${token.symbol}`
+                        : "Reading balance"}
+                    </p>
+                    <ModeControl
+                      symbol={token.symbol}
+                      mode={choice.mode}
+                      disabled={locked}
+                      onChange={(mode) => changeAsset(token.symbol, { mode })}
+                    />
+                    {choice.mode === "active" ? (
+                      <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                        <AmountField
+                          label="Max per task"
+                          unit={token.symbol}
+                          value={choice.max}
+                          error={own?.max}
+                          disabled={locked}
+                          onChange={(max) => changeAsset(token.symbol, { max })}
+                        />
+                        <AmountField
+                          label="24h cap"
+                          unit={token.symbol}
+                          value={choice.daily}
+                          error={own?.daily}
+                          disabled={locked}
+                          onChange={(daily) =>
+                            changeAsset(token.symbol, { daily })
+                          }
+                        />
+                      </div>
+                    ) : null}
+                  </fieldset>
+                );
+              })}
+            </div>
+            {errors.general ? (
+              <p
+                role="alert"
+                className="border-l-2 border-fail-ink pl-4 text-sm text-fail-ink"
+              >
+                {errors.general}
+              </p>
+            ) : null}
+
+            <div className="grid gap-x-6 gap-y-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <AmountField
+                  label="Maximum slippage"
+                  unit="bps"
+                  inputMode="numeric"
+                  value={shown.slippageBps}
+                  error={errors.slippage}
+                  hint={
+                    slippageValid
+                      ? `= ${percentOfBps(shown.slippageBps)}%`
+                      : undefined
+                  }
+                  disabled={locked}
+                  onChange={(slippageBps) => edit({ ...state, slippageBps })}
+                />
+                <Presets
+                  label="Slippage presets"
+                  options={SLIPPAGE_PRESETS}
+                  current={shown.slippageBps}
+                  disabled={locked}
+                  onPick={(slippageBps) => edit({ ...state, slippageBps })}
+                />
+              </div>
+              <div className="space-y-3">
+                <AmountField
+                  label="Maximum task lifetime"
+                  unit="min"
+                  value={shown.lifetimeMinutes}
+                  error={errors.lifetime}
+                  hint={
+                    lifetimeSeconds === null
+                      ? undefined
+                      : `= ${lifetimeSeconds.toLocaleString("en-US")} seconds`
+                  }
+                  disabled={locked}
+                  onChange={(lifetimeMinutes) =>
+                    edit({ ...state, lifetimeMinutes })
+                  }
+                />
+                <Presets
+                  label="Lifetime presets"
+                  options={LIFETIME_PRESETS}
+                  current={shown.lifetimeMinutes}
+                  disabled={locked}
+                  onPick={(lifetimeMinutes) =>
+                    edit({ ...state, lifetimeMinutes })
+                  }
+                />
+              </div>
+            </div>
+
+            <p className="max-w-[70ch] text-sm text-fog">
+              Only the pinned {adapterNames} adapters are enabled. The recipient
+              is always this smart account. Protected tokens can never be spent;
+              switching them to Off removes that protection.
+            </p>
+
+            {recoveryError ? (
+              <p
+                role="alert"
+                className="border-l-2 border-fail-ink pl-4 text-sm text-fail-ink"
+              >
+                {recoveryError}
+              </p>
+            ) : null}
+
+            {submitted && !review ? (
+              <div className="border border-rule p-5">
+                <Status tone="pending">Owner transaction submitted</Status>
+                <p className="mt-3 text-sm text-fog">
+                  The signed policy transition is already on chain or awaiting
+                  its receipt. Resume only the API finality check; no wallet
+                  prompt or new transaction.
+                </p>
+                <Button
+                  className="mt-4"
+                  busy={activate.busy}
+                  onClick={activatePolicy}
+                >
+                  Continue confirmation
+                </Button>
+                {activate.state.phase === "failed" ? (
+                  <FailureNotice
+                    failure={activate.state.failure}
+                    onRetry={activatePolicy}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            {!review && !submitted && !recoveryError ? (
+              <div className="space-y-5">
+                {candidate || resume ? (
+                  <DiffSummary
+                    lines={diffLines}
+                    baseVersion={active?.version ?? null}
+                  />
+                ) : null}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    arrow
+                    busy={prepare.busy}
+                    disabled={!valid && !resume}
+                    onClick={reviewPolicy}
+                  >
+                    Review exact limits
+                  </Button>
+                  {active || resume ? (
+                    <Button
+                      variant="ghost"
+                      disabled={prepare.busy}
+                      onClick={() => {
+                        setEditing(false);
+                        setResume(null);
+                        setState(initialEditorState(baseline, config));
+                        prepare.reset();
+                      }}
+                    >
+                      {resume && !active ? "Discard review" : "Cancel"}
+                    </Button>
+                  ) : null}
+                  {!valid && !resume ? (
+                    <span className="font-mono text-[12px] text-fail-ink">
+                      Fix the highlighted fields to continue.
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {prepare.state.phase === "failed" ? (
+              <FailureNotice
+                failure={prepare.state.failure}
+                onRetry={() => prepare.reset()}
+              />
+            ) : null}
+
+            {review ? (
+              <ActivationReview
+                config={config}
+                owner={owner}
+                account={account}
+                review={review}
+                submitted={submitted}
+                state={activate.state}
+                busy={activate.busy}
+                onActivate={activatePolicy}
+                onBack={() => {
                   setReview(null);
                   activate.reset();
                 }}
-              >
-                Back to choices
-              </Button>
+              />
+            ) : null}
+
+            {holdings &&
+            holdings.ownerNative === 0n &&
+            !config.sponsorship.enabled ? (
+              <p className="text-sm text-fail-ink">
+                Your owner wallet needs tBNB to pay for the activation
+                transaction. The faucet only funds your smart account.
+              </p>
             ) : null}
           </div>
-          {submitted ? (
-            <p className="mt-4 text-sm text-paper/70">
-              The owner transaction was submitted. Confirmation may take more
-              blocks; retry only checks that same transaction, with no new
-              wallet prompt.
-            </p>
-          ) : null}
-          {activate.state.phase !== "idle" ? (
-            <div className="mt-6">
-              <StepList
-                dark
-                state={activate.state}
-                steps={[
-                  {
-                    id: "sign-policy",
-                    title: "Sign EIP-712 policy",
-                    detail: "The fields above, with no blanket access.",
-                    prompt: true,
-                  },
-                  {
-                    id: "sign",
-                    title: "Sign UserOperation hash",
-                    detail:
-                      "Session installation, policy registration, and the allowances above.",
-                    prompt: true,
-                  },
-                  {
-                    id: "send",
-                    title: config.sponsorship.enabled
-                      ? "Submit to the bundler"
-                      : "Send handleOps",
-                    detail: config.sponsorship.enabled
-                      ? "Gas is sponsored. If sponsorship is refused, your wallet sends the same signed operation and pays gas."
-                      : "Your owner wallet pays transaction gas.",
-                    prompt: !config.sponsorship.enabled,
-                  },
-                  {
-                    id: "confirm",
-                    title: "Confirm on chain",
-                    detail: "EntryPoint must report UserOperation success.",
-                  },
-                  {
-                    id: "record",
-                    title: "Reconcile policy",
-                    detail:
-                      "The API checks the exact onchain result before it marks the policy active.",
-                  },
-                ]}
-              />
-            </div>
-          ) : null}
-          {activate.state.phase === "failed" ? (
-            <div className="mt-5">
-              <FailureNotice
-                dark
-                failure={activate.state.failure}
-                onRetry={activatePolicy}
-              />
-            </div>
-          ) : null}
-        </div>
+        </Panel>
       ) : null}
-      {holdings &&
-      holdings.ownerNative === 0n &&
-      !config.sponsorship.enabled ? (
-        <p className="text-sm text-fail-ink">
-          Your owner wallet needs tBNB to pay for the activation transaction.
-          The faucet only funds your smart account.
-        </p>
-      ) : null}
-    </div>
+    </>
   );
 }

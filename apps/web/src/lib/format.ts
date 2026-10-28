@@ -18,6 +18,36 @@ export function amount(
   return cut.length > 0 ? `${grouped}.${cut}` : grouped;
 }
 
+const SCALES = [
+  { suffix: "T", digits: 12n },
+  { suffix: "B", digits: 9n },
+  { suffix: "M", digits: 6n },
+] as const;
+
+/**
+ * A display amount for a reader, not a signature: below one million it is
+ * `amount`; above, the whole part is scaled to M/B/T with two floored digits.
+ * Pure bigint math, so nothing passes through floating point. Pair it with
+ * the exact `amount` (title, evidence row) wherever precision matters.
+ */
+export function compact(
+  value: bigint | string,
+  decimals: number,
+  places = 6,
+): string {
+  const whole = BigInt(value) / 10n ** BigInt(decimals);
+  for (const scale of SCALES) {
+    const unit = 10n ** scale.digits;
+    if (whole >= unit) {
+      const hundredths = (whole * 100n) / unit;
+      const head = hundredths / 100n;
+      const tail = (hundredths % 100n).toString().padStart(2, "0");
+      return `${head.toString().replace(/\B(?=(\d{3})+(?!\d))/gu, ",")}.${tail}${scale.suffix}`;
+    }
+  }
+  return amount(value, decimals, places);
+}
+
 /** `0x1234…abcd`, keeping the checksum-free lowercase form the API emits. */
 export function short(value: string, head = 6, tail = 4): string {
   if (value.length <= head + tail + 1) return value;

@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 
 /*
- * Live UTC clock for the top bar. Renders a placeholder that matches the
- * server markup, then swaps to the real time after mount; the transition
- * never fights hydration.
+ * Live UTC clock for the top bar. Until the real time is known it renders
+ * dashes, matching the server markup, then swaps after mount; a fake
+ * 00:00:00 is never shown as a time and the swap never fights hydration.
  */
 export function UtcClock() {
   const [now, setNow] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function UtcClock() {
 
   return (
     <span suppressHydrationWarning>
-      {now ? `${now} UTC \u00B7 ` : "00:00:00 UTC \u00B7 "}
+      {now ? `${now} UTC \u00B7 ` : "--:--:-- UTC \u00B7 "}
       BSC Testnet
     </span>
   );

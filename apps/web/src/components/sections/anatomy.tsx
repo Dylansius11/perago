@@ -14,12 +14,12 @@ const BINDINGS: Array<[string, string, string]> = [
   ["executor", "0x9dC0…b2a4", "the one scoped session signer"],
   ["chainId", "97", "BSC Testnet, bound in the EIP-712 domain"],
   ["nonce", "one draw", "consumed at authorize, forever"],
-  ["expiresAt", "+30 min", "authority ends with the clock"],
+  ["expiresAt", "within 30 min", "authority ends with the clock"],
 ];
 
 const BOUNDS: Array<[string, string]> = [
   ["inputToken", "WBNB"],
-  ["maxInput", "0.01 WBNB"],
+  ["maxInput", "0.005 WBNB"],
   ["outputToken", "CAKE"],
   ["minOutput", "simulated, then bound"],
   ["recipient", "your smart account"],

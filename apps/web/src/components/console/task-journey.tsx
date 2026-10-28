@@ -22,7 +22,7 @@ import { encodeFunctionData, erc20Abi, formatUnits } from "viem";
 import { getPublicClient, signTypedData } from "wagmi/actions";
 import { ApiError, api } from "@/lib/api";
 import { assertPreparedMandate } from "@/lib/authority";
-import { toFailure } from "@/lib/failure";
+import { RECEIPT_UNAVAILABLE, toFailure } from "@/lib/failure";
 import { duration, utc } from "@/lib/format";
 import {
   type AutomaticStepInput,
@@ -49,14 +49,28 @@ import { useSession } from "@/lib/session";
 import { assertWalletVenue } from "@/lib/venue";
 import { CHAIN_ID, wagmiConfig } from "@/lib/wagmi";
 import { type Step, StepList, useStagedAction } from "./action";
+import { PolicyDecisionPanel } from "./task/decision";
+import {
+  deriveVerdict,
+  lifecycle,
+  money,
+  outcomeOf,
+  standingOf,
+  stoppedAt,
+  suggestedGoal,
+  tokenOf,
+} from "./task/model";
+import { LifecycleStepper, RichText, VerdictHero } from "./task/verdict";
 import {
   Button,
+  Disclosure,
   Fact,
   FailureNotice,
   Hash,
   Label,
   Panel,
   Status,
+  StatusBadge,
   useSecondsUntil,
 } from "./ui";
 import { WalletGate } from "./wallet-gate";
@@ -97,17 +111,15 @@ function DateFact({ label, seconds }: { label: string; seconds: string }) {
     />
   );
 }
+/** An amount for a reader: compact, with the exact value on hover; the base units stay in each row's note. */
 function tokenAmount(
   value: string,
   address: string,
   config: PublicConfig | undefined,
-): string {
-  const token = config?.tokens.find(
-    (item) => item.address.toLowerCase() === address.toLowerCase(),
+) {
+  return (
+    <RichText rich={[money(value, tokenOf(config?.tokens ?? [], address))]} />
   );
-  return token
-    ? `${formatUnits(BigInt(value), token.decimals)} ${token.symbol}`
-    : `${value} base units`;
 }
 
 /*
@@ -205,10 +217,13 @@ function JourneySummary({
   task,
   prepared,
   allowance,
+  stoppedReason,
 }: {
   task: TaskDetail;
   prepared: PreparedMandate | null;
   allowance: AllowanceStatus;
+  /** Set when the task can no longer move forward; rows that cannot exist then say so. */
+  stoppedReason: string | null;
 }) {
   const config = usePublicConfig();
   const mandate = prepared?.mandate ?? task.mandate?.mandate ?? null;
@@ -239,13 +254,23 @@ function JourneySummary({
   const deadline = action?.deadline ?? null;
   const expiresAt = mandate?.expiresAt ?? simulation?.mandate.expiresAt ?? null;
   const prompts = allowance.prompts;
+  const signed = task.mandate !== null;
+  const unreached = stoppedReason ? (
+    <span className="text-fog">Not reached · {stoppedReason}</span>
+  ) : null;
   return (
     <Panel
       label="Summary"
       aside={
-        <Status tone={prompts.total === 1 ? "ok" : "signal"}>
-          {prompts.total} wallet prompt{prompts.total === 1 ? "" : "s"}
-        </Status>
+        stoppedReason ? (
+          <Status tone="idle">Stopped</Status>
+        ) : signed ? (
+          <Status tone="idle">Signed terms</Status>
+        ) : (
+          <Status tone={prompts.total === 1 ? "ok" : "signal"}>
+            {prompts.total} wallet prompt{prompts.total === 1 ? "" : "s"}
+          </Status>
+        )
       }
     >
       <dl>
@@ -255,7 +280,7 @@ function JourneySummary({
           value={
             spend !== null && spendToken !== null
               ? tokenAmount(spend, spendToken, config.data)
-              : "waiting for a compiled plan"
+              : (unreached ?? "waiting for a compiled plan")
           }
           note={spend !== null ? `at most ${spend} base units` : undefined}
         />
@@ -264,7 +289,7 @@ function JourneySummary({
           emphasis
           value={
             minimum === null
-              ? "waiting for a simulation"
+              ? (unreached ?? "waiting for a simulation")
               : simulation?.outcomeUnit === "POOL_SHARES"
                 ? `${minimum} pool shares`
                 : outputToken !== null
@@ -272,9 +297,11 @@ function JourneySummary({
                   : `${minimum} base units`
           }
           note={
-            simulation?.outcomeUnit === "POOL_SHARES"
-              ? "New position shares, not an amount of the staked token."
-              : "Committed by the signature, never taken from the quote."
+            minimum === null
+              ? undefined
+              : simulation?.outcomeUnit === "POOL_SHARES"
+                ? "New position shares, not an amount of the staked token."
+                : `${minimum} base units · committed by the signature, never taken from the quote.`
           }
         />
         <Fact
@@ -283,7 +310,7 @@ function JourneySummary({
             recipient !== null ? (
               <Hash value={recipient} full />
             ) : (
-              "waiting for a compiled plan"
+              (unreached ?? "waiting for a compiled plan")
             )
           }
         />
@@ -292,62 +319,68 @@ function JourneySummary({
           value={
             deadline !== null
               ? utc(Number(deadline))
-              : "waiting for a simulation"
+              : (unreached ?? "waiting for a simulation")
           }
           note={
-            expiresAt !== null
-              ? `mandate expires ${utc(Number(expiresAt))}`
-              : "no mandate prepared"
+            stoppedReason && expiresAt === null
+              ? undefined
+              : expiresAt !== null
+                ? `mandate expires ${utc(Number(expiresAt))}`
+                : "no mandate prepared"
           }
         />
-        <Fact
-          label="allowance to executor"
-          value={
-            allowance.current !== null && allowance.token !== null
-              ? tokenAmount(
-                  allowance.current.toString(),
+        {signed || stoppedReason ? null : (
+          <>
+            <Fact
+              label="allowance to executor"
+              value={
+                allowance.current !== null && allowance.token !== null
+                  ? tokenAmount(
+                      allowance.current.toString(),
+                      allowance.token,
+                      config.data,
+                    )
+                  : "reading chain"
+              }
+              note={allowanceSentence(allowance)}
+            />
+            <Fact
+              label="this task uses"
+              value={
+                allowance.needed !== null && allowance.token !== null
+                  ? tokenAmount(
+                      allowance.needed.toString(),
+                      allowance.token,
+                      config.data,
+                    )
+                  : "waiting for a compiled plan"
+              }
+              note="The executor may pull no more than this for the task."
+            />
+            {allowance.restore !== null && allowance.token !== null ? (
+              <Fact
+                label="restore amount"
+                value={tokenAmount(
+                  allowance.restore.toString(),
                   allowance.token,
                   config.data,
-                )
-              : "reading chain"
-          }
-          note={allowanceSentence(allowance)}
-        />
-        <Fact
-          label="this task uses"
-          value={
-            allowance.needed !== null && allowance.token !== null
-              ? tokenAmount(
-                  allowance.needed.toString(),
-                  allowance.token,
-                  config.data,
-                )
-              : "waiting for a compiled plan"
-          }
-          note="The executor may pull no more than this for the task."
-        />
-        {allowance.restore !== null && allowance.token !== null ? (
-          <Fact
-            label="restore amount"
-            value={tokenAmount(
-              allowance.restore.toString(),
-              allowance.token,
-              config.data,
-            )}
-            note="The active wallet policy's rolling cap, never more."
-          />
-        ) : null}
-        <Fact
-          label="wallet prompts"
-          value={`${prompts.total} wallet prompt${prompts.total === 1 ? "" : "s"}`}
-          note={
-            prompts.restore === 0
-              ? "Sign the mandate once. No other prompt is needed."
-              : prompts.restore === 1
-                ? "One to restore the allowance through the sponsored bundler, one to sign the mandate."
-                : "Two to restore the allowance through EntryPoint, one to sign the mandate."
-          }
-        />
+                )}
+                note="The active wallet policy's rolling cap, never more."
+              />
+            ) : null}
+            <Fact
+              label="wallet prompts"
+              value={`${prompts.total} wallet prompt${prompts.total === 1 ? "" : "s"}`}
+              note={
+                prompts.restore === 0
+                  ? "Sign the mandate once. No other prompt is needed."
+                  : prompts.restore === 1
+                    ? "One to restore the allowance through the sponsored bundler, one to sign the mandate."
+                    : "Two to restore the allowance through EntryPoint, one to sign the mandate."
+              }
+            />
+          </>
+        )}
       </dl>
     </Panel>
   );
@@ -389,6 +422,8 @@ function Plan({ task }: { task: TaskDetail }) {
   return (
     <Panel
       label="Compiled plan"
+      collapsible
+      defaultOpen={outcomeOf(task) === null}
       aside={<Status tone="ok">{action.kind}</Status>}
     >
       <dl>
@@ -433,76 +468,6 @@ function Plan({ task }: { task: TaskDetail }) {
         The plan fixes the exact spend, route, recipient, and slippage ceiling.
         A simulation supplies the signed minimum output and deadline.
       </p>
-    </Panel>
-  );
-}
-
-function Decision({ task }: { task: TaskDetail }) {
-  if (!task.decision) {
-    return (
-      <Panel
-        label="Policy decision"
-        aside={<Status tone="idle">Awaiting compilation</Status>}
-      >
-        <p className="text-fog">No rule evaluation is available yet.</p>
-      </Panel>
-    );
-  }
-  const rules = task.decision.rules;
-  const passing = task.decision.outcome === "PASS";
-  return (
-    <Panel
-      label="Policy decision"
-      aside={
-        <Status tone={statusTone(task.decision.outcome)}>
-          {task.decision.outcome}
-        </Status>
-      }
-    >
-      <dl className="border-t border-rule">
-        <Fact label="compiler" value={task.decision.compilerVersion} />
-        <Fact
-          label="decision hash"
-          value={<Hash value={task.decisionHash ?? task.intentHash} full />}
-        />
-      </dl>
-      <p className="mt-5 text-sm text-fog">
-        {rules.filter((rule) => rule.outcome === "PASS").length} of{" "}
-        {rules.length} policy checks pass.
-        {passing
-          ? " The exact limits remain available below."
-          : " Review each failed rule before changing the goal or policy."}
-      </p>
-      <details open={!passing} className="mt-5 border-t border-rule">
-        <summary className="cursor-pointer py-4 font-mono text-[12px] uppercase tracking-[0.12em] text-signal-ink focus-visible:outline-offset-2">
-          Inspect all {rules.length} policy checks
-        </summary>
-        <ol className="border-t border-rule">
-          {rules.map((rule) => (
-            <li
-              key={rule.rule}
-              className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 border-b border-rule py-4"
-            >
-              <div className="min-w-0">
-                <p className="font-mono text-[13px]">{rule.rule}</p>
-                <p className="mt-1 break-words text-[13px] text-fog">
-                  observed: {rule.observed}
-                </p>
-                <p className="mt-1 break-words text-[13px] text-fog">
-                  limit: {rule.limit}
-                </p>
-                {rule.reasonCode ? (
-                  <p className="mt-2 font-mono text-[12px] text-fail-ink">
-                    {rule.reasonCode} ·{" "}
-                    {reason(rule.reasonCode) ?? "API policy refusal"}
-                  </p>
-                ) : null}
-              </div>
-              <Status tone={statusTone(rule.outcome)}>{rule.outcome}</Status>
-            </li>
-          ))}
-        </ol>
-      </details>
     </Panel>
   );
 }
@@ -598,15 +563,23 @@ function SimulationPanel({
       </Panel>
     );
   }
+  const used = task.mandate !== null;
   const stale =
-    simulation.status === "STALE" || (remaining !== null && remaining <= 0);
+    !used &&
+    (simulation.status === "STALE" || (remaining !== null && remaining <= 0));
   return (
     <Panel
       label="Exact simulation"
+      collapsible
+      defaultOpen={outcomeOf(task) === null}
       aside={
-        <Status tone={stale ? "fail" : statusTone(simulation.status)}>
-          {stale ? "Stale" : simulation.status}
-        </Status>
+        used ? (
+          <Status tone="idle">Used</Status>
+        ) : (
+          <Status tone={stale ? "fail" : statusTone(simulation.status)}>
+            {stale ? "Stale" : simulation.status}
+          </Status>
+        )
       }
     >
       <dl>
@@ -635,11 +608,18 @@ function SimulationPanel({
         <Fact
           label="quote freshness"
           value={
-            remaining === null
-              ? "reading"
-              : remaining > 0
-                ? `fresh for ${duration(remaining)}`
-                : "expired"
+            used
+              ? "used at signing"
+              : remaining === null
+                ? "reading"
+                : remaining > 0
+                  ? `fresh for ${duration(remaining)}`
+                  : "expired"
+          }
+          note={
+            used
+              ? "Quote freshness only matters before the signature."
+              : undefined
           }
         />
       </dl>
@@ -718,6 +698,8 @@ function MandatePanel({
     return (
       <Panel
         label="Signed mandate"
+        collapsible
+        defaultOpen={outcomeOf(task) === null}
         aside={
           <Status tone={statusTone(task.mandate.status)}>
             {task.mandate.status}
@@ -1101,27 +1083,19 @@ function MandateTerms({
   );
 }
 
-function ExecutionPanel({
-  task,
-  receipt,
-}: {
-  task: TaskDetail;
-  receipt: UseQueryResult<ExecutionReceipt, Error>;
-}) {
+function ExecutionPanel({ task }: { task: TaskDetail }) {
   const execution = task.execution;
-  const terminal = task.receipt;
+  const state = standingOf(task);
   return (
     <Panel
-      label="Execution and receipt"
+      label="Execution"
+      collapsible
+      defaultOpen={outcomeOf(task) === null}
       aside={
         <span role="status" aria-live="polite" aria-atomic="true">
-          <Status
-            tone={statusTone(
-              terminal?.status ?? execution?.status ?? task.status,
-            )}
-          >
-            {terminal?.status ?? execution?.status ?? task.status}
-          </Status>
+          <StatusBadge tone={state.tone} glyph={state.glyph} live={state.live}>
+            {state.label}
+          </StatusBadge>
         </span>
       }
     >
@@ -1194,37 +1168,75 @@ function ExecutionPanel({
           the API.
         </p>
       )}
-      {terminal ? (
-        <div className="mt-6 border-t border-rule pt-1">
-          <Fact
-            label="terminal state"
-            value={terminal.status}
-            note={terminal.terminalReasonCode}
-          />
-          <p className="mt-3 max-w-[60ch] text-[13px] text-fog">
-            Terminal status is an API projection of finalized chain evidence. A
-            submitted signature or transaction is never shown as a successful
-            execution.
-          </p>
-        </div>
-      ) : (
+      {task.receipt ? null : (
         <p className="mt-6 max-w-[60ch] border-t border-rule pt-5 text-[13px] text-fog">
           The API polls the owner&apos;s task. Pending, retries, provider
           outages, and verification failures remain visible here until a
           terminal receipt is recorded.
         </p>
       )}
-      {terminal && receipt.isPending ? (
+    </Panel>
+  );
+}
+
+/**
+ * The public receipt index is a projection that can lag or fail. It never
+ * changes what the chain says, so a failure here is a calm, retryable notice.
+ */
+function ReceiptPanel({
+  task,
+  receipt,
+}: {
+  task: TaskDetail;
+  receipt: UseQueryResult<ExecutionReceipt, Error>;
+}) {
+  const terminal = task.receipt;
+  if (!terminal) return null;
+  const state = standingOf(task);
+  return (
+    <Panel
+      label="Receipt"
+      aside={
+        <StatusBadge tone={state.tone} glyph={state.glyph}>
+          {state.label}
+        </StatusBadge>
+      }
+    >
+      <dl>
+        <Fact label="terminal state" value={terminal.status} />
+        <Fact
+          label="reason code"
+          value={terminal.terminalReasonCode}
+          note={reason(terminal.terminalReasonCode) ?? "API terminal reason"}
+        />
+      </dl>
+      <p className="mt-3 max-w-[60ch] text-[13px] text-fog">
+        Terminal status is an API projection of finalized chain evidence. A
+        submitted signature or transaction is never shown as a successful
+        execution.
+      </p>
+      {receipt.isPending ? (
         <p className="mt-6">
           <Status tone="pending">Loading public receipt</Status>
         </p>
       ) : null}
-      {terminal && receipt.isError ? (
-        <div className="mt-6">
-          <FailureNotice
-            failure={toFailure(receipt.error)}
-            onRetry={() => void receipt.refetch()}
-          />
+      {receipt.isError && !receipt.data ? (
+        <div
+          role="status"
+          className="mt-6 border-l-2 border-rule bg-ink/[0.025] py-3 pr-4 pl-4"
+        >
+          <Label>Receipt index</Label>
+          <p className="mt-2 max-w-[60ch]">{RECEIPT_UNAVAILABLE}</p>
+          <p className="mt-1 font-mono text-[12px] text-fog">
+            Index response: {toFailure(receipt.error).code}
+          </p>
+          <button
+            type="button"
+            onClick={() => void receipt.refetch()}
+            className="pressable mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink underline decoration-1 underline-offset-4 hover:text-signal-ink"
+          >
+            Retry
+          </button>
         </div>
       ) : null}
       {receipt.data ? <PublicReceipt receipt={receipt.data} /> : null}
@@ -1261,17 +1273,6 @@ function PublicReceipt({ receipt }: { receipt: ExecutionReceipt }) {
           note={receipt.terminalMessage}
         />
         <Fact
-          label="authorization block"
-          value={receipt.authorization.blockNumber}
-          note={
-            <Hash
-              value={receipt.authorization.blockHash}
-              href={live ? receipt.explorer.block : null}
-              full
-            />
-          }
-        />
-        <Fact
           label="terminal tx"
           value={
             <Hash
@@ -1291,40 +1292,55 @@ function PublicReceipt({ receipt }: { receipt: ExecutionReceipt }) {
           label="authority consumed"
           value={receipt.authorityConsumed ? "yes" : "no"}
         />
-        <Fact label="settlement" value={settlement.status} />
-        {settlement.status === "CONFIRMED" ? (
-          <>
-            <Fact
-              label="paid amount"
-              value={
-                paymentToken
-                  ? `${formatUnits(BigInt(settlement.amount), paymentToken.decimals)} ${paymentToken.symbol}`
-                  : `${settlement.amount} base units (token decimals unavailable)`
-              }
-              note={<Hash value={settlement.paymentToken} full />}
-            />
-            <Fact
-              label="provider"
-              value={<Hash value={settlement.provider} full />}
-            />
-            <Fact
-              label="payment tx"
-              value={
-                <Hash
-                  value={settlement.transactionHash}
-                  href={
-                    paymentExplorer
-                      ? `${paymentExplorer}${settlement.transactionHash}`
-                      : null
-                  }
-                  full
-                />
-              }
-              note={`block ${settlement.blockNumber} · payment log ${settlement.paymentLogIndex}`}
-            />
-          </>
-        ) : null}
       </dl>
+      <Disclosure label="Authorization and settlement" hint="exact values">
+        <dl>
+          <Fact
+            label="authorization block"
+            value={receipt.authorization.blockNumber}
+            note={
+              <Hash
+                value={receipt.authorization.blockHash}
+                href={live ? receipt.explorer.block : null}
+                full
+              />
+            }
+          />
+          <Fact label="settlement" value={settlement.status} />
+          {settlement.status === "CONFIRMED" ? (
+            <>
+              <Fact
+                label="paid amount"
+                value={
+                  paymentToken
+                    ? `${formatUnits(BigInt(settlement.amount), paymentToken.decimals)} ${paymentToken.symbol}`
+                    : `${settlement.amount} base units (token decimals unavailable)`
+                }
+                note={<Hash value={settlement.paymentToken} full />}
+              />
+              <Fact
+                label="provider"
+                value={<Hash value={settlement.provider} full />}
+              />
+              <Fact
+                label="payment tx"
+                value={
+                  <Hash
+                    value={settlement.transactionHash}
+                    href={
+                      paymentExplorer
+                        ? `${paymentExplorer}${settlement.transactionHash}`
+                        : null
+                    }
+                    full
+                  />
+                }
+                note={`block ${settlement.blockNumber} · payment log ${settlement.paymentLogIndex}`}
+              />
+            </>
+          ) : null}
+        </dl>
+      </Disclosure>
       <p className="mt-4 max-w-[60ch] text-[13px] text-fog">
         Verification is the API&apos;s authoritative replay result. A failed or
         unavailable verification is shown as such; it is not inferred from a
@@ -1572,29 +1588,24 @@ function Journey({ taskId }: { taskId: string }) {
       await invalidate();
     });
 
+  const tokens = config.data?.tokens ?? [];
+  const verdict = deriveVerdict(current, tokens, config.data?.adapters ?? []);
+  const steps = lifecycle(current);
+  const stopped = stoppedAt(current);
+  const settled = outcomeOf(current) !== null;
+  const explorerBase =
+    config.data?.venue === "testnet"
+      ? (config.data.explorer?.transaction ?? null)
+      : null;
   return (
     <div className="space-y-6">
-      <header className="grid border border-rule bg-paper md:grid-cols-12">
-        <div className="border-b border-rule px-5 py-7 md:col-span-7 md:border-b-0 md:border-r md:px-6 md:py-8">
-          <Label>Task detail</Label>
-          <h1 className="mt-3 max-w-[24ch] text-3xl font-semibold tracking-[-0.03em] md:text-5xl">
-            {current.goal}
-          </h1>
-          <p className="mt-4 font-mono text-[12px] text-fog">{taskId}</p>
-        </div>
-        <div className="flex flex-col justify-between px-5 py-7 md:col-span-5 md:px-6 md:py-8">
-          <Status tone={statusTone(current.receipt?.status ?? current.status)}>
-            {current.receipt?.status ?? current.status}
-          </Status>
-          <dl className="mt-8 border-t border-rule">
-            <Fact
-              label="intent"
-              value={<Hash value={current.intentHash} full />}
-            />
-            <Fact label="updated" value={utc(current.updatedAt)} />
-          </dl>
-        </div>
-      </header>
+      <VerdictHero
+        task={current}
+        verdict={verdict}
+        executionHref={explorerBase}
+        suggestedGoal={suggestedGoal(current, tokens)}
+      />
+      <LifecycleStepper steps={steps} />
 
       <AutoPilot
         input={{
@@ -1615,111 +1626,129 @@ function Journey({ taskId }: { taskId: string }) {
           else prepareMandate();
         }}
       />
+      {stopped !== null && current.decision ? (
+        <PolicyDecisionPanel task={current} />
+      ) : null}
       <JourneySummary
         task={current}
         prepared={prepared}
         allowance={allowance}
+        stoppedReason={stopped}
       />
-
-      <div className="grid items-start gap-6 xl:grid-cols-2">
-        <Plan task={current} />
-        <Decision task={current} />
-      </div>
-      <SimulationPanel
-        task={current}
-        onSimulate={runSimulation}
-        simulating={simulate.busy}
-      />
-      {simulate.state.phase !== "idle" && simulate.state.phase !== "done" ? (
-        <Panel label="Simulation progress">
-          <StepList
-            steps={[
-              {
-                id: "simulate",
-                title: "Simulate the exact plan",
-                detail:
-                  "The API pins a chain block and runs the compiled action.",
-              },
-              {
-                id: "refresh",
-                title: "Read the authoritative task state",
-                detail:
-                  "The task view receives the simulation result and current freshness state.",
-              },
-            ]}
-            state={simulate.state}
-          />
-          {simulate.state.phase === "failed" ? (
-            <div className="mt-5">
-              <FailureNotice
-                failure={simulate.state.failure}
-                onRetry={runSimulation}
-              />
+      {stopped === null ? (
+        <>
+          {settled ? (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pt-6">
+              <Label>Evidence</Label>
+              <span className="font-mono text-[11px] text-fog">
+                Every hash and base unit stays one click away.
+              </span>
             </div>
           ) : null}
-        </Panel>
-      ) : null}
-      <MandatePanel
-        task={current}
-        prepared={prepared}
-        allowance={allowance}
-        preparing={prepare.busy}
-        signing={sign.busy}
-        owner={owner}
-        onPrepare={prepareMandate}
-        onSign={signMandate}
-      />
-      <RevokeMandate task={current} />
-      {prepare.state.phase !== "idle" && prepare.state.phase !== "done" ? (
-        <Panel label="Mandate preparation">
-          <StepList
-            steps={[
-              {
-                id: "freshness",
-                title: "Recheck the simulation",
-                detail:
-                  "The API pins current state and refuses stale quote, policy, code, position, nonce, or action commitments.",
-              },
-              {
-                id: "refresh",
-                title: "Read the prepared mandate",
-                detail: "Only the API-prepared EIP-712 terms may be signed.",
-              },
-            ]}
-            state={prepare.state}
+          <div className="grid items-start gap-6 xl:grid-cols-2">
+            <Plan task={current} />
+            <PolicyDecisionPanel task={current} />
+          </div>
+          <SimulationPanel
+            task={current}
+            onSimulate={runSimulation}
+            simulating={simulate.busy}
           />
-          {prepare.state.phase === "failed" ? (
-            <div className="mt-5">
-              <FailureNotice
-                failure={prepare.state.failure}
-                onRetry={prepareMandate}
+          {simulate.state.phase !== "idle" &&
+          simulate.state.phase !== "done" ? (
+            <Panel label="Simulation progress">
+              <StepList
+                steps={[
+                  {
+                    id: "simulate",
+                    title: "Simulate the exact plan",
+                    detail:
+                      "The API pins a chain block and runs the compiled action.",
+                  },
+                  {
+                    id: "refresh",
+                    title: "Read the authoritative task state",
+                    detail:
+                      "The task view receives the simulation result and current freshness state.",
+                  },
+                ]}
+                state={simulate.state}
               />
-            </div>
+              {simulate.state.phase === "failed" ? (
+                <div className="mt-5">
+                  <FailureNotice
+                    failure={simulate.state.failure}
+                    onRetry={runSimulation}
+                  />
+                </div>
+              ) : null}
+            </Panel>
           ) : null}
-        </Panel>
-      ) : null}
-      {sign.state.phase !== "idle" && sign.state.phase !== "done" ? (
-        <Panel label="Mandate signature">
-          <StepList
-            steps={signSteps({
-              restore:
-                allowance.needsRestore ||
-                sign.state.step.startsWith("restore-"),
-              sponsored: sponsorship,
-            })}
-            state={sign.state}
+          <MandatePanel
+            task={current}
+            prepared={prepared}
+            allowance={allowance}
+            preparing={prepare.busy}
+            signing={sign.busy}
+            owner={owner}
+            onPrepare={prepareMandate}
+            onSign={signMandate}
           />
-          {sign.state.phase === "failed" ? (
-            <div className="mt-5">
-              <FailureNotice
-                failure={sign.state.failure}
-                onRetry={signMandate}
+          <RevokeMandate task={current} />
+          {prepare.state.phase !== "idle" && prepare.state.phase !== "done" ? (
+            <Panel label="Mandate preparation">
+              <StepList
+                steps={[
+                  {
+                    id: "freshness",
+                    title: "Recheck the simulation",
+                    detail:
+                      "The API pins current state and refuses stale quote, policy, code, position, nonce, or action commitments.",
+                  },
+                  {
+                    id: "refresh",
+                    title: "Read the prepared mandate",
+                    detail:
+                      "Only the API-prepared EIP-712 terms may be signed.",
+                  },
+                ]}
+                state={prepare.state}
               />
-            </div>
+              {prepare.state.phase === "failed" ? (
+                <div className="mt-5">
+                  <FailureNotice
+                    failure={prepare.state.failure}
+                    onRetry={prepareMandate}
+                  />
+                </div>
+              ) : null}
+            </Panel>
           ) : null}
-        </Panel>
+          {sign.state.phase !== "idle" && sign.state.phase !== "done" ? (
+            <Panel label="Mandate signature">
+              <StepList
+                steps={signSteps({
+                  restore:
+                    allowance.needsRestore ||
+                    sign.state.step.startsWith("restore-"),
+                  sponsored: sponsorship,
+                })}
+                state={sign.state}
+              />
+              {sign.state.phase === "failed" ? (
+                <div className="mt-5">
+                  <FailureNotice
+                    failure={sign.state.failure}
+                    onRetry={signMandate}
+                  />
+                </div>
+              ) : null}
+            </Panel>
+          ) : null}
+          <ExecutionPanel task={current} />
+          <ReceiptPanel task={current} receipt={receipt} />
+        </>
       ) : null}
-      <ExecutionPanel task={current} receipt={receipt} />
     </div>
   );
 }

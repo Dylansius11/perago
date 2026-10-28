@@ -8,10 +8,11 @@ import { UtcClock } from "./utc-clock";
  * client island is the clock. The console has its own bar with wallet state.
  */
 
-const SECTIONS = [
+const LINKS = [
   ["Mandate", "/#mandate"],
   ["Failure", "/#execution"],
   ["Receipt", "/#evidence"],
+  ["Faucet", "/faucet"],
 ] as const;
 
 export function TopBar() {
@@ -20,7 +21,7 @@ export function TopBar() {
       <div className="flex h-16 items-stretch">
         <Link
           href="/"
-          className="flex w-44 shrink-0 items-center border-r border-ruleinvert px-5 md:w-52"
+          className="group pressable flex w-44 shrink-0 items-center border-r border-ruleinvert px-5 hover:bg-ink/[0.03] md:w-52"
           aria-label="Perago home"
         >
           <Wordmark size="md" />
@@ -30,12 +31,13 @@ export function TopBar() {
           aria-label="Primary"
           className="hidden flex-1 items-stretch md:flex"
         >
-          <div className="hidden flex-1 items-center px-6 font-mono text-[11px] uppercase tracking-[0.16em] text-fog lg:flex">
+          <div className="hidden flex-1 items-center gap-3 px-6 font-mono text-[11px] uppercase tracking-[0.16em] text-fog lg:flex">
+            <span aria-hidden className="size-1.5 bg-signal" />
             <UtcClock />
           </div>
           <div className="ml-auto flex items-stretch">
-            {SECTIONS.map(([label, href]) => (
-              <a
+            {LINKS.map(([label, href]) => (
+              <Link
                 key={label}
                 href={href}
                 className="group pressable relative flex items-center border-l border-rule px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-fog hover:text-ink"
@@ -43,20 +45,10 @@ export function TopBar() {
                 {label}
                 <span
                   aria-hidden
-                  className="absolute bottom-4 left-5 h-px w-[calc(100%-2.5rem)] origin-left scale-x-0 bg-signal transition-transform duration-300 ease-out-vivid group-hover:scale-x-100"
+                  className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 bg-signal transition-transform duration-300 ease-out-vivid group-hover:scale-x-100 group-focus-visible:scale-x-100"
                 />
-              </a>
+              </Link>
             ))}
-            <Link
-              href="/faucet"
-              className="group pressable relative flex items-center border-l border-rule px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-fog hover:text-ink"
-            >
-              Faucet
-              <span
-                aria-hidden
-                className="absolute bottom-4 left-5 h-px w-[calc(100%-2.5rem)] origin-left scale-x-0 bg-signal transition-transform duration-300 ease-out-vivid group-hover:scale-x-100"
-              />
-            </Link>
             <Link
               href="/app"
               className="group pressable flex items-center gap-3 whitespace-nowrap border-l border-ruleinvert bg-ink px-6 text-[15px] font-medium text-paper hover:bg-signal hover:text-ink"
@@ -75,9 +67,12 @@ export function TopBar() {
         {/* Mobile: collapse the strip to logo plus a single action. */}
         <Link
           href="/app"
-          className="pressable flex flex-1 items-center justify-end gap-2 whitespace-nowrap border-l border-ruleinvert bg-ink px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-paper hover:bg-signal hover:text-ink md:hidden"
+          className="group pressable flex flex-1 items-center justify-end gap-2 whitespace-nowrap border-l border-ruleinvert bg-ink px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-paper hover:bg-signal hover:text-ink md:hidden"
         >
-          Console <span aria-hidden>&#8594;</span>
+          Console{" "}
+          <span aria-hidden className="arrow group-hover:translate-x-1">
+            &#8594;
+          </span>
         </Link>
       </div>
     </header>

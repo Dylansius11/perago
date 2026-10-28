@@ -48,8 +48,8 @@ const STEPS: readonly [
   },
   {
     n: "06",
-    title: "Payment follows proof",
-    copy: "A deterministic verifier checks the postcondition before any agent payment settles. Receipts stay public.",
+    title: "Verified, then closed",
+    copy: "A deterministic verifier checks the outcome onchain. The mandate is consumed and the receipt is public. Authority ends here.",
     spec: "ExecutionReceipt",
   },
 ];
@@ -81,6 +81,7 @@ export function Lifecycle() {
         <StepCell data={STEPS[4]} dark />
         <StepCell data={STEPS[5]} tail />
       </div>
+      <NextStrip />
     </section>
   );
 }
@@ -93,7 +94,7 @@ function SectionHeader() {
           A mandate is a fence, not a feeling.
         </h2>
         <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-fog">
-          Six steps between a sentence and a settled outcome. Each one is a
+          Six steps between a sentence and a verified outcome. Each one is a
           contract fact you can read before it happens.
         </p>
       </RiseIn>
@@ -116,13 +117,18 @@ function StepCell({ data, dark, tail }: StepProps) {
       : "bg-paper text-ink";
   const ruleColor = dark ? "border-ruleinvert" : "border-rule";
   const numColor = dark ? "text-paper/40" : tail ? "text-ink/60" : "text-fog";
-  const copyColor = dark ? "text-paper/70" : "text-fog";
+  const copyColor = dark ? "text-paper/70" : tail ? "text-ink/80" : "text-fog";
   const specColor = dark ? "text-phos/80" : tail ? "text-ink/70" : "text-fog";
+  const hoverLine = dark ? "bg-signal" : tail ? "bg-ink" : "bg-signal";
 
   return (
     <RiseIn
-      className={`min-h-[280px] border-l border-t ${ruleColor} ${surface} p-6 md:p-8`}
+      className={`group relative min-h-[280px] overflow-hidden border-l border-t ${ruleColor} ${surface} p-6 md:p-8`}
     >
+      <span
+        aria-hidden
+        className={`absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 transition-transform duration-300 ease-out-vivid group-hover:scale-x-100 ${hoverLine}`}
+      />
       <div className="flex h-full flex-col justify-between gap-10">
         <div>
           <span className={`font-mono text-[12px] ${numColor}`}>{n}</span>
@@ -143,13 +149,38 @@ function StepCell({ data, dark, tail }: StepProps) {
   );
 }
 
+/*
+ * Payment is the one step that is not live. It is proven on a local fork
+ * only, so it sits outside the six numbered steps, labelled as such, and the
+ * hollow square keeps the state legible without color.
+ */
+function NextStrip() {
+  return (
+    <div className="grid grid-cols-1 border-t border-rule md:grid-cols-12">
+      <div className="flex items-center gap-3 border-b border-rule px-6 py-5 md:col-span-3 md:border-b-0 md:border-r md:px-10">
+        <span aria-hidden className="size-1.5 border border-pending-ink" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-pending-ink">
+          Next &middot; Fork-proven, not live
+        </span>
+      </div>
+      <p className="px-6 py-5 leading-relaxed text-fog md:col-span-9 md:px-8">
+        <span className="font-medium text-ink">
+          Agents get paid only after proof.
+        </span>{" "}
+        ERC-8183 payment follows a passed verification on a local fork today. It
+        is not live on testnet.
+      </p>
+    </div>
+  );
+}
+
 function PhotoCell() {
   return (
     <Unveil className="relative min-h-[220px] overflow-hidden border-l border-t border-rule bg-panel md:row-span-2">
       {/* Wood-cut node illustration: authored SVG line art on panel green. */}
       <svg
         viewBox="0 0 200 200"
-        className="absolute inset-0 h-full w-full text-paper/25"
+        className="absolute inset-x-0 top-0 h-[calc(100%-4.5rem)] w-full text-paper/25"
         aria-hidden
         fill="none"
         stroke="currentColor"
@@ -172,7 +203,7 @@ function PhotoCell() {
         })}
         <circle cx="100" cy="100" r="4" fill="currentColor" stroke="none" />
       </svg>
-      <div className="relative flex h-full items-end p-6">
+      <div className="relative flex h-full items-end px-6 pb-6 pt-0">
         <Caption>The one-use knot. Tied once, cut once.</Caption>
       </div>
     </Unveil>

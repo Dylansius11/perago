@@ -38,7 +38,7 @@ export function Hero() {
             </span>
           </div>
 
-          <h1 className="py-12 text-[clamp(3.2rem,8.4vw,7.75rem)] leading-[0.94] font-semibold tracking-[-0.03em] md:py-8">
+          <h1 className="py-12 text-[clamp(4.1rem,8.4vw,7.75rem)] leading-[0.94] font-semibold tracking-[-0.03em] md:py-8">
             {HEADLINE_LINES.map((line, i) => (
               <span key={line} className="block overflow-hidden pb-[0.06em]">
                 <motion.span
@@ -83,37 +83,29 @@ export function Hero() {
 }
 
 function HeroFoot() {
-  const inner = (
-    <>
-      <p className="max-w-[42ch] text-lg leading-relaxed text-fog">
-        One EIP-712 mandate. Bounded spend, one use, deterministic verification.
-        When the task ends, the authority ends.
-      </p>
-      <HeroActions />
-    </>
-  );
-  const className =
-    "flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between";
-
   return (
     <motion.div
       data-reveal
-      className={className}
+      className="flex flex-col gap-8"
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: EASE, delay: 0.55 }}
     >
-      {inner}
+      <p className="max-w-[44ch] text-lg leading-relaxed text-fog">
+        One EIP-712 mandate. Bounded spend, one use, deterministic verification.
+        When the task ends, the authority ends.
+      </p>
+      <HeroActions />
     </motion.div>
   );
 }
 
 function HeroActions() {
   return (
-    <div className="flex flex-wrap items-stretch">
+    <div className="grid grid-cols-1 sm:flex sm:items-stretch">
       <Link
         href="/app"
-        className="group pressable flex items-center gap-4 whitespace-nowrap bg-ink px-7 py-4 text-paper hover:bg-signal hover:text-ink"
+        className="group pressable flex items-center justify-between gap-4 whitespace-nowrap border border-ink bg-ink px-7 py-4 text-paper hover:border-signal hover:bg-signal hover:text-ink"
       >
         Open the console
         <span aria-hidden className="arrow font-mono group-hover:translate-x-1">
@@ -122,7 +114,7 @@ function HeroActions() {
       </Link>
       <a
         href="#mandate"
-        className="group pressable flex items-center gap-3 whitespace-nowrap border border-rule px-7 py-4 text-ink hover:border-ink hover:bg-ink hover:text-paper"
+        className="group pressable flex items-center justify-between gap-3 whitespace-nowrap border border-t-0 border-rule px-7 py-4 text-ink hover:border-ink hover:bg-ink hover:text-paper sm:border-l-0 sm:border-t"
       >
         How it works
         <span
@@ -155,13 +147,13 @@ type Phase = {
 const PHASES: Phase[] = [
   {
     label: "goal",
-    detail: '"Swap 0.01 WBNB for CAKE"',
+    detail: '"Swap 0.005 WBNB for CAKE"',
     status: "STATED",
     tone: "pass",
   },
   {
     label: "policy",
-    detail: "13 rules, input <= 0.05 WBNB",
+    detail: "13 rules, cap 0.005 WBNB per task",
     status: "PASS",
     tone: "pass",
   },
@@ -179,7 +171,7 @@ const PHASES: Phase[] = [
   },
   {
     label: "mandate",
-    detail: "EIP-712, one nonce, 30 min",
+    detail: "EIP-712, one nonce, 30 min max",
     status: "SIGNED",
     tone: "pass",
   },
@@ -245,20 +237,25 @@ function MandateLog() {
 
   return (
     <div className="mt-8 flex flex-1 flex-col font-mono text-[13px] leading-loose">
-      <ol aria-label="Illustrative mandate lifecycle">
+      <ol
+        aria-label="Illustrative mandate lifecycle"
+        className="flex flex-1 flex-col"
+      >
         {PHASES.map((phase, i) => {
           const visible = i <= state.shown;
           const settled = i <= state.settled;
           return (
             <motion.li
               key={phase.label}
-              className="flex items-baseline gap-3 border-b border-ruleinvert py-2.5"
+              className="flex items-baseline gap-3 border-b border-ruleinvert py-2.5 md:flex-1 md:items-center"
               initial={false}
               animate={{ opacity: visible ? 1 : 0, y: visible ? 0 : 8 }}
               transition={{ duration: 0.32, ease: EASE }}
             >
-              <span className="w-24 shrink-0 text-paper/50">{phase.label}</span>
-              <span className="min-w-0 flex-1 truncate text-paper/80">
+              <span className="w-[5.5rem] shrink-0 text-paper/50 md:w-24">
+                {phase.label}
+              </span>
+              <span className="min-w-0 flex-1 text-paper/80 md:truncate">
                 {phase.detail}
               </span>
               <span

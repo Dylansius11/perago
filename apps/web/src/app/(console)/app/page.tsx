@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import {
   CreateAccount,
   ReadinessRail,
   readinessOf,
+  type Section,
+  SectionNav,
   WrapNative,
 } from "@/components/console/account";
-import { PolicyComposer } from "@/components/console/policy";
+import { PolicySection } from "@/components/console/policy";
 import { TaskComposer, TaskLedger } from "@/components/console/tasks";
 import {
   Button,
@@ -41,6 +44,17 @@ function AccountConsole() {
   const policies = usePolicies();
   const tasks = useTasks();
   const holdings = useHoldings(config.data);
+  const loading = holdings.isPending || policies.isPending || tasks.isPending;
+  const loaded = config.data !== undefined && !loading;
+
+  // The sections render after their data, so a deep link such as /app#policy
+  // has nothing to land on until now.
+  useEffect(() => {
+    if (!loaded) return;
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [loaded]);
+
   if (!config.data || !owner || !account)
     return (
       <div className="relative h-52 border border-rule">
@@ -49,13 +63,31 @@ function AccountConsole() {
     );
   const wbnb = config.data.tokens.find((token) => token.symbol === "WBNB");
   const ready = readinessOf(holdings.data, policies.data);
-  const loading = holdings.isPending || policies.isPending || tasks.isPending;
+  const canWrap =
+    ready.deployed &&
+    wbnb !== undefined &&
+    holdings.data !== undefined &&
+    holdings.data.accountNative > 0n;
+
+  const sections: Section[] = [
+    ...(!ready.deployed ? [{ id: "account", label: "Account" }] : []),
+    ...(ready.deployed && !ready.funded ? [{ id: "fund", label: "Fund" }] : []),
+    ...(canWrap ? [{ id: "wrap", label: "Wrap" }] : []),
+    ...(ready.deployed ? [{ id: "policy", label: "Policy" }] : []),
+    ...(ready.policy ? [{ id: "goal", label: "Goal" }] : []),
+    { id: "ledger", label: "Ledger" },
+  ];
+  const numberOf = (id: string) =>
+    String(sections.findIndex((section) => section.id === id) + 1).padStart(
+      2,
+      "0",
+    );
 
   return (
     <div className="space-y-0">
       <div className="grid border border-rule md:grid-cols-12">
-        <div className="border-b border-rule px-6 py-8 md:col-span-9 md:border-b-0 md:border-r md:px-8 md:py-11">
-          <Label>Workspace / Chain {config.data.chainId}</Label>
+        <div className="border-b border-rule px-6 py-8 md:col-span-9 md:border-b-0 md:border-r md:px-8 md:py-10">
+          <Label>Console / Chain {config.data.chainId}</Label>
           <h1 className="mt-3 max-w-[21ch] text-4xl font-semibold leading-[1.02] tracking-[-0.03em] md:text-6xl">
             Your intent, carried through.
           </h1>
@@ -64,12 +96,28 @@ function AccountConsole() {
             independently checkable receipt at the end.
           </p>
         </div>
-        <div className="flex flex-col justify-between gap-6 px-6 py-8 md:col-span-3 md:px-8 md:py-11">
-          <Status tone={config.data.venue === "fork" ? "pending" : "signal"}>
-            {config.data.venue === "fork"
-              ? "Local chain-97 fork"
-              : "BSC Testnet"}
-          </Status>
+        <div className="flex flex-col justify-between gap-6 px-6 py-8 md:col-span-3 md:px-8 md:py-10">
+          <div className="space-y-3">
+            <Status tone={config.data.venue === "fork" ? "pending" : "signal"}>
+              {config.data.venue === "fork"
+                ? "Local chain-97 fork"
+                : "BSC Testnet"}
+            </Status>
+            {policies.data ? (
+              <p>
+                <a
+                  href="#policy"
+                  className="pressable inline-flex min-h-8 items-center"
+                >
+                  <Status tone={ready.policy ? "ok" : "idle"}>
+                    {ready.policy
+                      ? `Policy v${ready.policy.version} active`
+                      : "No active policy"}
+                  </Status>
+                </a>
+              </p>
+            ) : null}
+          </div>
           <p className="font-mono text-xs leading-relaxed text-fog">
             {config.data.deploymentLabel} · Account {account.slice(0, 10)}…
             {account.slice(-6)}
@@ -94,30 +142,37 @@ function AccountConsole() {
         </div>
       ) : null}
       {!loading && !holdings.isError && !policies.isError ? (
-        <div className="grid items-start gap-0 border-x border-b border-rule lg:grid-cols-[minmax(19rem,4fr)_minmax(0,8fr)]">
-          <div className="border-b border-rule p-5 md:p-7 lg:sticky lg:top-16 lg:border-b-0 lg:border-r">
-            <ReadinessRail
-              readiness={ready}
-              holdings={holdings.data}
-              config={config.data}
-            />
-          </div>
-          <div className="min-w-0 divide-y divide-rule">
-            {!ready.deployed ? (
-              <Panel label="01 / Account" className="!border-0">
-                <div className="p-5 md:p-8">
+        <>
+          <SectionNav sections={sections} />
+          <div className="grid items-start gap-0 border-x border-b border-rule lg:grid-cols-[minmax(19rem,4fr)_minmax(0,8fr)]">
+            <div className="border-b border-rule p-5 md:p-7 lg:sticky lg:top-28 lg:border-b-0 lg:border-r">
+              <ReadinessRail
+                readiness={ready}
+                holdings={holdings.data}
+                config={config.data}
+              />
+            </div>
+            <div className="min-w-0 divide-y divide-rule">
+              {!ready.deployed ? (
+                <Panel
+                  id="account"
+                  label={`${numberOf("account")} / Account`}
+                  className="scroll-mt-28 !border-0"
+                >
                   <CreateAccount owner={owner} account={account} />
-                </div>
-              </Panel>
-            ) : null}
-            {ready.deployed && !ready.funded ? (
-              <Panel label="02 / Fund" className="!border-0">
-                <div className="p-5 md:p-8">
+                </Panel>
+              ) : null}
+              {ready.deployed && !ready.funded ? (
+                <Panel
+                  id="fund"
+                  label={`${numberOf("fund")} / Fund`}
+                  className="scroll-mt-28 !border-0"
+                >
                   <h2 className="text-3xl font-semibold tracking-[-0.03em]">
                     Fund your account.
                   </h2>
                   <p className="mt-3 max-w-[60ch] text-fog">
-                    The faucet transfers testnet tBNB to this smart account—not
+                    The faucet transfers testnet tBNB to this smart account, not
                     to your owner wallet. You can also transfer tBNB or
                     supported tokens directly to its address.
                   </p>
@@ -127,15 +182,14 @@ function AccountConsole() {
                   >
                     Open faucet ↗
                   </Link>
-                </div>
-              </Panel>
-            ) : null}
-            {ready.deployed &&
-            wbnb &&
-            holdings.data &&
-            holdings.data.accountNative > 0n ? (
-              <Panel label="03 / Prepare input" className="!border-0">
-                <div className="p-5 md:p-8">
+                </Panel>
+              ) : null}
+              {canWrap && wbnb && holdings.data ? (
+                <Panel
+                  id="wrap"
+                  label={`${numberOf("wrap")} / Prepare input`}
+                  className="scroll-mt-28 !border-0"
+                >
                   <h2 className="mb-3 text-2xl font-semibold">
                     Turn testnet BNB into swap input.
                   </h2>
@@ -145,40 +199,33 @@ function AccountConsole() {
                     wbnb={wbnb.address}
                     available={holdings.data.accountNative}
                   />
-                </div>
-              </Panel>
-            ) : null}
-            {ready.deployed ? (
-              <Panel label="04 / Wallet Policy" className="!border-0">
-                <div className="p-5 md:p-8">
-                  <h2 className="text-3xl font-semibold tracking-[-0.03em]">
-                    Set the boundary first.
-                  </h2>
-                  <p className="mb-8 mt-2 max-w-[64ch] text-fog">
-                    Your policy limits what may be proposed. Only a later
-                    signature over a specific simulated mandate can authorize
-                    one action.
-                  </p>
-                  <PolicyComposer
-                    config={config.data}
-                    policies={policies.data ?? []}
-                    holdings={holdings.data}
-                  />
-                </div>
-              </Panel>
-            ) : null}
-            {ready.policy ? (
-              <Panel label="05 / One goal" className="!border-0">
-                <div className="p-5 md:p-8">
+                </Panel>
+              ) : null}
+              {ready.deployed ? (
+                <PolicySection
+                  config={config.data}
+                  policies={policies.data ?? []}
+                  holdings={holdings.data}
+                  number={numberOf("policy")}
+                />
+              ) : null}
+              {ready.policy ? (
+                <Panel
+                  id="goal"
+                  label={`${numberOf("goal")} / One goal`}
+                  className="scroll-mt-28 !border-0"
+                >
                   <TaskComposer
                     config={config.data}
                     maxLifetime={ready.policy.policy.maxTaskLifetimeSeconds}
                   />
-                </div>
-              </Panel>
-            ) : null}
-            <Panel label="Task ledger" className="!border-0">
-              <div className="p-5 md:p-8">
+                </Panel>
+              ) : null}
+              <Panel
+                id="ledger"
+                label={`${numberOf("ledger")} / Task ledger`}
+                className="scroll-mt-28 !border-0"
+              >
                 {tasks.data ? (
                   <TaskLedger tasks={tasks.data} />
                 ) : tasks.isError ? (
@@ -188,10 +235,10 @@ function AccountConsole() {
                 ) : (
                   <Scan />
                 )}
-              </div>
-            </Panel>
+              </Panel>
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );

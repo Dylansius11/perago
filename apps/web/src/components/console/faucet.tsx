@@ -9,11 +9,20 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "@/lib/api";
 import { toFailure } from "@/lib/failure";
-import { amount, utc } from "@/lib/format";
+import { amount, duration, utc } from "@/lib/format";
 import { useFaucet, useHoldings, usePublicConfig } from "@/lib/queries";
 import { useSession } from "@/lib/session";
 import { useStagedAction } from "./action";
-import { Button, Fact, FailureNotice, Hash, Label, Panel, Status } from "./ui";
+import {
+  Button,
+  Fact,
+  FailureNotice,
+  Hash,
+  Label,
+  Panel,
+  Status,
+  useSecondsUntil,
+} from "./ui";
 
 /*
  * The faucet is an API-funded transfer, not a root UserOperation. Its API
@@ -98,6 +107,91 @@ function Eligibility({ status }: { status: FaucetStatus }) {
           : "The faucet cannot accept a claim right now."}
       </p>
     </div>
+  );
+}
+
+/**
+ * The four limits that decide a claim, each read from the faucet's own status.
+ * They mirror what the API reports; the API still makes the decision and also
+ * applies a per-client rate limit that this page cannot see.
+ */
+function FaucetRules({ status }: { status: FaucetStatus }) {
+  const nextClaim =
+    status.nextClaimAt === null
+      ? null
+      : Math.floor(Date.parse(status.nextClaimAt) / 1000);
+  const left = useSecondsUntil(nextClaim);
+  const waiting = left !== null && left > 0;
+  const below =
+    BigInt(status.accountBalanceWei) < BigInt(status.fundedThresholdWei);
+  const budgetOk =
+    BigInt(status.budgetRemainingWei) >= BigInt(status.amountWei);
+  const rules: {
+    label: string;
+    value: string;
+    state: { tone: "ok" | "fail" | "signal"; word: string };
+    note: string;
+  }[] = [
+    {
+      label: "Claim size",
+      value: `${amount(status.amountWei, 18)} tBNB`,
+      state: { tone: "signal", word: "Fixed" },
+      note: "One fixed amount, sent only to your smart account.",
+    },
+    {
+      label: "Once per 24 hours",
+      value: waiting && status.nextClaimAt ? "Waiting" : "Open",
+      state: waiting
+        ? { tone: "fail", word: "Blocked" }
+        : { tone: "ok", word: "Clear" },
+      note:
+        waiting && status.nextClaimAt
+          ? `Next claim ${utc(status.nextClaimAt)}, in ${duration(left)}.`
+          : status.lastClaim
+            ? `Last claim ${utc(status.lastClaim.createdAt)}.`
+            : "No earlier claim for this account.",
+    },
+    {
+      label: "Only below the threshold",
+      value: `Under ${amount(status.fundedThresholdWei, 18)} tBNB`,
+      state: below
+        ? { tone: "ok", word: "Clear" }
+        : { tone: "fail", word: "Blocked" },
+      note: `Your balance is ${amount(status.accountBalanceWei, 18)} tBNB, ${below ? "under" : "not under"} the threshold.`,
+    },
+    {
+      label: "Faucet budget",
+      value: `${amount(status.budgetRemainingWei, 18)} tBNB left`,
+      state: budgetOk
+        ? { tone: "ok", word: "Clear" }
+        : { tone: "fail", word: "Blocked" },
+      note: "A rolling budget shared by every claim.",
+    },
+  ];
+  return (
+    <section aria-label="Faucet limits" className="mt-6">
+      <div className="grid gap-px border border-rule bg-rule sm:grid-cols-2">
+        {rules.map((rule) => (
+          <div key={rule.label} className="min-w-0 bg-paper p-4">
+            <div className="flex items-center justify-between gap-3">
+              <Label>{rule.label}</Label>
+              <Status tone={rule.state.tone}>{rule.state.word}</Status>
+            </div>
+            <p className="mt-3 break-words font-mono text-[18px] leading-tight tabular-nums">
+              {rule.value}
+            </p>
+            <p className="mt-2 text-[13px] leading-snug text-fog">
+              {rule.note}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 max-w-[64ch] text-[13px] leading-snug text-fog">
+        These limits come from the faucet's own status. The API makes the final
+        decision and also applies a per-client rate limit that is not shown
+        here.
+      </p>
+    </section>
   );
 }
 
@@ -197,6 +291,7 @@ export function Faucet() {
           ) : status ? (
             <>
               <Eligibility status={status} />
+              <FaucetRules status={status} />
               <dl className="mt-6 border-t border-rule">
                 <Fact
                   label="Recipient"
@@ -212,22 +307,6 @@ export function Faucet() {
                   }
                   note="The authenticated owner's derived smart account."
                 />
-                <Fact
-                  label="Transfer"
-                  value={`${amount(status.amountWei, 18)} tBNB`}
-                />
-                <Fact
-                  label="Account balance"
-                  value={`${amount(status.accountBalanceWei, 18)} tBNB`}
-                  note={`Eligibility stops at ${amount(status.fundedThresholdWei, 18)} tBNB.`}
-                />
-                <Fact
-                  label="Rolling budget left"
-                  value={`${amount(status.budgetRemainingWei, 18)} tBNB`}
-                />
-                {status.nextClaimAt ? (
-                  <Fact label="Next window" value={utc(status.nextClaimAt)} />
-                ) : null}
               </dl>
 
               <div className="mt-6 flex flex-wrap items-center gap-4">

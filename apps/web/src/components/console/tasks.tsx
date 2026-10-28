@@ -4,12 +4,49 @@ import type { PublicConfig, TaskSummary } from "@perago/sdk";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { short } from "@/lib/format";
+import { amount, short } from "@/lib/format";
+import { usePolicies } from "@/lib/queries";
 import { useSession } from "@/lib/session";
+import { cn } from "@/lib/utils";
 import { useStagedAction } from "./action";
-import { Button, FailureNotice, Label, Status } from "./ui";
+import { standing, symbolOf, tokenOf } from "./task/model";
+import { Button, FailureNotice, Glyph, Label, Status, StatusBadge } from "./ui";
+
+/**
+ * Goal examples taken from the active Wallet Policy, so a chip never suggests an
+ * amount the policy would refuse. Empty until a policy is active.
+ */
+function useGoalExamples(config: PublicConfig): string[] {
+  const policies = usePolicies();
+  const active = policies.data?.find((entry) => entry.status === "ACTIVE");
+  if (!active) return [];
+  const { activeAssets, services } = active.policy;
+  const examples: string[] = [];
+  for (const asset of activeAssets) {
+    const input = tokenOf(config.tokens, asset.token);
+    const cap = BigInt(asset.maxInputPerTask);
+    if (!input || cap <= 0n) continue;
+    const symbol = symbolOf(input);
+    if (services.includes("SWAP")) {
+      const output = config.tokens.find((token) => token !== input);
+      if (output) {
+        for (const size of [cap, cap / 2n]) {
+          if (size > 0n)
+            examples.push(
+              `Swap ${amount(size, input.decimals, input.decimals)} ${symbol} to ${symbolOf(output)}`,
+            );
+        }
+      }
+    }
+    if (services.includes("STAKE") && symbol === "CAKE")
+      examples.push(
+        `Stake ${amount(cap, input.decimals, input.decimals)} ${symbol}`,
+      );
+  }
+  return [...new Set(examples)].slice(0, 4);
+}
 
 export function TaskComposer({
   config,
@@ -22,10 +59,28 @@ export function TaskComposer({
   const queryClient = useQueryClient();
   const router = useRouter();
   const action = useStagedAction<string>();
+  const examples = useGoalExamples(config);
+  const field = useRef<HTMLTextAreaElement>(null);
   const [goal, setGoal] = useState("");
   const [expiry, setExpiry] = useState("1800");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const attempted = useRef<{ goal: string; expiry: string } | null>(null);
+  /* A `?goal=` link from a task page fills the field once. It never submits. */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get("goal");
+    if (!prefill) return;
+    setGoal(prefill.slice(0, 4000));
+    params.delete("goal");
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    );
+    field.current?.focus();
+    field.current?.scrollIntoView({ block: "center" });
+  }, []);
   const changeIntent = (nextGoal: string, nextExpiry: string) => {
     if (
       attempted.current &&
@@ -84,6 +139,7 @@ export function TaskComposer({
       <label className="block space-y-2">
         <Label className="block">Your goal</Label>
         <textarea
+          ref={field}
           value={goal}
           maxLength={4000}
           rows={4}
@@ -95,6 +151,28 @@ export function TaskComposer({
           className="w-full resize-y border border-rule bg-paper px-4 py-4 text-[17px] leading-relaxed placeholder:text-fog/70 focus:border-ink focus:outline-none"
         />
       </label>
+      {examples.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Label className="mr-1">Within your limits</Label>
+          {examples.map((example) => (
+            <button
+              key={example}
+              type="button"
+              onClick={() => {
+                changeIntent(example, expiry);
+                setGoal(example);
+                field.current?.focus();
+              }}
+              className={cn(
+                "pressable min-h-9 border px-3 font-mono text-[12px] transition-colors duration-150 hover:border-ink hover:bg-ink/[0.03]",
+                goal === example ? "border-ink bg-ink/[0.04]" : "border-rule",
+              )}
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex min-w-[13rem] flex-col gap-2">
           <Label>Deadline after signing (seconds)</Label>
@@ -137,50 +215,83 @@ export function TaskComposer({
   );
 }
 
-function tone(status: string) {
-  if (["SUCCEEDED", "AUTHORIZED", "ACTIVE"].includes(status))
-    return "ok" as const;
-  if (["FAILED", "REVOKED", "EXPIRED", "REJECTED"].includes(status))
-    return "fail" as const;
-  return "pending" as const;
+function kindText(task: TaskSummary): string {
+  if (task.kind === "SWAP") return "Swap";
+  if (task.kind === "STAKE") return "Stake";
+  return task.status === "REJECTED_POLICY" ? "No plan" : "No plan yet";
 }
 
+const when = new Intl.DateTimeFormat(undefined, {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 export function TaskLedger({ tasks }: { tasks: TaskSummary[] }) {
+  const rows = tasks.map((task) => ({
+    task,
+    state: standing({
+      status: task.status,
+      mandateStatus: task.mandateStatus,
+      executionStatus: task.executionStatus,
+    }),
+  }));
+  const succeeded = rows.filter(
+    (row) => row.state.label === "Succeeded",
+  ).length;
+  const blocked = rows.filter((row) => row.state.tone === "fail").length;
   return (
     <section aria-label="Recent tasks" className="border border-rule">
-      <div className="flex justify-between border-b border-rule px-5 py-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-rule px-5 py-4">
         <Label>Recent tasks</Label>
         <span className="font-mono text-[11px] text-fog">
-          {tasks.length} shown
+          {succeeded} succeeded · {blocked} blocked or failed · {tasks.length}{" "}
+          shown
         </span>
       </div>
       {tasks.length ? (
         <ol>
-          {tasks.map((task, index) => (
+          {rows.map(({ task, state }, index) => (
             <li
               key={task.taskId}
               className="border-b border-rule last:border-b-0"
             >
               <Link
                 href={`/app/tasks/${task.taskId}`}
-                className="group pressable grid gap-2 px-5 py-4 hover:bg-ink/[0.03] md:grid-cols-[3rem_minmax(0,1fr)_auto] md:items-center md:gap-4"
+                className="group pressable relative grid gap-x-4 gap-y-2 px-5 py-4 transition-colors duration-150 -outline-offset-2 hover:bg-ink/[0.03] focus-visible:bg-ink/[0.03] md:grid-cols-[2.5rem_minmax(0,1fr)_auto_1rem] md:items-center"
               >
-                <span className="font-mono text-[11px] text-fog">
+                {state.tone === "fail" ? (
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 w-0.5 bg-fail-ink"
+                  />
+                ) : null}
+                <span className="hidden font-mono text-[11px] text-fog md:block">
                   {String(tasks.length - index).padStart(2, "0")}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate font-medium group-hover:text-signal-ink">
                     {task.goal}
                   </span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-fog">
-                    {task.kind ?? "Awaiting plan"} ·{" "}
-                    {new Date(task.createdAt).toLocaleString()} ·{" "}
+                  <span className="mt-0.5 block truncate font-mono text-[11px] text-fog">
+                    {kindText(task)} · {when.format(new Date(task.createdAt))} ·{" "}
                     {short(task.taskId)}
                   </span>
                 </span>
-                <Status tone={tone(task.mandateStatus ?? task.status)}>
-                  {task.mandateStatus ?? task.status}
-                </Status>
+                <span className="justify-self-start md:justify-self-end">
+                  <StatusBadge
+                    tone={state.tone}
+                    glyph={state.glyph}
+                    live={state.live}
+                  >
+                    {state.label}
+                  </StatusBadge>
+                </span>
+                <Glyph
+                  name="arrow"
+                  className="hidden -translate-x-1 text-fog opacity-0 transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none md:block"
+                />
               </Link>
             </li>
           ))}
