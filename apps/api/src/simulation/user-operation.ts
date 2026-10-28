@@ -24,6 +24,7 @@ import {
   hashTypedData,
   keccak256,
   type PublicClient,
+  RpcRequestError,
   stringToHex,
   TimeoutError,
   toHex,
@@ -133,7 +134,15 @@ export function isTransportError(error: unknown): boolean {
     error instanceof BaseError &&
     error.walk(
       (cause) =>
-        cause instanceof HttpRequestError || cause instanceof TimeoutError,
+        cause instanceof HttpRequestError ||
+        cause instanceof TimeoutError ||
+        (cause instanceof RpcRequestError &&
+          !hasRevertData(cause.cause) &&
+          !/execution reverted/i.test(cause.details) &&
+          ([-32603, -32005, -32016, 429].includes(cause.code) ||
+            /rate.?limit|compute units|capacity|too many requests|timed? out|timeout|temporarily unavailable|service unavailable|internal (server|error)|bad gateway/i.test(
+              cause.details,
+            ))),
     ) !== null
   );
 }

@@ -107,6 +107,7 @@ export async function readFinalizedMandate(input: {
   mandateExecutor: Address;
   mandateHash: Hash;
   fromBlock: bigint;
+  projectedReceiptStatus?: MandateRecordStatus | null;
   now: Date;
 }): Promise<{
   finalized: { hash: Hash; number: bigint };
@@ -114,6 +115,7 @@ export async function readFinalizedMandate(input: {
   recordStatus: MandateRecordStatus;
   verificationHash: Hash;
   failureReasonHash: Hash;
+  scanSkipped: boolean;
 }> {
   const finalized = await input.client.getBlock({ blockTag: "finalized" });
   const record = await input.client.readContract({
@@ -126,15 +128,19 @@ export async function readFinalizedMandate(input: {
   const recordStatus = MANDATE_RECORD_STATUSES[record.status];
   if (!recordStatus) throw new Error("unknown mandate record status");
 
-  // Status never returns to NONE. A NONE record cannot have lifecycle logs at
-  // or before this finalized block, so old unsigned mandates need no scan.
-  if (recordStatus === "NONE") {
+  const scanSkipped =
+    input.projectedReceiptStatus === recordStatus &&
+    ["SUCCEEDED", "FAILED", "REVOKED", "EXPIRED"].includes(recordStatus);
+  // Finalized terminal records cannot change. Reuse an equal receipt projection,
+  // but callers must still compare its verification and failure commitments.
+  if (recordStatus === "NONE" || scanSkipped) {
     return {
       events: [],
       finalized: { hash: finalized.hash, number: finalized.number },
       recordStatus,
       verificationHash: record.verificationHash,
       failureReasonHash: record.failureReasonHash,
+      scanSkipped,
     };
   }
 
@@ -170,5 +176,6 @@ export async function readFinalizedMandate(input: {
     recordStatus,
     verificationHash: record.verificationHash,
     failureReasonHash: record.failureReasonHash,
+    scanSkipped: false,
   };
 }

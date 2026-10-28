@@ -612,11 +612,14 @@ export function Hash({
   href,
   dark = false,
   full = false,
+  wrap = false,
 }: {
   value: string;
   href?: string | null;
   dark?: boolean;
   full?: boolean;
+  /** Break a full value across lines instead of truncating it. */
+  wrap?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -633,7 +636,8 @@ export function Hash({
           rel="noreferrer"
           title={value}
           className={cn(
-            "min-w-0 truncate underline decoration-1 underline-offset-4",
+            wrap ? "min-w-0 break-all" : "min-w-0 truncate",
+            "underline decoration-1 underline-offset-4",
             dark
               ? "decoration-paper/30 hover:text-signal"
               : "decoration-rule hover:text-signal-ink hover:decoration-signal-ink",
@@ -642,7 +646,10 @@ export function Hash({
           {full ? value : short(value, 10, 8)}
         </a>
       ) : (
-        <span title={value} className="min-w-0 truncate">
+        <span
+          title={value}
+          className={wrap ? "min-w-0 break-all" : "min-w-0 truncate"}
+        >
           {full ? value : short(value, 10, 8)}
         </span>
       )}
@@ -653,7 +660,7 @@ export function Hash({
         }}
         aria-label={`Copy ${value}`}
         className={cn(
-          "pressable shrink-0 text-[10px] uppercase tracking-[0.16em]",
+          "pressable -my-3 shrink-0 px-1 py-3 text-[10px] uppercase tracking-[0.16em]",
           dark ? "text-paper/40 hover:text-paper" : "text-fog hover:text-ink",
         )}
       >

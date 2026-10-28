@@ -382,7 +382,7 @@ export function RevokeAccess({
               UserOperation that removes the session, records the revocation,
               and zeroes the allowances.{" "}
               {config.sponsorship.enabled
-                ? "Perago's bundler pays the gas; a third prompt to pay it yourself appears only if sponsorship is refused."
+                ? "Perago sponsors the gas; a third prompt to pay it yourself appears only if sponsorship is refused."
                 : "Prompt 3 pays for EntryPoint.handleOps from your owner wallet."}{" "}
               Revoking does not move any tokens.
             </p>
