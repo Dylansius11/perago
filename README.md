@@ -62,7 +62,7 @@ sequenceDiagram
     actor Owner
     participant Web as Perago web
     participant API as Perago API
-    participant AI as Planner (OpenRouter)
+    participant AI as Planner (Groq)
     participant Worker as Executor worker
     participant Chain as BNB Chain
 
@@ -104,7 +104,7 @@ flowchart TB
         X["Executor worker<br/>Node 24"]
     end
     DB[("Supabase PostgreSQL<br/>session pooler, verified TLS")]
-    L["OpenRouter planner"]
+    L["Groq planner"]
     C["BNB Smart Chain Testnet<br/>MandateExecutor, adapters, verifiers,<br/>ERC-4337 smart account"]
 
     W -->|HTTPS| A

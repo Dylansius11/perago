@@ -5,49 +5,49 @@ export type Planner = (prompt: PlannerPrompt) => Promise<unknown>;
 
 export class PlannerUnavailableError extends Error {}
 
-export type OpenRouterPlannerConfig = {
+export type GroqPlannerConfig = {
   apiKey: string;
   timeoutMs: number;
 };
 
 /** One bounded request; malformed output remains untrusted and fails closed in the compiler. */
-export function createOpenRouterPlanner(
-  config: OpenRouterPlannerConfig,
-): Planner {
+export function createGroqPlanner(config: GroqPlannerConfig): Planner {
   if (!config.apiKey.trim()) {
-    throw new RangeError("an OpenRouter API key is required for the planner");
+    throw new RangeError("a Groq API key is required for the planner");
   }
 
   return async (prompt) => {
     let response: Response;
     try {
-      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "stealth/space-bunny-alpha",
-          messages: [
-            { role: "system", content: prompt.system },
-            { role: "user", content: prompt.user },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "perago_plan_candidate",
-              strict: true,
-              schema: prompt.schema,
-            },
+      response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+            "Content-Type": "application/json",
           },
-          reasoning: { effort: "low" },
-          max_tokens: 2048,
-          temperature: 0,
-          stream: false,
-        }),
-        signal: AbortSignal.timeout(config.timeoutMs),
-      });
+          body: JSON.stringify({
+            model: "qwen/qwen3.8-27b",
+            messages: [
+              { role: "system", content: prompt.system },
+              { role: "user", content: prompt.user },
+            ],
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "perago_plan_candidate",
+                strict: true,
+                schema: prompt.schema,
+              },
+            },
+            max_tokens: 2048,
+            temperature: 0,
+            stream: false,
+          }),
+          signal: AbortSignal.timeout(config.timeoutMs),
+        },
+      );
     } catch {
       throw new PlannerUnavailableError("planner request failed");
     }

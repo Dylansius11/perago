@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createOpenRouterPlanner,
-  PlannerUnavailableError,
-} from "./provider.js";
+import { createGroqPlanner, PlannerUnavailableError } from "./provider.js";
 
 const prompt = {
   schema: {
@@ -37,11 +34,11 @@ const completion = (content: string | null, finish_reason = "stop") =>
   });
 
 const planner = () =>
-  createOpenRouterPlanner({ apiKey: "test-key", timeoutMs: 5_000 });
+  createGroqPlanner({ apiKey: "test-key", timeoutMs: 5_000 });
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("OpenRouter planner boundary", () => {
+describe("Groq planner boundary", () => {
   it("requests the bounded schema and parses a well-formed candidate", async () => {
     const requests: Array<{ url: string; body: unknown; auth: string | null }> =
       [];
@@ -56,10 +53,10 @@ describe("OpenRouter planner boundary", () => {
     expect(await planner()(prompt)).toEqual(candidate);
     expect(requests).toEqual([
       {
-        url: "https://openrouter.ai/api/v1/chat/completions",
+        url: "https://api.groq.com/openai/v1/chat/completions",
         auth: "Bearer test-key",
         body: {
-          model: "stealth/space-bunny-alpha",
+          model: "qwen/qwen3.8-27b",
           messages: [
             { role: "system", content: prompt.system },
             { role: "user", content: prompt.user },
@@ -72,7 +69,6 @@ describe("OpenRouter planner boundary", () => {
               schema: prompt.schema,
             },
           },
-          reasoning: { effort: "low" },
           max_tokens: 2048,
           temperature: 0,
           stream: false,
