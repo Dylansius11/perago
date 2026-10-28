@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { RiseIn } from "@/components/motion/reveal";
 
 /*
@@ -8,8 +9,12 @@ import { RiseIn } from "@/components/motion/reveal";
 
 export function Closing() {
   return (
-    <section id="access" className="scroll-mt-16 bg-signal text-ink">
-      <div className="px-6 pb-24 pt-20 md:px-10">
+    <section
+      id="access"
+      className="relative scroll-mt-16 overflow-hidden bg-signal text-ink"
+    >
+      <BrandMark className="pointer-events-none absolute -right-20 top-1/2 hidden h-[135%] -translate-y-1/2 text-ink/[0.12] md:block" />
+      <div className="relative px-6 pb-24 pt-20 md:px-10">
         <RiseIn>
           <h2 className="max-w-[14ch] text-[clamp(2.6rem,6.5vw,6rem)] font-semibold leading-[1.02] tracking-[-0.03em]">
             Give the goal. Keep the keys.

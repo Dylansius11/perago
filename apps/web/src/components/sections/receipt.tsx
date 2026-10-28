@@ -30,7 +30,7 @@ export function Receipt() {
           <RiseIn>
             <Caption>Execution Receipt</Caption>
             <h2 className="max-w-[22ch] text-4xl font-semibold tracking-[-0.03em] md:text-6xl">
-              The receipt is the proof. Payment follows it.
+              The receipt is the proof.
             </h2>
           </RiseIn>
 
@@ -55,25 +55,37 @@ export function Receipt() {
                     ["mandateHash", "0x7c33…41aa"],
                     ["authorityConsumed", "true"],
                     ["transactions.userOperation", "0x9d7f…e2f1"],
+                    ["authorization.blockNumber", "71,204,118"],
                     ["terminal.blockNumber", "71,204,131"],
                     ["verification.status", "PASSED"],
                     ["terminalReasonCode", "ONCHAIN_SUCCEEDED"],
-                    ["settlement.status", "CONFIRMED"],
-                    ["settlement.amount", "paid after the verdict"],
+                    ["settlement.status", "NOT_BOUND"],
                   ].map(([k, v]) => (
                     <div
                       key={k}
-                      className="flex items-baseline justify-between gap-6 px-6 py-3 transition-colors duration-200 ease-out-vivid hover:bg-paper/[0.04]"
+                      className="flex flex-col gap-1 px-6 py-3 transition-colors duration-200 ease-out-vivid hover:bg-paper/[0.04] sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
                     >
-                      <dt className="min-w-0 truncate text-paper/50">{k}</dt>
-                      <dd className="shrink-0 text-right text-paper/85">{v}</dd>
+                      <dt className="min-w-0 text-paper/50 sm:truncate">{k}</dt>
+                      <dd
+                        className={`sm:shrink-0 sm:text-right ${
+                          k === "settlement.status"
+                            ? "text-statuspending"
+                            : "text-paper/85"
+                        }`}
+                      >
+                        {v}
+                      </dd>
                     </div>
                   ))}
                 </dl>
-                <div className="border-t border-ruleinvert px-6 py-4">
-                  <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/40">
+                <div className="space-y-2 border-t border-ruleinvert px-6 py-4 font-mono text-[11px] uppercase leading-relaxed tracking-[0.16em]">
+                  <p className="text-paper/40">
                     Illustrative values on real field names
-                  </span>
+                  </p>
+                  <p className="text-statuspending">
+                    NOT_BOUND: no agent payment is attached. Payment is
+                    fork-proven, not live.
+                  </p>
                 </div>
               </div>
             </Unveil>
@@ -92,6 +104,25 @@ export function Receipt() {
                   </div>
                 </RiseIn>
               ))}
+              <RiseIn delay={0.08 * PROOFS.length}>
+                <div className="border-t border-dashed border-ruleinvert pt-5">
+                  <h3 className="flex items-center gap-3 text-xl font-semibold tracking-[-0.01em] text-paper/80">
+                    <span
+                      aria-hidden
+                      className="size-1.5 border border-statuspending"
+                    />
+                    Next: payment follows proof
+                  </h3>
+                  <p className="mt-2 max-w-[40ch] leading-relaxed text-paper/60">
+                    Agents get paid only after the verifier passes. ERC-8183
+                    payment is proven on a local fork. It is not live on
+                    testnet.
+                  </p>
+                  <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-statuspending">
+                    Fork-proven, not live
+                  </p>
+                </div>
+              </RiseIn>
             </div>
           </div>
         </div>
