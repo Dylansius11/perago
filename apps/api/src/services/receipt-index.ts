@@ -525,17 +525,27 @@ export async function indexFinalizedReceipt(
       erc8183_contract: Buffer | null;
       erc8183_job_id: string | null;
       settlement_tx_hash: Buffer | null;
+      receipt_status: MandateRecordStatus | null;
       from_block: string;
       commerce_from_block: string;
     }[]
   >`
     select m.chain_id::text, m.mandate_executor_address, m.account_address,
       m.erc8183_contract, m.erc8183_job_id::text, r.settlement_tx_hash,
-      coalesce(c.next_block_number, s.block_number)::text as from_block,
+      r.status as receipt_status,
+      coalesce(c.next_block_number, authorized.block_number, s.block_number)::text as from_block,
       coalesce(cc.next_block_number, s.block_number)::text as commerce_from_block
     from mandates m
     join simulations s on s.id = m.simulation_id
     left join execution_receipts r on r.mandate_hash = m.mandate_hash
+    left join lateral (
+      select min(e.block_number) as block_number from chain_events e
+      where e.chain_id = m.chain_id
+        and e.contract_address = m.mandate_executor_address
+        and e.transaction_hash = m.authorize_tx_hash
+        and e.status = 'CONFIRMED' and e.decoded_name = 'MandateAuthorized'
+        and e.decoded_args->>'mandateHash' = ${mandateHash}
+    ) authorized on true
     left join indexer_checkpoints c on c.chain_id = m.chain_id
       and c.stream_name = ${stream(mandateHash)}
     left join indexer_checkpoints cc on cc.chain_id = m.chain_id
@@ -555,6 +565,7 @@ export async function indexFinalizedReceipt(
   const scan = await readFinalizedMandate({
     client,
     fromBlock: BigInt(source.from_block),
+    projectedReceiptStatus: source.receipt_status,
     mandateExecutor: deployment.mandateExecutor.address,
     mandateHash,
     now: new Date(),
@@ -608,6 +619,7 @@ export async function indexFinalizedReceipt(
     `;
     if (
       checkpoint &&
+      !scan.scanSkipped &&
       BigInt(checkpoint.next_block_number) !== BigInt(source.from_block)
     ) {
       throw new Error("receipt index advanced during finalized read");
@@ -671,21 +683,23 @@ export async function indexFinalizedReceipt(
         "public receipt projection disagrees with finalized mandate",
       );
     }
-    await tx`
-      insert into indexer_checkpoints (
-        chain_id, stream_name, next_block_number, last_canonical_block_hash, confirmation_depth
-      ) values (
-        ${source.chain_id}, ${stream(mandateHash)}, ${(scan.finalized.number + 1n).toString()},
-        ${buffer(scan.finalized.hash)}, 1
-      ) on conflict (chain_id, stream_name) do update set
-        next_block_number = greatest(indexer_checkpoints.next_block_number, excluded.next_block_number),
-        last_canonical_block_hash = case
-          when excluded.next_block_number > indexer_checkpoints.next_block_number
-          then excluded.last_canonical_block_hash
-          else indexer_checkpoints.last_canonical_block_hash
-        end,
-        updated_at = now()
-    `;
+    if (!scan.scanSkipped) {
+      await tx`
+        insert into indexer_checkpoints (
+          chain_id, stream_name, next_block_number, last_canonical_block_hash, confirmation_depth
+        ) values (
+          ${source.chain_id}, ${stream(mandateHash)}, ${(scan.finalized.number + 1n).toString()},
+          ${buffer(scan.finalized.hash)}, 1
+        ) on conflict (chain_id, stream_name) do update set
+          next_block_number = greatest(indexer_checkpoints.next_block_number, excluded.next_block_number),
+          last_canonical_block_hash = case
+            when excluded.next_block_number > indexer_checkpoints.next_block_number
+            then excluded.last_canonical_block_hash
+            else indexer_checkpoints.last_canonical_block_hash
+          end,
+          updated_at = now()
+      `;
+    }
     if (commerceScan !== null) {
       await tx`
         insert into indexer_checkpoints (

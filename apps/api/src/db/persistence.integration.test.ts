@@ -1,11 +1,17 @@
 import { readFile } from "node:fs/promises";
+import type { Hash } from "@perago/sdk";
 import postgres, { type Sql } from "postgres";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { type PublicClient, RpcRequestError } from "viem";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { createApiApp } from "../app.js";
+import { loadBscTestnetCatalog } from "../compiler/catalog.js";
 import {
   applyChainEventBatch,
   applyFinalizedEvents,
   type ChainEventInput,
 } from "../indexer/project-chain-events.js";
+import type { ExecutionServiceConfig } from "../services/executions.js";
+import { indexFinalizedReceipt } from "../services/receipt-index.js";
 import { getPublicReceipt } from "../services/receipts.js";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
@@ -824,4 +830,335 @@ describe("P3-001 constrained persistence", () => {
       settlement: { status: "NOT_BOUND" },
     });
   });
+});
+
+async function receiptFixture(
+  value: number,
+  status: "AUTHORIZED" | "SUCCEEDED" | "FAILED" | "REVOKED" | "EXPIRED",
+) {
+  const { mandateHash } = await seedMandate(sql, value);
+  const event = (
+    name: ChainEventInput["decodedName"],
+    offset: number,
+  ): ChainEventInput => ({
+    ...chainEvent({
+      seed: value + offset,
+      blockNumber: BigInt(100 + offset),
+      blockHash: bytes(100 + offset, 32),
+      name,
+      mandateHash,
+    }),
+    logIndex: value * 2 + offset,
+    observedAt: new Date("2026-10-28T00:00:00Z"),
+  });
+  const events = [event("MandateAuthorized", 0)];
+  if (status !== "AUTHORIZED") {
+    const terminal = event(
+      status === "REVOKED"
+        ? "MandateRevoked"
+        : status === "EXPIRED"
+          ? "MandateExpired"
+          : "ExecutionReceiptRecorded",
+      1,
+    );
+    if (status === "SUCCEEDED" || status === "FAILED") {
+      terminal.decodedArgs = {
+        mandateHash: hex(mandateHash),
+        status,
+        verificationHash: hex(bytes(status === "SUCCEEDED" ? 1 : 0, 32)),
+        failureReasonHash: hex(bytes(status === "FAILED" ? 2 : 0, 32)),
+      };
+    }
+    events.push(terminal);
+  }
+  await sql.begin((tx) => applyFinalizedEvents(tx, 97n, events));
+  const calls = {
+    blocks: 0,
+    records: 0,
+    logs: [] as { fromBlock: bigint; toBlock: bigint }[],
+  };
+  let activeLogRequests = 0;
+  const client = {
+    async getBlock(input: { blockTag: string }) {
+      expect(input).toEqual({ blockTag: "finalized" });
+      calls.blocks++;
+      return { hash: hex(bytes(120, 32)), number: 120n };
+    },
+    async readContract(input: { blockNumber: bigint; args: Hash[] }) {
+      expect(input.blockNumber).toBe(120n);
+      expect(input.args).toEqual([hex(mandateHash)]);
+      calls.records++;
+      return {
+        status: [
+          "NONE",
+          "AUTHORIZED",
+          "EXECUTING",
+          "SUCCEEDED",
+          "FAILED",
+          "REVOKED",
+          "EXPIRED",
+        ].indexOf(status),
+        verificationHash: hex(bytes(status === "SUCCEEDED" ? 1 : 0, 32)),
+        failureReasonHash: hex(bytes(status === "FAILED" ? 2 : 0, 32)),
+      };
+    },
+    async getLogs(input: { fromBlock: bigint; toBlock: bigint }) {
+      expect(++activeLogRequests).toBe(1);
+      calls.logs.push({ fromBlock: input.fromBlock, toBlock: input.toBlock });
+      await Promise.resolve();
+      activeLogRequests--;
+      return [];
+    },
+  };
+  const config: ExecutionServiceConfig = {
+    client: client as unknown as PublicClient,
+    deployment: {
+      chainId: "97",
+      mandateExecutor: { address: hex(bytes(value + 12, 20)) },
+    } as ExecutionServiceConfig["deployment"],
+    leaseSeconds: 60,
+    workerTokenHash: bytes(1, 32),
+  };
+  return { mandateHash, config, client, calls };
+}
+
+function receiptApp(config: ExecutionServiceConfig) {
+  // Only the public receipt route is exercised; unrelated routes stay unused.
+  return createApiApp({
+    sql,
+    executionConfig: config,
+    authConfig: {} as never,
+    mandateConfig: {
+      catalog: loadBscTestnetCatalog(),
+      deployment: config.deployment,
+      client: config.client,
+      blockTag: "latest",
+      quoteTtlSeconds: 120,
+      now: () => new Date("2026-10-28T00:00:00Z"),
+    },
+    planner: async () => {
+      throw new Error("unused planner");
+    },
+    policyConfig: {} as never,
+    policyVerifier: {} as never,
+    taskConfig: { intentKey: bytes(1, 32), compileLeaseSeconds: 60 } as never,
+  });
+}
+
+describe("bounded public receipt reads", () => {
+  it.each([
+    ["SUCCEEDED", 110],
+    ["FAILED", 112],
+    ["REVOKED", 114],
+    ["EXPIRED", 116],
+  ] as const)(
+    "reads projected %s receipts without logs or advancing the cursor",
+    async (status, seed) => {
+      const { mandateHash, config, calls } = await receiptFixture(seed, status);
+      const streamName = `mandate:${hex(mandateHash)}`;
+      await sql`
+      insert into indexer_checkpoints (
+        chain_id, stream_name, next_block_number, last_canonical_block_hash, confirmation_depth
+      ) values (97, ${streamName}, 102, ${bytes(101, 32)}, 1)
+    `;
+      const response = await receiptApp(config).request(
+        `/receipts/${hex(mandateHash)}`,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        status,
+        settlement: { status: "NOT_BOUND" },
+      });
+      expect(calls).toEqual({ blocks: 1, records: 1, logs: [] });
+      const [checkpoint] = await sql`
+      select next_block_number::text from indexer_checkpoints
+      where chain_id = 97 and stream_name = ${streamName}
+    `;
+      expect(checkpoint).toEqual({ next_block_number: "102" });
+    },
+  );
+
+  it("scans non-terminal mandates sequentially from confirmed authorization, not simulation", async () => {
+    const { mandateHash, config, calls } = await receiptFixture(
+      118,
+      "AUTHORIZED",
+    );
+    const indexed = await indexFinalizedReceipt(sql, config, hex(mandateHash));
+    expect(indexed?.recordStatus).toBe("AUTHORIZED");
+    expect(calls.logs).toEqual([
+      { fromBlock: 100n, toBlock: 109n },
+      { fromBlock: 110n, toBlock: 119n },
+      { fromBlock: 120n, toBlock: 120n },
+    ]);
+  });
+
+  it("rebuilds a missing terminal receipt with a full bounded scan from authorization", async () => {
+    const { mandateHash, config, calls } = await receiptFixture(
+      120,
+      "SUCCEEDED",
+    );
+    await sql`delete from execution_receipts where mandate_hash = ${mandateHash}`;
+    const response = await receiptApp(config).request(
+      `/receipts/${hex(mandateHash)}`,
+    );
+    expect(response.status).toBe(200);
+    expect(calls.logs).toEqual([
+      { fromBlock: 100n, toBlock: 109n },
+      { fromBlock: 110n, toBlock: 119n },
+      { fromBlock: 120n, toBlock: 120n },
+    ]);
+    expect(await getPublicReceipt(sql, hex(mandateHash))).toMatchObject({
+      status: "SUCCEEDED",
+    });
+  });
+
+  it("returns a retryable 503 for RPC compute-unit throttling and does not cache errors", async () => {
+    const { mandateHash, config, client, calls } = await receiptFixture(
+      122,
+      "SUCCEEDED",
+    );
+    const read = client.readContract;
+    client.readContract = async () => {
+      throw new RpcRequestError({
+        body: { method: "eth_call" },
+        error: {
+          code: -32000,
+          message: "exceeded its compute units per second capacity",
+        },
+        url: "https://rpc.example.test",
+      });
+    };
+    const app = receiptApp(config);
+    const response = await app.request(`/receipts/${hex(mandateHash)}`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: "CHAIN_UNAVAILABLE",
+        message: expect.stringMatching(/retry|try again/i),
+      },
+    });
+    client.readContract = read;
+    expect((await app.request(`/receipts/${hex(mandateHash)}`)).status).toBe(
+      200,
+    );
+    expect(calls.blocks).toBe(2);
+  });
+
+  it("keeps commitment mismatches as errors and never caches them", async () => {
+    const { mandateHash, config, client } = await receiptFixture(
+      124,
+      "SUCCEEDED",
+    );
+    const read = client.readContract;
+    client.readContract = async (input) => ({
+      ...(await read(input)),
+      verificationHash: hex(bytes(9, 32)),
+    });
+    const app = receiptApp(config);
+    const response = await app.request(`/receipts/${hex(mandateHash)}`);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: { code: "INTERNAL_ERROR", message: "request failed" },
+    });
+    client.readContract = read;
+    expect((await app.request(`/receipts/${hex(mandateHash)}`)).status).toBe(
+      200,
+    );
+  });
+
+  it("rejects unknown and malformed hashes without any RPC", async () => {
+    const { config, calls } = await receiptFixture(126, "SUCCEEDED");
+    const app = receiptApp(config);
+    const unknown = await app.request(`/receipts/${hex(bytes(250, 32))}`);
+    expect(unknown.status).toBe(404);
+    expect(await unknown.json()).toMatchObject({
+      error: { code: "NOT_FOUND" },
+    });
+    const malformed = await app.request("/receipts/not-a-hash");
+    expect(malformed.status).toBe(400);
+    expect(await malformed.json()).toMatchObject({
+      error: { code: "INVALID_REQUEST" },
+    });
+    expect(calls).toEqual({ blocks: 0, records: 0, logs: [] });
+  });
+
+  it("briefly caches only validated public receipts and rechecks the chain after expiry", async () => {
+    const { mandateHash, config, calls } = await receiptFixture(
+      128,
+      "SUCCEEDED",
+    );
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      const app = receiptApp(config);
+      const first = await app.request(`/receipts/${hex(mandateHash)}`);
+      const body = await first.json();
+      const second = await app.request(`/receipts/${hex(mandateHash)}`);
+      expect(second.status).toBe(200);
+      expect(await second.json()).toEqual(body);
+      expect(calls).toEqual({ blocks: 1, records: 1, logs: [] });
+      const checkpoints = await sql`
+        select stream_name from indexer_checkpoints
+        where chain_id = 97 and stream_name = ${`mandate:${hex(mandateHash)}`}
+      `;
+      expect(checkpoints).toHaveLength(0);
+      clock.mockReturnValue(16_001);
+      expect((await app.request(`/receipts/${hex(mandateHash)}`)).status).toBe(
+        200,
+      );
+      expect(calls.blocks).toBe(2);
+      expect(Object.keys(body).sort()).toEqual([
+        "account",
+        "actionHash",
+        "authorityConsumed",
+        "authorization",
+        "begin",
+        "chainId",
+        "explorer",
+        "intentHash",
+        "mandateExecutor",
+        "mandateHash",
+        "nonce",
+        "planHash",
+        "policyHash",
+        "postconditionHash",
+        "schemaVersion",
+        "settlement",
+        "simulationHash",
+        "status",
+        "terminal",
+        "terminalMessage",
+        "terminalReasonCode",
+        "transactions",
+        "verification",
+      ]);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("evicts the oldest response when the bounded cache fills", async () => {
+    const first = await receiptFixture(130, "SUCCEEDED");
+    const sharedConfig = { ...first.config };
+    const app = receiptApp(sharedConfig);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      expect(
+        (await app.request(`/receipts/${hex(first.mandateHash)}`)).status,
+      ).toBe(200);
+      for (let seed = 131; seed <= 194; seed++) {
+        const next = await receiptFixture(seed, "SUCCEEDED");
+        Object.assign(sharedConfig, next.config);
+        expect(
+          (await app.request(`/receipts/${hex(next.mandateHash)}`)).status,
+        ).toBe(200);
+      }
+      Object.assign(sharedConfig, first.config);
+      expect(
+        (await app.request(`/receipts/${hex(first.mandateHash)}`)).status,
+      ).toBe(200);
+      expect(first.calls.blocks).toBe(2);
+    } finally {
+      clock.mockRestore();
+    }
+  }, 30_000);
 });
