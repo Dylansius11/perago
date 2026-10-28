@@ -1,4 +1,5 @@
 import {
+  type ConfirmPolicyRevocationRequest,
   type EstimateUserOperationRequest,
   type EstimateUserOperationResponse,
   type ExecutionReceipt,
@@ -11,6 +12,7 @@ import {
   mandateAcceptedSchema,
   mandatePreparedSchema,
   type PolicyView,
+  type PreparePolicyRevocationRequest,
   type PublicConfig,
   policyListResponseSchema,
   policyTransitionConfirmedSchema,
@@ -165,6 +167,28 @@ export const api = {
       policyTransitionPreparedSchema,
       `/policies/${policyId}/activation/prepare`,
       { token, body: transition },
+    ),
+
+  preparePolicyRevocation: (
+    token: string,
+    policyId: string,
+    body: PreparePolicyRevocationRequest,
+  ) =>
+    request(
+      policyTransitionPreparedSchema,
+      `/policies/${policyId}/revocation/prepare`,
+      { token, body },
+    ),
+
+  confirmPolicyRevocation: (
+    token: string,
+    policyId: string,
+    body: ConfirmPolicyRevocationRequest,
+  ) =>
+    request(
+      policyTransitionConfirmedSchema,
+      `/policies/${policyId}/revocation`,
+      { token, body, method: "PUT" },
     ),
 
   confirmActivation: (token: string, policyId: string, body: unknown) =>

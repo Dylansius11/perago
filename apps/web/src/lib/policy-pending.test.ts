@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   pendingPolicyKey,
+  pendingRevocationKey,
   readPendingPolicy,
+  readPendingRevocation,
   writePendingPolicy,
+  writePendingRevocation,
 } from "./policy-pending";
 
 const identity = {
@@ -60,5 +63,43 @@ describe("pending policy finality recovery", () => {
     writePendingPolicy(store, identity, record);
     store.setItem(pendingPolicyKey(identity), "{}");
     expect(() => readPendingPolicy(store, identity)).toThrow();
+  });
+});
+
+const revocation = {
+  policyId: record.policyId,
+  body: {
+    validUntil: "1790600000",
+    rootSignature: record.body.rootSignature,
+    transactionHash: record.body.transactionHash,
+    userOperationHash: record.body.userOperationHash,
+  },
+};
+
+describe("pending policy revocation finality recovery", () => {
+  it("restores a signed revocation for the same owner and account only", () => {
+    const store = memoryStore();
+    writePendingRevocation(store, identity, revocation);
+    expect(readPendingRevocation(store, identity)).toEqual(revocation);
+    expect(
+      readPendingRevocation(store, { ...identity, owner: identity.account }),
+    ).toBeNull();
+  });
+
+  it("keeps activation and revocation evidence apart", () => {
+    const store = memoryStore();
+    writePendingRevocation(store, identity, revocation);
+    expect(readPendingPolicy(store, identity)).toBeNull();
+    writePendingPolicy(store, identity, record);
+    expect(readPendingRevocation(store, identity)).toEqual(revocation);
+    expect(pendingRevocationKey(identity)).not.toBe(pendingPolicyKey(identity));
+  });
+
+  it("rejects activation evidence stored as a revocation and corrupted evidence", () => {
+    const store = memoryStore();
+    store.setItem(pendingRevocationKey(identity), JSON.stringify(record));
+    expect(() => readPendingRevocation(store, identity)).toThrow();
+    store.setItem(pendingRevocationKey(identity), "{}");
+    expect(() => readPendingRevocation(store, identity)).toThrow();
   });
 });

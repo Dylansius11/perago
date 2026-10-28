@@ -9,10 +9,10 @@ import {
   type PublicConfig,
 } from "@perago/sdk";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { encodeFunctionData, parseAbi, parseEther } from "viem";
 import { sendTransaction, waitForTransactionReceipt } from "wagmi/actions";
-import { amount } from "@/lib/format";
+import { amount, compact } from "@/lib/format";
 import { ownerSubmissionKey, submitOwnerOnce } from "@/lib/owner-submission";
 import { type Holdings, usePublicConfig } from "@/lib/queries";
 import { sendRootOperation, sponsorFor } from "@/lib/root-operation";
@@ -183,25 +183,28 @@ export function ReadinessRail({
         <dl className="px-5 py-2 font-mono text-[13px]">
           <HoldingRow
             label="account tBNB"
-            value={holdings ? amount(holdings.accountNative, 18) : null}
+            value={holdings ? compact(holdings.accountNative, 18) : null}
+            exact={holdings ? amount(holdings.accountNative, 18, 18) : null}
           />
-          {config.tokens.map((token) => (
-            <HoldingRow
-              key={token.address}
-              label={`account ${token.symbol}`}
-              value={
-                holdings?.tokens[token.symbol]
-                  ? amount(
-                      holdings.tokens[token.symbol]?.balance ?? 0n,
-                      token.decimals,
-                    )
-                  : null
-              }
-            />
-          ))}
+          {config.tokens.map((token) => {
+            const entry = holdings?.tokens[token.symbol];
+            return (
+              <HoldingRow
+                key={token.address}
+                label={`account ${token.symbol}`}
+                value={entry ? compact(entry.balance, token.decimals) : null}
+                exact={
+                  entry
+                    ? amount(entry.balance, token.decimals, token.decimals)
+                    : null
+                }
+              />
+            );
+          })}
           <HoldingRow
             label="owner tBNB (gas)"
-            value={holdings ? amount(holdings.ownerNative, 18) : null}
+            value={holdings ? compact(holdings.ownerNative, 18) : null}
+            exact={holdings ? amount(holdings.ownerNative, 18, 18) : null}
             warn={holdings !== undefined && !readiness.ownerGas}
           />
         </dl>
@@ -228,19 +231,101 @@ export function ReadinessRail({
 function HoldingRow({
   label,
   value,
+  exact,
   warn = false,
 }: {
   label: string;
   value: string | null;
+  /** Every digit, reachable by hover or focus when `value` is scaled. */
+  exact: string | null;
   warn?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-rule py-2 last:border-b-0">
       <dt className="text-fog">{label}</dt>
-      <dd className={cn("tabular-nums", warn ? "text-fail-ink" : "text-ink")}>
+      <dd
+        title={exact ?? undefined}
+        className={cn("tabular-nums", warn ? "text-fail-ink" : "text-ink")}
+      >
         {value ?? <span className="text-fog">reading</span>}
       </dd>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* In-page navigation                                                  */
+/* ------------------------------------------------------------------ */
+
+export type Section = { id: string; label: string };
+
+/**
+ * A sticky jump bar for the console's sections. The current section is the
+ * first one inside a reading band just under the fixed bars; it is a hint for
+ * the eye, so it carries `aria-current` and never hides a link.
+ */
+export function SectionNav({ sections }: { sections: Section[] }) {
+  const [current, setCurrent] = useState(sections[0]?.id ?? "");
+  const key = sections.map((section) => section.id).join("|");
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-observe only when the set of section ids changes
+  useEffect(() => {
+    const inBand = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) inBand.add(entry.target.id);
+          else inBand.delete(entry.target.id);
+        }
+        const first = sections.find((section) => inBand.has(section.id));
+        if (first) setCurrent(first.id);
+      },
+      { rootMargin: "-120px 0px -55% 0px" },
+    );
+    for (const section of sections) {
+      const target = document.getElementById(section.id);
+      if (target) observer.observe(target);
+    }
+    return () => observer.disconnect();
+  }, [key]);
+
+  return (
+    <nav
+      aria-label="Console sections"
+      className="sticky top-16 z-30 border-x border-b border-rule bg-paper"
+    >
+      <ol className="flex overflow-x-auto">
+        {sections.map((section, index) => {
+          const active = current === section.id;
+          return (
+            <li key={section.id} className="shrink-0">
+              <a
+                href={`#${section.id}`}
+                aria-current={active ? "location" : undefined}
+                className={cn(
+                  "group pressable relative flex min-h-11 items-center gap-2.5 border-r border-rule px-4 font-mono text-[11px] uppercase tracking-[0.16em] md:px-5",
+                  active ? "text-ink" : "text-fog hover:text-ink",
+                )}
+              >
+                <span className={active ? "text-signal-ink" : "text-fog"}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                {section.label}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute inset-x-0 bottom-0 h-0.5 origin-left bg-signal transition-transform duration-300 ease-out-vivid",
+                    active
+                      ? "scale-x-100"
+                      : "scale-x-0 group-hover:scale-x-100",
+                  )}
+                />
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
@@ -275,9 +360,9 @@ export function CreateAccount({
     <div>
       <p className="max-w-[60ch] text-fog">
         Your smart account already has an address; it just has no code yet.
-        Creating it deploys the audited Alchemy Modular Account V2 at that exact
-        address with your wallet as root owner. No session or permission is
-        installed here.
+        Creating it deploys Alchemy's Modular Account V2 at that exact address
+        with your wallet as root owner. No session or permission is installed
+        here.
       </p>
       <div className="mt-6">
         <StepList steps={steps} state={action.state} />
