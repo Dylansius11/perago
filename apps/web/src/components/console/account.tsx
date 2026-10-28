@@ -481,7 +481,7 @@ export function WrapNative({
         ? "Submit it to the bundler"
         : "Send it through the EntryPoint",
       detail: sponsored
-        ? "Perago's bundler pays the gas. If it refuses, your wallet sends the same signed operation and pays."
+        ? "Perago sponsors the gas. If sponsorship is refused, your wallet sends the same signed operation and pays."
         : "Your wallet submits handleOps and pays the fee; the account pays nothing.",
       prompt: !sponsored,
     },

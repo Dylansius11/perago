@@ -922,9 +922,9 @@ function RevokeMandate({ task }: { task: TaskDetail }) {
     >
       <p className="max-w-[65ch] text-fog">
         Only while the mandate is authorized and execution has not begun can the
-        smart account revoke it. The contract—not this button—enforces the race.
-        The chain may authorize before the API's finalized projection catches
-        up. Your wallet signs the exact revoke call through EntryPoint.
+        smart account revoke it. The contract, not this button, enforces the
+        race. The chain may authorize before the API's finalized projection
+        catches up. Your wallet signs the exact revoke call through EntryPoint.
       </p>
       <dl className="mt-4">
         <Fact
