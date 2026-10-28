@@ -20,6 +20,14 @@ export type Failure = {
   retry: boolean;
 };
 
+/**
+ * The public receipt index is a projection of chain events. When it is
+ * unavailable the chain evidence is unchanged, so the console says exactly
+ * that and offers a retry instead of drawing the task as failed.
+ */
+export const RECEIPT_UNAVAILABLE =
+  "Receipt index unavailable right now. The chain evidence above is final.";
+
 function walk(error: unknown, test: (value: unknown) => boolean): boolean {
   if (error instanceof BaseError) return error.walk(test) !== null;
   return test(error);
