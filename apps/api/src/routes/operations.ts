@@ -15,8 +15,8 @@ import type { SponsorshipService } from "../services/sponsorship.js";
 
 /**
  * Sponsored root operations for the signed-in wallet's own smart account. The
- * sender always comes from the wallet session, never from the body, and a
- * refusal is a `409` reason code the console answers with the owner-paid path.
+ * account and owner come from the wallet session, never from body fields, and
+ * a refusal is a `409` reason code answered by the console's owner-paid path.
  */
 export function createOperationRoutes(input: {
   authConfig: WalletAuthConfig;
@@ -33,6 +33,7 @@ export function createOperationRoutes(input: {
     return context.json(
       await input.sponsorship.estimate({
         account: context.get("wallet").account,
+        owner: context.get("wallet").rootOwner,
         callData: request.callData,
         nonce: BigInt(request.nonce),
       }),
@@ -45,6 +46,7 @@ export function createOperationRoutes(input: {
     return context.json(
       await input.sponsorship.submit({
         account: context.get("wallet").account,
+        owner: context.get("wallet").rootOwner,
         userOperation,
       }),
       202,
