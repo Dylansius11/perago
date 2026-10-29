@@ -38,6 +38,7 @@ export function ActivationReview({
   busy,
   onActivate,
   onBack,
+  backLabel = "Back to choices",
 }: {
   config: PublicConfig;
   owner: Address | null;
@@ -48,6 +49,7 @@ export function ActivationReview({
   busy: boolean;
   onActivate: () => void;
   onBack: () => void;
+  backLabel?: string;
 }) {
   return (
     <div className="border border-ruleinvert bg-ink p-5 text-paper md:p-8">
@@ -152,7 +154,7 @@ export function ActivationReview({
         </Button>
         {!submitted ? (
           <Button variant="ghost-dark" disabled={busy} onClick={onBack}>
-            Back to choices
+            {backLabel}
           </Button>
         ) : null}
       </div>

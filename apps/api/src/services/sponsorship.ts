@@ -14,6 +14,7 @@ import {
 import {
   type Abi,
   decodeFunctionData,
+  encodeFunctionData,
   getAbiItem,
   type Hex,
   isAddressEqual,
@@ -57,7 +58,13 @@ export class BundlerError extends Error {
 const erc20ApproveAbi = parseAbi([
   "function approve(address spender, uint256 value) returns (bool)",
 ]);
-const wbnbAbi = parseAbi(["function deposit() payable"]);
+const erc20TransferAbi = parseAbi([
+  "function transfer(address to, uint256 amount) returns (bool)",
+]);
+const wbnbAbi = parseAbi([
+  "function deposit() payable",
+  "function withdraw(uint256 amount)",
+]);
 
 const selectors = {
   approve: toFunctionSelector(
@@ -79,9 +86,13 @@ const selectors = {
   setAccountPolicy: toFunctionSelector(
     getAbiItem({ abi: mandateExecutorAbi, name: "setAccountPolicy" }),
   ),
+  transfer: toFunctionSelector(
+    getAbiItem({ abi: erc20TransferAbi, name: "transfer" }),
+  ),
   uninstallValidation: toFunctionSelector(
     getAbiItem({ abi: modularAccountAbi, name: "uninstallValidation" }),
   ),
+  withdraw: toFunctionSelector(getAbiItem({ abi: wbnbAbi, name: "withdraw" })),
 };
 
 /** Limits for the estimation request; the bundler measures and replaces them. */
@@ -226,6 +237,8 @@ export function createAlchemyBundlerRpc(input: {
 /** The accounts, contracts, and tokens a sponsored call may name. */
 export type SponsorableCallScope = {
   account: Address;
+  /** Authenticated wallet-session root owner, never a request body field. */
+  owner: Address;
   mandateExecutor: Address;
   tokens: readonly Address[];
   wbnb: Address;
@@ -235,11 +248,13 @@ export type SponsorshipService = {
   /** Gas limits for a sponsored operation, measured from the session account. */
   estimate: (input: {
     account: Address;
+    owner: Address;
     callData: Hex;
     nonce: bigint;
   }) => Promise<EstimateUserOperationResponse>;
   submit: (input: {
     account: Address;
+    owner: Address;
     userOperation: UserOperationRequest;
   }) => Promise<SubmitUserOperationResponse>;
   status: (userOperationHash: Hash) => Promise<UserOperationStatus>;
@@ -248,7 +263,7 @@ export type SponsorshipService = {
 export type SponsorshipServiceConfig = {
   /** Defaults to the pinned Alchemy EntryPoint v0.7 deployment. */
   entryPoint?: Address;
-  /** Sponsored sends per smart account in a rolling hour; defaults to 20. */
+  /** Sponsored send attempts per smart account in a rolling hour; defaults to 20. */
   hourlySendLimit?: number;
   mandateExecutor: Address;
   now?: () => number;
@@ -275,6 +290,13 @@ function assertAccountCall(
   scope: SponsorableCallScope,
 ): void {
   const selector = call.data.slice(0, 10).toLowerCase();
+  if (isAddressEqual(call.target, scope.owner)) {
+    if (call.value <= 0n)
+      refused("a native withdrawal to the owner must carry positive value");
+    if (call.data !== "0x")
+      refused("a native withdrawal to the owner must have exactly empty data");
+    return;
+  }
   if (isAddressEqual(call.target, scope.account)) {
     if (
       call.value !== 0n ||
@@ -296,12 +318,59 @@ function assertAccountCall(
       refused(`MandateExecutor ${selector} is not a sponsored call`);
     return;
   }
+  // WBNB is also a catalog token. Handle its own selectors before ERC-20 calls.
+  if (isAddressEqual(call.target, scope.wbnb)) {
+    if (selector === selectors.deposit) {
+      if (call.value === 0n) refused("a WBNB deposit must carry native value");
+      if (call.data.toLowerCase() !== selectors.deposit)
+        refused("a WBNB deposit must use the exact deposit() encoding");
+      return;
+    }
+    if (selector === selectors.withdraw) {
+      if (call.value !== 0n)
+        refused("a WBNB withdrawal may not carry native value");
+      const decoded = decodeOrRefuse(wbnbAbi, call.data);
+      if (decoded.functionName !== "withdraw")
+        refused("the WBNB withdrawal is unreadable");
+      if (decoded.args[0] <= 0n)
+        refused("a WBNB withdrawal amount must be positive");
+      if (
+        encodeFunctionData({
+          abi: wbnbAbi,
+          functionName: "withdraw",
+          args: decoded.args,
+        }).toLowerCase() !== call.data.toLowerCase()
+      )
+        refused(
+          "a WBNB withdrawal must use the exact withdraw(uint256) encoding",
+        );
+      return;
+    }
+  }
   if (scope.tokens.some((token) => isAddressEqual(token, call.target))) {
-    if (call.value !== 0n)
-      refused("a token approval may not carry native value");
+    if (call.value !== 0n) refused("a token call may not carry native value");
+    if (selector === selectors.transfer) {
+      const { args } = decodeOrRefuse(erc20TransferAbi, call.data);
+      if (!isAddressEqual(args[0], scope.owner))
+        refused(
+          "a sponsored transfer may only name the session root owner as recipient",
+        );
+      if (args[1] <= 0n) refused("a token withdrawal amount must be positive");
+      if (
+        encodeFunctionData({
+          abi: erc20TransferAbi,
+          functionName: "transfer",
+          args,
+        }).toLowerCase() !== call.data.toLowerCase()
+      )
+        refused(
+          "a token withdrawal must use the exact transfer(address,uint256) encoding",
+        );
+      return;
+    }
     if (selector !== selectors.approve)
       refused(
-        `only approve(...) is sponsored on a catalog token, not ${selector}`,
+        `only approve(...) or transfer(owner, amount) is sponsored on a catalog token, not ${selector}`,
       );
     const { args } = decodeOrRefuse(erc20ApproveAbi, call.data);
     if (!isAddressEqual(args[0], scope.mandateExecutor))
@@ -310,20 +379,14 @@ function assertAccountCall(
       );
     return;
   }
-  if (isAddressEqual(call.target, scope.wbnb)) {
-    if (call.value === 0n) refused("a WBNB deposit must carry native value");
-    if (call.data.toLowerCase() !== selectors.deposit)
-      refused(`only WBNB.deposit() is sponsored, not ${selector}`);
-    return;
-  }
   refused(
-    `target ${call.target} is not the account, MandateExecutor, a catalog token, or WBNB`,
+    `target ${call.target} is not the owner, account, MandateExecutor, a catalog token, or WBNB`,
   );
 }
 
 /**
- * Refuses any account call the sponsored path must not submit. The session
- * account is never taken from the request: it comes from the wallet session.
+ * Refuses any account call the sponsored path must not submit. The account and
+ * root owner come from the authenticated wallet session, never the request body.
  */
 export function assertSponsorableCall(
   input: SponsorableCallScope & { callData: Hex },
@@ -394,12 +457,12 @@ export function createSponsorship(
   if (!Number.isInteger(hourlySendLimit) || hourlySendLimit <= 0)
     throw new RangeError("the sponsored send limit must be a positive integer");
   const now = config.now ?? (() => Date.now());
-  const scope: Omit<SponsorableCallScope, "account"> = {
+  const scope: Omit<SponsorableCallScope, "account" | "owner"> = {
     mandateExecutor: config.mandateExecutor,
     tokens: config.tokens,
     wbnb: config.wbnb,
   };
-  /** Sponsored send timestamps per smart account, this process only. */
+  /** Sponsored send-attempt timestamps per smart account, this process only. */
   const sends = new Map<string, number[]>();
 
   async function call(method: string, params: unknown[]): Promise<unknown> {
@@ -411,12 +474,18 @@ export function createSponsorship(
     }
   }
 
-  function withinHourlyLimit(account: Address): boolean {
+  function reserveHourlySend(account: Address): boolean {
     const key = account.toLowerCase();
-    const cutoff = now() - HOUR_MS;
-    const recent = (sends.get(key) ?? []).filter((at) => at > cutoff);
+    const at = now();
+    const cutoff = at - HOUR_MS;
+    const recent = (sends.get(key) ?? []).filter((sentAt) => sentAt > cutoff);
     sends.set(key, recent);
-    return recent.length < hourlySendLimit;
+    if (recent.length >= hourlySendLimit) return false;
+    // Reserve before any await so concurrent submissions cannot share a slot.
+    // Count every RPC attempt, even a refusal: transport failures cannot prove
+    // nothing was sent, and repeated rejected calls also consume provider work.
+    recent.push(at);
+    return true;
   }
 
   return {
@@ -424,6 +493,7 @@ export function createSponsorship(
       assertSponsorableCall({
         ...scope,
         account: input.account,
+        owner: input.owner,
         callData: input.callData,
       });
       const measured = readBundlerAnswer(
@@ -454,6 +524,7 @@ export function createSponsorship(
       assertSponsorableCall({
         ...scope,
         account: input.account,
+        owner: input.owner,
         callData: userOperation.callData,
       });
       if (!isAddressEqual(userOperation.sender, input.account))
@@ -465,7 +536,7 @@ export function createSponsorship(
         BigInt(userOperation.maxPriorityFeePerGas) !== 0n
       )
         refused("a sponsored operation must carry zero fees");
-      if (!withinHourlyLimit(input.account))
+      if (!reserveHourlySend(input.account))
         throw new ReasonError(
           "SPONSORSHIP_UNAVAILABLE",
           "this smart account reached its sponsored send limit for the last hour",
@@ -475,7 +546,6 @@ export function createSponsorship(
         userOperation,
         entryPoint,
       ]);
-      sends.get(input.account.toLowerCase())?.push(now());
       // The operation may already be pending, so an unreadable answer must not
       // be a refusal that invites an owner-paid resend of the same operation.
       const parsed = hashSchema.safeParse(userOperationHash);

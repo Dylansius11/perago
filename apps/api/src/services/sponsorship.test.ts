@@ -2,12 +2,13 @@ import {
   encodeAccountExecute,
   encodeAccountExecuteBatch,
   encodeInstallMandateSession,
+  encodeOwnerWithdrawal,
   encodeSetAccountPolicy,
   encodeUninstallMandateSession,
   type MandateSessionPermission,
   type UserOperationRequest,
 } from "@perago/sdk";
-import { encodeFunctionData, type Hex } from "viem";
+import { encodeFunctionData, erc20Abi, type Hex, parseAbi } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
@@ -25,13 +26,15 @@ const token: Hex = "0x2222222222222222222222222222222222222222";
 const cake: Hex = "0x3333333333333333333333333333333333333333";
 const wbnb: Hex = "0x4444444444444444444444444444444444444444";
 const stranger: Hex = "0x5555555555555555555555555555555555555555";
+const owner: Hex = "0x6666666666666666666666666666666666666666";
 const hash = `0x${"ab".repeat(32)}` as Hex;
 const rootSignature = `0x${"cd".repeat(65)}` as Hex;
 
 const scope = {
   account,
   mandateExecutor,
-  tokens: [token, cake],
+  owner,
+  tokens: [token, cake, wbnb],
   wbnb,
 } as const;
 
@@ -67,6 +70,18 @@ const approveData = (spender: Hex, amount: bigint): Hex =>
 
 const depositData = (): Hex =>
   encodeFunctionData({ abi: depositAbi, functionName: "deposit" });
+const transferData = (to: Hex, amount: bigint): Hex =>
+  encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [to, amount],
+  });
+const withdrawData = (amount: bigint): Hex =>
+  encodeFunctionData({
+    abi: parseAbi(["function withdraw(uint256 amount)"]),
+    functionName: "withdraw",
+    args: [amount],
+  });
 
 const execute = (target: Hex, value: bigint, data: Hex): Hex =>
   encodeAccountExecute({ data, target, value });
@@ -153,6 +168,165 @@ function recordingRpc(answer: (call: Call) => unknown) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("sponsored call shapes", () => {
+  it("allows owner-bound native, catalog-token, and WBNB withdrawals", () => {
+    const allowed = [
+      execute(owner, 1n, "0x"),
+      execute(token, 0n, transferData(owner, 2n)),
+      execute(cake, 0n, transferData(owner, 3n)),
+      execute(wbnb, 0n, transferData(owner, 4n)),
+      execute(wbnb, 0n, withdrawData(5n)),
+    ];
+    for (const callData of allowed)
+      expect(() => assertSponsorableCall({ ...scope, callData })).not.toThrow();
+  });
+
+  it("accepts the SDK mixed UNWRAP, CAKE, and NATIVE batch", () => {
+    expect(() =>
+      assertSponsorableCall({
+        ...scope,
+        tokens: [token, cake, wbnb],
+        callData: encodeOwnerWithdrawal({
+          owner,
+          legs: [
+            { kind: "NATIVE", amount: 7n },
+            { kind: "TOKEN", token: cake, amount: 9n },
+            { kind: "UNWRAP", wbnb, amount: 11n },
+          ],
+        }),
+      }),
+    ).not.toThrow();
+  });
+
+  it("preserves deposit and approval when WBNB is also a catalog token", () => {
+    for (const callData of [
+      execute(wbnb, 1n, depositData()),
+      execute(wbnb, 0n, approveData(mandateExecutor, 1n)),
+    ])
+      expect(() =>
+        assertSponsorableCall({
+          ...scope,
+          tokens: [...scope.tokens, wbnb],
+          callData,
+        }),
+      ).not.toThrow();
+  });
+
+  it.each([
+    {
+      label: "transfer to stranger",
+      callData: execute(token, 0n, transferData(stranger, 1n)),
+      detail: "owner",
+    },
+    {
+      label: "transfer to account",
+      callData: execute(token, 0n, transferData(account, 1n)),
+      detail: "owner",
+    },
+    {
+      label: "native send to stranger",
+      callData: execute(stranger, 1n, "0x"),
+      detail: "target",
+    },
+    {
+      label: "owner native send with non-empty data",
+      callData: execute(owner, 1n, "0x00"),
+      detail: "empty",
+    },
+    {
+      label: "owner native send with zero value",
+      callData: execute(owner, 0n, "0x"),
+      detail: "positive",
+    },
+    {
+      label: "transferFrom",
+      callData: execute(
+        token,
+        0n,
+        encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transferFrom",
+          args: [account, owner, 1n],
+        }),
+      ),
+      detail: "approve",
+    },
+    {
+      label: "approval to stranger",
+      callData: execute(token, 0n, approveData(stranger, 1n)),
+      detail: "spender",
+    },
+    {
+      label: "withdraw carrying native value",
+      callData: execute(wbnb, 1n, withdrawData(1n)),
+      detail: "native value",
+    },
+    {
+      label: "transfer carrying native value",
+      callData: execute(token, 1n, transferData(owner, 1n)),
+      detail: "native value",
+    },
+    {
+      label: "noncatalog token transfer",
+      callData: execute(stranger, 0n, transferData(owner, 1n)),
+      detail: "target",
+    },
+    {
+      label: "non-WBNB unwrap",
+      callData: execute(token, 0n, withdrawData(1n)),
+      detail: "approve",
+    },
+    {
+      label: "truncated transfer",
+      callData: execute(token, 0n, "0xa9059cbb"),
+      detail: "unreadable",
+    },
+    {
+      label: "truncated unwrap",
+      callData: execute(wbnb, 0n, "0x2e1a7d4d"),
+      detail: "unreadable",
+    },
+    {
+      label: "zero token withdrawal",
+      callData: execute(token, 0n, transferData(owner, 0n)),
+      detail: "positive",
+    },
+    {
+      label: "zero unwrap",
+      callData: execute(wbnb, 0n, withdrawData(0n)),
+      detail: "positive",
+    },
+    {
+      label: "transfer with trailing data",
+      callData: execute(token, 0n, `${transferData(owner, 1n)}00`),
+      detail: "encoding",
+    },
+    {
+      label: "unwrap with trailing data",
+      callData: execute(wbnb, 0n, `${withdrawData(1n)}00`),
+      detail: "encoding",
+    },
+  ])("refuses $label with a precise detail", ({ callData, detail }) => {
+    expect(() => assertSponsorableCall({ ...scope, callData })).toThrowError(
+      expect.objectContaining({
+        code: "SPONSORSHIP_REFUSED",
+        detail: expect.stringContaining(detail),
+      }),
+    );
+  });
+
+  it("refuses the entire batch when one transfer routes to a stranger", () => {
+    const callData = encodeAccountExecuteBatch([
+      { target: owner, value: 1n, data: "0x" },
+      { target: cake, value: 0n, data: transferData(stranger, 1n) },
+    ]);
+    expect(() => assertSponsorableCall({ ...scope, callData })).toThrowError(
+      expect.objectContaining({
+        code: "SPONSORSHIP_REFUSED",
+        detail: expect.stringContaining("owner"),
+      }),
+    );
+  });
+
   it("allows the calls the console root-signs", () => {
     const allowed = [
       approvalOperation(),
@@ -284,6 +458,7 @@ describe("sponsored gas estimation", () => {
     expect(
       await service.estimate({
         account,
+        owner,
         callData: approvalOperation(),
         nonce: 7n,
       }),
@@ -313,7 +488,7 @@ describe("sponsored gas estimation", () => {
     const { calls, rpc } = recordingRpc(() => ({}));
     const service = createSponsorship(scope, rpc);
     const failure = await service
-      .estimate({ account, callData: revokeCall, nonce: 1n })
+      .estimate({ account, owner, callData: revokeCall, nonce: 1n })
       .catch((error: unknown) => error);
     expect((failure as ReasonError).code).toBe("SPONSORSHIP_REFUSED");
     expect(calls).toHaveLength(0);
@@ -325,7 +500,7 @@ describe("sponsored gas estimation", () => {
     });
     const service = createSponsorship(scope, rpc);
     const failure = await service
-      .estimate({ account, callData: approvalOperation(), nonce: 1n })
+      .estimate({ account, owner, callData: approvalOperation(), nonce: 1n })
       .catch((error: unknown) => error);
     expect((failure as ReasonError).code).toBe("SPONSORSHIP_UNAVAILABLE");
   });
@@ -334,18 +509,127 @@ describe("sponsored gas estimation", () => {
     const { rpc } = recordingRpc(() => ({ callGasLimit: "12" }));
     const service = createSponsorship(scope, rpc);
     const failure = await service
-      .estimate({ account, callData: approvalOperation(), nonce: 1n })
+      .estimate({ account, owner, callData: approvalOperation(), nonce: 1n })
       .catch((error: unknown) => error);
     expect((failure as ReasonError).code).toBe("SPONSORSHIP_UNAVAILABLE");
   });
 });
 
 describe("sponsored submission", () => {
+  it("reserves the hourly slot before concurrent owner withdrawals reach the bundler", async () => {
+    const { calls, rpc } = recordingRpc(() => hash);
+    const service = createSponsorship({ ...scope, hourlySendLimit: 1 }, rpc);
+    const callData = encodeOwnerWithdrawal({
+      owner,
+      legs: [{ kind: "NATIVE", amount: 1n }],
+    });
+    const results = await Promise.allSettled([
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ callData, nonce: "0x1" }),
+      }),
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ callData, nonce: "0x2" }),
+      }),
+    ]);
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toEqual([
+      expect.objectContaining({
+        reason: expect.objectContaining({
+          code: "SPONSORSHIP_UNAVAILABLE",
+          detail: expect.stringContaining("last hour"),
+        }),
+      }),
+    ]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each([
+    { label: "an unreadable send answer", answer: () => "accepted" },
+    {
+      label: "a bundler refusal",
+      answer: () => {
+        throw new BundlerError("policy refused the submission");
+      },
+    },
+    {
+      label: "a transport failure with unknown inclusion",
+      answer: () => {
+        throw new TypeError("connection closed");
+      },
+    },
+  ])("counts the attempt after $label", async ({ answer }) => {
+    const { calls, rpc } = recordingRpc(answer);
+    const service = createSponsorship({ ...scope, hourlySendLimit: 1 }, rpc);
+    await expect(
+      service.submit({ account, owner, userOperation: operation() }),
+    ).rejects.toBeInstanceOf(Error);
+    await expect(
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ nonce: "0x2" }),
+      }),
+    ).rejects.toMatchObject({
+      code: "SPONSORSHIP_UNAVAILABLE",
+      detail: expect.stringContaining("last hour"),
+    });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not consume a send slot for a call refused before bundler submission", async () => {
+    const { calls, rpc } = recordingRpc(() => hash);
+    const service = createSponsorship({ ...scope, hourlySendLimit: 1 }, rpc);
+    await expect(
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ callData: execute(stranger, 1n, "0x") }),
+      }),
+    ).rejects.toMatchObject({ code: "SPONSORSHIP_REFUSED" });
+    await expect(
+      service.submit({ account, owner, userOperation: operation() }),
+    ).resolves.toEqual({ userOperationHash: hash });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("shares the existing rolling hourly limit between withdrawals and other root sends", async () => {
+    let now = 1_000_000;
+    const { calls, rpc } = recordingRpc(() => hash);
+    const service = createSponsorship(
+      { ...scope, hourlySendLimit: 2, now: () => now },
+      rpc,
+    );
+    await service.submit({ account, owner, userOperation: operation() });
+    const withdrawal = operation({
+      callData: encodeOwnerWithdrawal({
+        owner,
+        legs: [{ kind: "NATIVE", amount: 1n }],
+      }),
+    });
+    await service.submit({ account, owner, userOperation: withdrawal });
+    await expect(
+      service.submit({ account, owner, userOperation: withdrawal }),
+    ).rejects.toMatchObject({
+      code: "SPONSORSHIP_UNAVAILABLE",
+      detail: expect.stringContaining("last hour"),
+    });
+    expect(calls).toHaveLength(2);
+    now += 3_600_001;
+    await service.submit({ account, owner, userOperation: withdrawal });
+    expect(calls).toHaveLength(3);
+  });
+
   it("submits a zero-fee operation from the session account", async () => {
     const { calls, rpc } = recordingRpc(() => hash);
     const service = createSponsorship(scope, rpc);
     expect(
-      await service.submit({ account, userOperation: operation() }),
+      await service.submit({ account, owner, userOperation: operation() }),
     ).toEqual({ userOperationHash: hash });
     expect(calls[0]?.method).toBe("eth_sendUserOperation");
     expect(calls[0]?.params[0]).toMatchObject({ sender: account });
@@ -355,7 +639,7 @@ describe("sponsored submission", () => {
     const { rpc } = recordingRpc(() => "accepted");
     const service = createSponsorship(scope, rpc);
     const failure = await service
-      .submit({ account, userOperation: operation() })
+      .submit({ account, owner, userOperation: operation() })
       .catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(ReasonError);
@@ -374,7 +658,7 @@ describe("sponsored submission", () => {
       }),
     ]) {
       const failure = await service
-        .submit({ account, userOperation: bad })
+        .submit({ account, owner, userOperation: bad })
         .catch((error: unknown) => error);
       expect((failure as ReasonError).code).toBe("SPONSORSHIP_REFUSED");
     }
@@ -389,7 +673,7 @@ describe("sponsored submission", () => {
     });
     const service = createSponsorship(scope, rpc);
     const failure = await service
-      .submit({ account, userOperation: operation() })
+      .submit({ account, owner, userOperation: operation() })
       .catch((error: unknown) => error);
     expect((failure as ReasonError).code).toBe("SPONSORSHIP_UNAVAILABLE");
     expect((failure as ReasonError).detail).toContain("efficiency too low");
@@ -402,14 +686,14 @@ describe("sponsored submission", () => {
       { ...scope, hourlySendLimit: 1, now: () => now },
       rpc,
     );
-    await service.submit({ account, userOperation: operation() });
+    await service.submit({ account, owner, userOperation: operation() });
     const refused = await service
-      .submit({ account, userOperation: operation() })
+      .submit({ account, owner, userOperation: operation() })
       .catch((error: unknown) => error);
     expect((refused as ReasonError).code).toBe("SPONSORSHIP_UNAVAILABLE");
     expect(calls).toHaveLength(1);
     now += 3_600_001;
-    await service.submit({ account, userOperation: operation() });
+    await service.submit({ account, owner, userOperation: operation() });
     expect(calls).toHaveLength(2);
   });
 });

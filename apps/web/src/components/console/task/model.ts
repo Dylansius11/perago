@@ -9,9 +9,9 @@ import { amount, compact, duration, short } from "../../../lib/format";
 import type { GlyphName, Tone } from "../ui";
 
 /*
- * What a task page says, derived only from the API's task detail and the public
- * config. Nothing here reads a wallet, a clock, or a cache: the same payload
- * always yields the same verdict, so pending can never be drawn as success.
+ * What a task page says, derived from the API's task detail, the latest local
+ * simulation refusal, and the public config. Nothing here reads a wallet, a
+ * clock, or a cache: pending can never be drawn as success.
  */
 
 export type Token = PublicConfig["tokens"][number];
@@ -592,6 +592,7 @@ export type VerdictKind =
   | "authorized"
   | "signed"
   | "ready"
+  | "simulation-blocked"
   | "simulation-failed"
   | "simulation-stale"
   | "preparing"
@@ -671,10 +672,33 @@ function codeReasons(code: string | null, detail: string | null): Reason[] {
   ];
 }
 
+/** A refused attempt is local to this task, not a persisted task status. */
+export type SimulationRefusal = {
+  taskId: string;
+  code: string;
+  detail: string | null;
+  /** The simulation visible before this attempt; a new result supersedes it. */
+  simulationId: string | null;
+};
+
+function simulationBlocked(
+  task: TaskDetail,
+  refusal: SimulationRefusal | null,
+): refusal is SimulationRefusal {
+  return (
+    refusal !== null &&
+    refusal.taskId === task.taskId &&
+    task.mandate === null &&
+    (task.simulation?.simulationId ?? null) === refusal.simulationId &&
+    ["READY_TO_SIMULATE", "SIMULATED", "READY_TO_SIGN"].includes(task.status)
+  );
+}
+
 export function deriveVerdict(
   task: TaskDetail,
   tokens: readonly Token[],
   adapters: readonly Adapter[],
+  refusal: SimulationRefusal | null = null,
 ): Verdict {
   const base = standingOf(task);
   const outcome = outcomeOf(task);
@@ -683,7 +707,7 @@ export function deriveVerdict(
   const make = (
     kind: VerdictKind,
     headline: Rich,
-    extra: Partial<Omit<Verdict, "kind" | "standing" | "headline">> = {},
+    extra: Partial<Omit<Verdict, "kind" | "headline">> = {},
   ): Verdict => ({
     kind,
     standing: base,
@@ -770,6 +794,34 @@ export function deriveVerdict(
       detail:
         "The API is reconciling the chain before the mandate is authorized. Nothing has executed.",
     });
+  }
+
+  if (simulationBlocked(task, refusal)) {
+    const input = inputTokenOf(task, tokens);
+    const balance = /^holds (\d+); the plan spends (\d+)$/u.exec(
+      refusal.detail ?? "",
+    );
+    const insufficient = refusal.code === "INSUFFICIENT_BALANCE";
+    const formatted = insufficient && input && balance;
+    return make(
+      "simulation-blocked",
+      insufficient && input
+        ? [`Not enough ${symbolOf(input)} to run this.`]
+        : ["Simulation is blocked."],
+      {
+        standing: {
+          label: "Blocked",
+          tone: "fail",
+          glyph: "block",
+          live: false,
+        },
+        detail: formatted
+          ? `Your account holds ${plain([money(balance[1] ?? "", input)])}. This task spends ${plain([money(balance[2] ?? "", input)])}. Nothing was signed.`
+          : reasonSentence(refusal.code),
+        reasons: codeReasons(refusal.code, null),
+        note: formatted ? null : "Nothing was signed.",
+      },
+    );
   }
 
   if (task.simulation?.status === "REVERTED") {
@@ -862,12 +914,16 @@ export type Step = {
   live: boolean;
 };
 
-export function lifecycle(task: TaskDetail): Step[] {
+export function lifecycle(
+  task: TaskDetail,
+  refusal: SimulationRefusal | null = null,
+): Step[] {
   const outcome = outcomeOf(task);
   const decision = task.decision;
   const simulation = task.simulation;
   const signed = task.mandate !== null;
   const rejected = task.status === "REJECTED_POLICY";
+  const blocked = simulationBlocked(task, refusal);
   const raw: Array<{ key: StepKey; label: string; done: StepState }> = [
     { key: "goal", label: "Goal", done: "done" },
     {
@@ -886,7 +942,7 @@ export function lifecycle(task: TaskDetail): Step[] {
       key: "simulation",
       label: "Simulation",
       done:
-        simulation?.status === "REVERTED" && !signed
+        (blocked || simulation?.status === "REVERTED") && !signed
           ? "failed"
           : simulation && (simulation.status === "PASSED" || signed)
             ? "done"
@@ -940,7 +996,9 @@ export function lifecycle(task: TaskDetail): Step[] {
           step.key === "policy"
             ? "Blocked"
             : step.key === "simulation"
-              ? "Reverted"
+              ? blocked
+                ? "Blocked"
+                : "Reverted"
               : outcome === "REVOKED"
                 ? "Revoked"
                 : outcome === "EXPIRED"
@@ -985,4 +1043,85 @@ export function lifecycle(task: TaskDetail): Step[] {
       live: state === "current" && live,
     };
   });
+}
+
+/* ------------------------------------------------------------------ */
+/* Moving funds to the owner's own wallet                              */
+/* ------------------------------------------------------------------ */
+
+/** What a task page can pre-fill on the Funds withdrawal form; null means the form just opens. */
+export type SelfWithdrawHint = { symbol: string | null; amount: string | null };
+
+const OWN_WALLET_GOAL =
+  /\b(?:my|own)\s+(?:own\s+)?(?:wallet|metamask|phantom|eoa|address)\b|\bback to me\b|\bto me\b/iu;
+
+/** The spend the task named: the plan when it exists, else the rules' own evidence. */
+function namedSpend(
+  task: TaskDetail,
+  tokens: readonly Token[],
+): SelfWithdrawHint {
+  const token = inputTokenOf(task, tokens);
+  const base =
+    task.plan?.action.inputAmount ??
+    /\((\d+) base units\)/u.exec(
+      task.decision?.rules.find((rule) => rule.rule === "INPUT_AMOUNT")
+        ?.observed ?? "",
+    )?.[1];
+  if (!token || !base) return { symbol: null, amount: null };
+  return {
+    symbol: token.symbol,
+    amount: amount(base, token.decimals, token.decimals).replaceAll(",", ""),
+  };
+}
+
+/**
+ * Shown under a policy refusal when the output was headed for the connected
+ * owner wallet. Every recipient the evidence names (both sides of the RECIPIENT
+ * rule's observed value, and the plan's recipient) is collected. Each must be
+ * the owner or the task's own smart account, which is the policy's SELF and
+ * only context; any other address vetoes the hint, whichever side names it.
+ * At least one must be the owner. Only when no address is named anywhere does
+ * the goal text decide whether a generic hint is worth showing. It never
+ * builds calldata.
+ */
+export function selfWithdrawHint(
+  task: TaskDetail,
+  owner: string | null,
+  tokens: readonly Token[],
+): SelfWithdrawHint | null {
+  if (!owner) return null;
+  const rules = task.decision?.rules ?? [];
+  const refused = rules.find(
+    (rule) =>
+      rule.rule === "RECIPIENT" &&
+      rule.outcome === "FAIL" &&
+      rule.reasonCode === "RECIPIENT_NOT_ALLOWED",
+  );
+  if (!refused) return null;
+  const own = [
+    ...(refused.limit.match(ADDRESS) ?? []),
+    ...rules
+      .filter((rule) => rule.rule === "ACCOUNT")
+      .flatMap((rule) => [
+        ...(rule.observed.match(ADDRESS) ?? []),
+        ...(rule.limit.match(ADDRESS) ?? []),
+      ]),
+    ...(task.plan ? [task.plan.account] : []),
+  ];
+  const named = [
+    ...(refused.observed.match(ADDRESS) ?? []),
+    ...(task.plan ? [task.plan.action.recipient] : []),
+  ];
+  if (named.length === 0)
+    return OWN_WALLET_GOAL.test(task.goal)
+      ? { symbol: null, amount: null }
+      : null;
+  const foreign = named.some(
+    (address) =>
+      !sameAddress(address, owner) &&
+      !own.some((account) => sameAddress(account, address)),
+  );
+  if (foreign || !named.some((address) => sameAddress(address, owner)))
+    return null;
+  return namedSpend(task, tokens);
 }

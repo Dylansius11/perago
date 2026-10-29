@@ -55,6 +55,7 @@ import {
   validateEditor,
 } from "./policy/editor-model";
 import { PolicyReadout } from "./policy/readout";
+import { renewedPolicy } from "./policy/renew";
 import { RevokeAccess } from "./policy/revoke";
 import { Button, FailureNotice, Panel, Status } from "./ui";
 
@@ -164,6 +165,7 @@ export function PolicySection({
   );
   const [editing, setEditing] = useState(false);
   const [review, setReview] = useState<Review | null>(null);
+  const [renewing, setRenewing] = useState(false);
   const [submitted, setSubmitted] = useState<PendingActivation | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [resume, setResume] = useState<PolicyView | null>(null);
@@ -177,6 +179,7 @@ export function PolicySection({
     setState(initialEditorState(active?.policy ?? null, config));
     setEditing(false);
     setResume(null);
+    setRenewing(false);
   }, [active?.policyId, config]);
 
   useEffect(() => {
@@ -205,13 +208,13 @@ export function PolicySection({
     submitted !== null ||
     resume !== null;
   useEffect(() => {
-    if (editing || resume) {
+    if (editing || resume || renewing) {
       editor.current?.scrollIntoView({
         behavior: reduced ? "auto" : "smooth",
         block: "start",
       });
     }
-  }, [editing, resume, reduced]);
+  }, [editing, resume, renewing, reduced]);
 
   const locked = resume !== null || review !== null;
   const shown = useMemo(
@@ -225,6 +228,7 @@ export function PolicySection({
     setState(next);
     setReview(null);
     setResume(null);
+    setRenewing(false);
     prepare.reset();
   };
   const changeAsset = (symbol: string, patch: Partial<AssetChoice>) => {
@@ -256,13 +260,20 @@ export function PolicySection({
     [candidate, baseline, config],
   );
 
-  const reviewPolicy = () => {
+  /**
+   * Prepares the activation review. A renewal passes the active policy itself
+   * (see `renewedPolicy`), so exactly the same limits go through the same
+   * prepare, sign, and confirm path as any change, only with a new 24-hour
+   * session.
+   */
+  const reviewPolicy = (renewal?: WalletPolicy) => {
     void prepare.run(async (advance) => {
       if (!session || !owner || !account) throw new Error("Sign in first.");
       advance("draft");
-      const policy = resume?.policy ?? policyOf();
+      const reviewed = renewal ? null : resume;
+      const policy = renewal ?? reviewed?.policy ?? policyOf();
       const policyId =
-        resume?.policyId ??
+        reviewed?.policyId ??
         (await api.createPolicy(session.token, policy)).policyId;
       await queryClient.invalidateQueries({
         queryKey: ["session", owner, "policies"],
@@ -304,6 +315,23 @@ export function PolicySection({
       });
       setReview({ policyId, policy, prepared, transition });
     });
+  };
+
+  const renewSession = () => {
+    if (!active) return;
+    setState(initialEditorState(active.policy, config));
+    setEditing(false);
+    setResume(null);
+    setReview(null);
+    setRenewing(true);
+    prepare.reset();
+    activate.reset();
+    reviewPolicy(
+      renewedPolicy(
+        active.policy,
+        policies.map((row) => row.version),
+      ),
+    );
   };
 
   const activatePolicy = () => {
@@ -419,6 +447,7 @@ export function PolicySection({
           });
           setSubmitted(null);
           setReview(null);
+          setRenewing(false);
           return;
         }
         if (result.status !== "PENDING") {
@@ -452,6 +481,16 @@ export function PolicySection({
         confirming={confirming}
         holdings={holdings}
         resumeDisabled={review !== null || submitted !== null}
+        renew={{
+          busy: prepare.busy && renewing,
+          disabled:
+            prepare.busy ||
+            activate.busy ||
+            review !== null ||
+            submitted !== null ||
+            recoveryError !== null,
+          onRenew: renewSession,
+        }}
         onResumeDraft={() => {
           if (!draft) return;
           setResume(draft);
@@ -479,7 +518,67 @@ export function PolicySection({
         }
       />
 
-      {showEditor ? (
+      {renewing && active ? (
+        <Panel
+          id="policy-renew"
+          label="Renew session"
+          className="scroll-mt-28 !border-0"
+          aside={<Status tone="idle">Same limits as v{active.version}</Status>}
+        >
+          <div ref={editor} className="scroll-mt-28 space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
+                Start a new 24-hour session.
+              </h2>
+              <p className="mt-2 max-w-[64ch] text-fog">
+                Perago may do exactly what it may do now. Only the session
+                restarts, so it can submit mandates you sign. The new policy
+                version carries the same limits.
+              </p>
+            </div>
+            <DiffSummary lines={[]} baseVersion={active.version} />
+            {prepare.busy ? (
+              <Status tone="pending">Preparing what your wallet signs</Status>
+            ) : null}
+            {prepare.state.phase === "failed" ? (
+              <FailureNotice
+                failure={prepare.state.failure}
+                onRetry={() => renewSession()}
+              />
+            ) : null}
+            {review ? (
+              <ActivationReview
+                config={config}
+                owner={owner}
+                account={account}
+                review={review}
+                submitted={submitted}
+                state={activate.state}
+                busy={activate.busy}
+                backLabel="Cancel renewal"
+                onActivate={activatePolicy}
+                onBack={() => {
+                  setReview(null);
+                  setRenewing(false);
+                  activate.reset();
+                }}
+              />
+            ) : (
+              <Button
+                variant="ghost"
+                disabled={prepare.busy}
+                onClick={() => {
+                  setRenewing(false);
+                  prepare.reset();
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+        </Panel>
+      ) : null}
+      {showEditor && !renewing ? (
         <Panel
           id="policy-editor"
           label={active ? "Edit limits" : "Set the boundary"}
@@ -688,7 +787,7 @@ export function PolicySection({
                     arrow
                     busy={prepare.busy}
                     disabled={!valid && !resume}
-                    onClick={reviewPolicy}
+                    onClick={() => reviewPolicy()}
                   >
                     Review exact limits
                   </Button>

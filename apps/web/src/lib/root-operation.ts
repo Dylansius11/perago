@@ -56,6 +56,8 @@ export class OperationFailedError extends Error {
 export type RootOperationResult = {
   transactionHash: Hash;
   userOperationHash: Hash;
+  /** True when the bundler's gas policy paid; false when the owner wallet sent handleOps. */
+  sponsored: boolean;
 };
 
 /** `sponsor` is the wallet session when the API offers sponsorship, else null. */
@@ -111,13 +113,18 @@ export async function sendRootOperation(input: {
   sponsor: Sponsor;
   onStage?: (
     stage: RootStage,
-    detail: { userOperationHash?: Hash; transactionHash?: Hash },
+    /** `sponsored` is the path now in effect: false once sponsorship was refused. */
+    detail: {
+      userOperationHash?: Hash;
+      transactionHash?: Hash;
+      sponsored?: boolean;
+    },
   ) => void;
 }): Promise<RootOperationResult> {
   await assertWalletVenue();
   const entryPoint = MODULAR_ACCOUNT_V2_ADDRESSES.entryPoint;
-  const { receipt, transactionHash, userOperationHash } = await submitOwnerOnce(
-    {
+  const { receipt, sponsored, transactionHash, userOperationHash } =
+    await submitOwnerOnce({
       key: ownerSubmissionKey({
         chainId: CHAIN_ID,
         owner: input.owner,
@@ -165,7 +172,10 @@ export async function sendRootOperation(input: {
           }
         }
         const userOperationHash = hashUserOperation(unsigned, CHAIN_ID);
-        input.onStage?.("sign", { userOperationHash });
+        input.onStage?.("sign", {
+          userOperationHash,
+          sponsored: sponsor !== null,
+        });
         const signed = {
           ...unsigned,
           signature: packUserOperationSignature(
@@ -176,7 +186,10 @@ export async function sendRootOperation(input: {
           ),
         };
         await assertWalletVenue();
-        input.onStage?.("send", { userOperationHash });
+        input.onStage?.("send", {
+          userOperationHash,
+          sponsored: sponsor !== null,
+        });
         if (sponsor) {
           const rpc: UserOperationRpc = {
             callData: signed.callData,
@@ -203,6 +216,7 @@ export async function sendRootOperation(input: {
           } catch (error) {
             if (!sponsorshipRefused(error)) throw error;
           }
+          input.onStage?.("send", { userOperationHash, sponsored: false });
         }
         const transactionHash = await sendTransaction(wagmiConfig, {
           account: input.owner,
@@ -231,6 +245,7 @@ export async function sendRootOperation(input: {
         input.onStage?.("confirm", {
           transactionHash,
           userOperationHash: pending.userOperationHash,
+          sponsored: pending.transactionHash === null,
         });
         const receipt = await waitForTransactionReceipt(wagmiConfig, {
           chainId: CHAIN_ID,
@@ -238,12 +253,12 @@ export async function sendRootOperation(input: {
         });
         return {
           receipt,
+          sponsored: pending.transactionHash === null,
           transactionHash,
           userOperationHash: pending.userOperationHash,
         };
       },
-    },
-  );
+    });
   if (receipt.status !== "success") {
     throw new OperationFailedError(
       "The EntryPoint transaction reverted. The account did not change.",
@@ -264,5 +279,5 @@ export async function sendRootOperation(input: {
       "The UserOperation was included but its call reverted. The account did not change.",
     );
   }
-  return { transactionHash, userOperationHash };
+  return { sponsored, transactionHash, userOperationHash };
 }

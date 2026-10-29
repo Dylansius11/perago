@@ -1,0 +1,52 @@
+diff --git a/dist/esm/hydrate.js b/dist/esm/hydrate.js
+index 1e780f64ba3cde82dbbe228ca1dd7694e350d9fe..0931d8f5ec45a5461adf924446e806331fc7c1ab 100644
+--- a/dist/esm/hydrate.js	
++++ b/dist/esm/hydrate.js	
+@@ -16,8 +16,10 @@ export function hydrate(config, parameters) {
+                 await config._internal.store.persist.rehydrate();
+                 if (config._internal.mipd) {
+                     config._internal.connectors.setState((connectors) => {
++                        const connectorIdSet = new Set();
+                         const rdnsSet = new Set();
+                         for (const connector of connectors ?? []) {
++                            connectorIdSet.add(connector.id);
+                             if (connector.rdns) {
+                                 const rdnsValues = Array.isArray(connector.rdns)
+                                     ? connector.rdns
+@@ -30,7 +32,7 @@ export function hydrate(config, parameters) {
+                         const mipdConnectors = [];
+                         const providers = config._internal.mipd?.getProviders() ?? [];
+                         for (const provider of providers) {
+-                            if (rdnsSet.has(provider.info.rdns))
++                            if (rdnsSet.has(provider.info.rdns) || connectorIdSet.has(provider.info.rdns))
+                                 continue;
+                             const connectorFn = config._internal.connectors.providerDetailToConnector(provider);
+                             const connector = config._internal.connectors.setup(connectorFn);
+diff --git a/src/hydrate.ts b/src/hydrate.ts
+index 70bc2199e64eeeb873ac515f2333c34f5c439dc8..70d8adaa41db752823fe53210aae3fdae873ba1d 100644
+--- a/src/hydrate.ts	
++++ b/src/hydrate.ts	
+@@ -25,8 +25,10 @@ export function hydrate(config: Config, parameters: HydrateParameters) {
+         await config._internal.store.persist.rehydrate()
+         if (config._internal.mipd) {
+           config._internal.connectors.setState((connectors) => {
++            const connectorIdSet = new Set<string>()
+             const rdnsSet = new Set<string>()
+             for (const connector of connectors ?? []) {
++              connectorIdSet.add(connector.id)
+               if (connector.rdns) {
+                 const rdnsValues = Array.isArray(connector.rdns)
+                   ? connector.rdns
+@@ -39,7 +41,11 @@ export function hydrate(config: Config, parameters: HydrateParameters) {
+             const mipdConnectors = []
+             const providers = config._internal.mipd?.getProviders() ?? []
+             for (const provider of providers) {
+-              if (rdnsSet.has(provider.info.rdns)) continue
++              if (
++                rdnsSet.has(provider.info.rdns) ||
++                connectorIdSet.has(provider.info.rdns)
++              )
++                continue
+               const connectorFn =
+                 config._internal.connectors.providerDetailToConnector(provider)
+               const connector = config._internal.connectors.setup(connectorFn)

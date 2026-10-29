@@ -3,7 +3,9 @@
 import type { TaskDetail } from "@perago/sdk";
 import { duration, utc } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { fundsHref } from "../funds/model";
 import {
+  Button,
   ButtonLink,
   Fact,
   Glyph,
@@ -12,7 +14,14 @@ import {
   StatusBadge,
   type Tone,
 } from "../ui";
-import type { Reason, Rich, Step, StepState, Verdict } from "./model";
+import type {
+  Reason,
+  Rich,
+  SelfWithdrawHint,
+  Step,
+  StepState,
+  Verdict,
+} from "./model";
 
 /** Renders rich text; a part with a title is a scaled amount whose exact value is one hover away. */
 export function RichText({ rich }: { rich: Rich }) {
@@ -111,12 +120,19 @@ export function VerdictHero({
   verdict,
   executionHref,
   suggestedGoal,
+  selfWithdraw,
+  onCheckAgain,
+  checking = false,
 }: {
   task: TaskDetail;
   verdict: Verdict;
   /** Explorer base for transactions, or null when no public explorer applies. */
   executionHref: string | null;
   suggestedGoal: string | null;
+  /** Set when the refused recipient was the owner's own wallet. */
+  selfWithdraw: SelfWithdrawHint | null;
+  onCheckAgain: () => void;
+  checking?: boolean;
 }) {
   const dark = verdict.kind === "succeeded";
   const { tone, label, glyph, live } = verdict.standing;
@@ -181,7 +197,10 @@ export function VerdictHero({
             task={task}
             verdict={verdict}
             suggestedGoal={suggestedGoal}
+            selfWithdraw={selfWithdraw}
             explorerUrl={explorerUrl}
+            onCheckAgain={onCheckAgain}
+            checking={checking}
           />
         </div>
         <aside
@@ -244,17 +263,55 @@ function VerdictActions({
   task,
   verdict,
   suggestedGoal,
+  selfWithdraw,
   explorerUrl,
+  onCheckAgain,
+  checking,
 }: {
   task: TaskDetail;
   verdict: Verdict;
   suggestedGoal: string | null;
+  selfWithdraw: SelfWithdrawHint | null;
   explorerUrl: string | null;
+  onCheckAgain: () => void;
+  checking: boolean;
 }) {
   const goalHref = (goal: string) => `/app?goal=${encodeURIComponent(goal)}`;
+  if (verdict.kind === "simulation-blocked") {
+    return (
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <ButtonLink arrow href="/app#funds">
+          Wrap more WBNB
+        </ButtonLink>
+        <ButtonLink variant="ghost" href={goalHref(task.goal)}>
+          Change the goal
+        </ButtonLink>
+        <Button variant="ghost" busy={checking} onClick={onCheckAgain}>
+          Check again
+        </Button>
+      </div>
+    );
+  }
   if (verdict.kind === "blocked") {
     return (
       <div className="mt-8">
+        {selfWithdraw ? (
+          <div className="mb-6 max-w-[56ch] border-l-2 border-signal py-1 pl-4">
+            <p className="text-[15px] leading-snug">
+              Moving funds to your own wallet is an owner action, not a task.
+            </p>
+            <ButtonLink
+              arrow
+              className="mt-3"
+              href={fundsHref({
+                symbol: selfWithdraw.symbol,
+                amount: selfWithdraw.amount,
+              })}
+            >
+              Open Funds
+            </ButtonLink>
+          </div>
+        ) : null}
         {suggestedGoal ? (
           <p className="mb-4 max-w-[56ch] text-[15px] text-fog">
             A goal inside your limits:{" "}
@@ -269,7 +326,7 @@ function VerdictActions({
           ) : null}
           <ButtonLink
             href="/app#policy"
-            variant={suggestedGoal ? "ghost" : "primary"}
+            variant={suggestedGoal || selfWithdraw ? "ghost" : "primary"}
           >
             Change limits
           </ButtonLink>

@@ -56,6 +56,8 @@ import {
   lifecycle,
   money,
   outcomeOf,
+  type SimulationRefusal,
+  selfWithdrawHint,
   standingOf,
   stoppedAt,
   suggestedGoal,
@@ -1362,6 +1364,8 @@ function Journey({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const [prepared, setPrepared] = useState<PreparedMandate | null>(null);
   const simulate = useStagedAction<void>();
+  const [simulationRefusal, setSimulationRefusal] =
+    useState<SimulationRefusal | null>(null);
   const prepare = useStagedAction<void>();
   const sign = useStagedAction<void>();
   const mandateHash = task.data?.mandate?.mandateHash;
@@ -1482,8 +1486,21 @@ function Journey({ taskId }: { taskId: string }) {
   const runSimulation = () =>
     void simulate.run(async (advance) => {
       setPrepared(null);
+      setSimulationRefusal(null);
       advance("simulate");
-      await api.simulate(token(), taskId);
+      try {
+        await api.simulate(token(), taskId);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          setSimulationRefusal({
+            taskId,
+            simulationId: current.simulation?.simulationId ?? null,
+            code: error.code,
+            detail: error.detail,
+          });
+        }
+        throw error;
+      }
       advance("refresh");
       await invalidate();
     });
@@ -1592,8 +1609,13 @@ function Journey({ taskId }: { taskId: string }) {
     });
 
   const tokens = config.data?.tokens ?? [];
-  const verdict = deriveVerdict(current, tokens, config.data?.adapters ?? []);
-  const steps = lifecycle(current);
+  const verdict = deriveVerdict(
+    current,
+    tokens,
+    config.data?.adapters ?? [],
+    simulationRefusal,
+  );
+  const steps = lifecycle(current, simulationRefusal);
   const stopped = stoppedAt(current);
   const settled = outcomeOf(current) !== null;
   const explorerBase =
@@ -1607,6 +1629,9 @@ function Journey({ taskId }: { taskId: string }) {
         verdict={verdict}
         executionHref={explorerBase}
         suggestedGoal={suggestedGoal(current, tokens)}
+        selfWithdraw={selfWithdrawHint(current, owner, tokens)}
+        onCheckAgain={runSimulation}
+        checking={simulate.busy}
       />
       <LifecycleStepper steps={steps} />
 

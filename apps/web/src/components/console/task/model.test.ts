@@ -1,4 +1,8 @@
-import type { PolicyRuleResult, TaskDetail } from "@perago/sdk";
+import {
+  type PolicyRuleResult,
+  REASON_MESSAGES,
+  type TaskDetail,
+} from "@perago/sdk";
 import { describe, expect, it } from "vitest";
 import {
   deriveVerdict,
@@ -6,6 +10,7 @@ import {
   lifecycle,
   percent,
   plain,
+  selfWithdrawHint,
   standing,
   stoppedAt,
   suggestedGoal,
@@ -206,6 +211,116 @@ describe("policy rules in plain language", () => {
   });
 });
 
+const awaitingSimulation = task({
+  status: "READY_TO_SIMULATE",
+  decision: decision(),
+  plan: {
+    action: {
+      kind: "SWAP",
+      inputToken: wbnb,
+      outputToken: cake,
+      inputAmount: "1000000000000000",
+    },
+  },
+});
+const balanceRefusal = {
+  taskId: awaitingSimulation.taskId,
+  simulationId: null,
+  code: "INSUFFICIENT_BALANCE",
+  detail: "holds 400000000000000; the plan spends 1000000000000000",
+};
+
+describe("simulation preflight refusals", () => {
+  it("blocks the verdict with token-formatted account holdings and spend", () => {
+    const verdict = deriveVerdict(
+      awaitingSimulation,
+      tokens,
+      [],
+      balanceRefusal,
+    );
+    expect(verdict.kind).toBe("simulation-blocked");
+    expect(verdict.standing).toMatchObject({
+      label: "Blocked",
+      tone: "fail",
+      live: false,
+    });
+    expect(plain(verdict.headline)).toBe("Not enough WBNB to run this.");
+    expect(verdict.detail).toBe(
+      "Your account holds 0.0004 WBNB. This task spends 0.001 WBNB. Nothing was signed.",
+    );
+  });
+
+  it.each([
+    "QUOTE_UNAVAILABLE",
+    "SESSION_EXPIRES_FIRST",
+    "MINIMUM_OUTPUT_ZERO",
+  ] as const)(
+    "uses the published reason copy for %s, not raw refusal detail",
+    (code) => {
+      const verdict = deriveVerdict(awaitingSimulation, tokens, [], {
+        ...balanceRefusal,
+        code,
+        detail: "raw protocol detail",
+      });
+      expect(verdict.kind).toBe("simulation-blocked");
+      expect(verdict.detail).toBe(REASON_MESSAGES[code]);
+      expect(verdict.reasons[0]?.code).toBe(code);
+      expect(verdict.note).toBe("Nothing was signed.");
+    },
+  );
+
+  it("keeps the running verdict when no refusal was received", () => {
+    const verdict = deriveVerdict(awaitingSimulation, tokens, []);
+    expect(verdict.kind).toBe("preparing");
+    expect(plain(verdict.headline)).toBe(
+      "Policy passed. Running the exact simulation.",
+    );
+  });
+
+  it("does not carry a refusal into a different task", () => {
+    expect(
+      deriveVerdict(
+        { ...awaitingSimulation, taskId: "another-task" },
+        tokens,
+        [],
+        balanceRefusal,
+      ).kind,
+    ).toBe("preparing");
+  });
+
+  it("clears the blocked verdict and rail after a later passing simulation", () => {
+    const passed = task({
+      ...awaitingSimulation,
+      status: "SIMULATED",
+      simulation: { simulationId: "new-pass", status: "PASSED", result: {} },
+    });
+    expect(deriveVerdict(passed, tokens, [], balanceRefusal).kind).toBe(
+      "preparing",
+    );
+    expect(lifecycle(passed, balanceRefusal)[3]).toMatchObject({
+      state: "done",
+      detail: "Passed",
+    });
+  });
+
+  it("marks Simulation blocked, without a running lifecycle step", () => {
+    const steps = lifecycle(awaitingSimulation, balanceRefusal);
+    expect(steps[3]).toMatchObject({
+      state: "failed",
+      detail: "Blocked",
+      live: false,
+    });
+    expect(steps.some((step) => step.live)).toBe(false);
+    expect(steps[4]?.detail).toBe("Not reached");
+  });
+
+  it("does not expose base units when token metadata is unavailable", () => {
+    const verdict = deriveVerdict(awaitingSimulation, [], [], balanceRefusal);
+    expect(verdict.kind).toBe("simulation-blocked");
+    expect(verdict.detail).toBe(REASON_MESSAGES.INSUFFICIENT_BALANCE);
+  });
+});
+
 describe("verdict", () => {
   it("blocks a rejected task with the failing rule and says nothing moved", () => {
     const verdict = deriveVerdict(rejected, tokens, []);
@@ -321,5 +436,150 @@ describe("a draft that never compiled", () => {
     expect(steps.some((step) => step.state === "current")).toBe(false);
     expect(steps[1]?.detail).toBe("Not run");
     expect(steps[2]?.detail).toBe("Not reached");
+  });
+});
+
+describe("moving funds to your own wallet", () => {
+  const owner = "0x1111111111111111111111111111111111111111";
+  const stranger = "0x2222222222222222222222222222222222222222";
+  const refused = (observed: string, over: Record<string, unknown> = {}) =>
+    task({
+      status: "REJECTED_POLICY",
+      goal: "Send 0.01 WBNB to my wallet",
+      decision: decision({
+        RECIPIENT: rule(
+          "RECIPIENT",
+          `SELF (${account})`,
+          observed,
+          "RECIPIENT_NOT_ALLOWED",
+        ),
+      }),
+      ...over,
+    });
+
+  it("points at Funds when the refused recipient is the owner wallet", () => {
+    const hint = selfWithdrawHint(
+      refused(`planner ${owner}; intent ${account}`),
+      owner,
+      tokens,
+    );
+    expect(hint).toEqual({ symbol: "WBNB", amount: "0.01" });
+  });
+
+  it("compares addresses without caring about case", () => {
+    expect(
+      selfWithdrawHint(
+        refused(
+          `planner ${owner.toUpperCase().replace("0X", "0x")}; intent ${account}`,
+        ),
+        owner,
+        tokens,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("stays silent for any other recipient", () => {
+    expect(
+      selfWithdrawHint(
+        refused(`planner ${stranger}; intent ${account}`),
+        owner,
+        tokens,
+      ),
+    ).toBeNull();
+  });
+
+  it("stays silent when any named recipient is foreign, whichever side names it", () => {
+    for (const observed of [
+      `planner ${owner}; intent ${stranger}`,
+      `planner ${stranger}; intent ${owner}`,
+      `planner ${owner}; intent ${owner}; also ${stranger}`,
+    ]) {
+      expect(selfWithdrawHint(refused(observed), owner, tokens)).toBeNull();
+    }
+  });
+
+  it("lets a foreign plan recipient override a rule that names the owner", () => {
+    const conflicting = refused(`planner ${owner}; intent ${account}`, {
+      plan: {
+        account,
+        action: {
+          kind: "SWAP",
+          inputToken: wbnb,
+          outputToken: cake,
+          inputAmount: "5000000000000000",
+          recipient: stranger,
+        },
+      },
+    });
+    expect(selfWithdrawHint(conflicting, owner, tokens)).toBeNull();
+  });
+
+  it("treats the smart account as the allowed context beside the owner", () => {
+    expect(
+      selfWithdrawHint(
+        refused(`planner ${owner}; intent ${account}`),
+        owner,
+        tokens,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("stays silent when the recipient rule did not fail, or failed for another reason", () => {
+    expect(selfWithdrawHint(rejected, owner, tokens)).toBeNull();
+    expect(selfWithdrawHint(refused(owner), null, tokens)).toBeNull();
+    const other = task({
+      status: "REJECTED_POLICY",
+      goal: "send it to my wallet",
+      decision: overCap,
+    });
+    expect(selfWithdrawHint(other, owner, tokens)).toBeNull();
+  });
+
+  it("reads the recipient from the plan when the rule shows none", () => {
+    const withPlan = refused("another address", {
+      plan: {
+        action: {
+          kind: "SWAP",
+          inputToken: wbnb,
+          outputToken: cake,
+          inputAmount: "5000000000000000",
+          recipient: owner,
+        },
+      },
+    });
+    expect(selfWithdrawHint(withPlan, owner, tokens)).toEqual({
+      symbol: "WBNB",
+      amount: "0.005",
+    });
+  });
+
+  it("falls back to the goal text only to show a generic hint", () => {
+    const generic = refused("another address", {
+      goal: "send my WBNB back to my wallet",
+      decision: decision({
+        RECIPIENT: rule(
+          "RECIPIENT",
+          `SELF (${account})`,
+          "another address",
+          "RECIPIENT_NOT_ALLOWED",
+        ),
+        INPUT_AMOUNT: rule(
+          "INPUT_AMOUNT",
+          "> 0 with at most 18 decimals",
+          "unparsed",
+        ),
+      }),
+    });
+    expect(selfWithdrawHint(generic, owner, tokens)).toEqual({
+      symbol: null,
+      amount: null,
+    });
+    expect(
+      selfWithdrawHint(
+        { ...generic, goal: "send my WBNB to a friend" },
+        owner,
+        tokens,
+      ),
+    ).toBeNull();
   });
 });

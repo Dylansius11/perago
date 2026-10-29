@@ -64,6 +64,11 @@ export {
   PERAGO_USER_OPERATION_GAS,
 } from "./account/user-operation.js";
 export {
+  encodeOwnerWithdrawal,
+  type WithdrawalLeg,
+  withdrawalCalls,
+} from "./account/withdrawal.js";
+export {
   CAKE_POOL_ID,
   encodeStakeAction,
   encodeSwapAction,

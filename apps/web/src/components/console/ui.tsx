@@ -7,6 +7,7 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
   useEffect,
+  useId,
   useState,
 } from "react";
 import type { Failure } from "@/lib/failure";
@@ -236,7 +237,7 @@ export function Fact({
   return (
     <div
       className={cn(
-        "grid grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)] items-baseline gap-x-5 border-b py-3",
+        "grid grid-cols-1 items-baseline gap-x-5 gap-y-1 border-b py-3 sm:grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)]",
         dark ? "border-ruleinvert" : "border-rule",
       )}
     >
@@ -418,6 +419,75 @@ export function Disclosure({
       </summary>
       <div>{children}</div>
     </details>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Segmented choice                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One choice out of a few, as a radio group in the policy editor's mode
+ * control style: square cells on a hairline, the chosen one filled ink.
+ */
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  className,
+}: {
+  label: string;
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const name = useId();
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn("grid border border-rule", className)}
+      style={{
+        gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
+      }}
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <label
+            key={option.value}
+            className={cn(
+              "pressable relative flex min-h-11 cursor-pointer items-center justify-center gap-2 border-l border-rule px-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] first:border-l-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-signal-ink",
+              selected
+                ? "bg-ink text-paper"
+                : "text-fog hover:bg-ink/[0.03] hover:text-ink",
+              disabled && "cursor-not-allowed opacity-60",
+            )}
+          >
+            <input
+              type="radio"
+              name={name}
+              className="sr-only"
+              checked={selected}
+              disabled={disabled}
+              onChange={() => onChange(option.value)}
+            />
+            <span
+              aria-hidden
+              className={cn(
+                "size-1.5 shrink-0",
+                selected ? "bg-signal" : "bg-rule",
+              )}
+            />
+            {option.label}
+          </label>
+        );
+      })}
+    </div>
   );
 }
 
