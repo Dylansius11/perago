@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { amount, short } from "@/lib/format";
-import { usePolicies } from "@/lib/queries";
+import { useHoldings, usePolicies } from "@/lib/queries";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { useStagedAction } from "./action";
@@ -60,6 +60,7 @@ export function TaskComposer({
   const router = useRouter();
   const action = useStagedAction<string>();
   const examples = useGoalExamples(config);
+  const holdings = useHoldings(config);
   const field = useRef<HTMLTextAreaElement>(null);
   const [goal, setGoal] = useState("");
   const [expiry, setExpiry] = useState("1800");
@@ -151,6 +152,23 @@ export function TaskComposer({
           className="w-full resize-y border border-rule bg-paper px-4 py-4 text-[17px] leading-relaxed placeholder:text-fog/70 focus:border-ink focus:outline-none"
         />
       </label>
+      <p className="font-mono text-[11px] text-fog" aria-live="polite">
+        {holdings.data
+          ? `ACCOUNT HOLDS ${[
+              ...config.tokens
+                .map((token) => {
+                  const held = holdings.data.tokens[token.symbol];
+                  return held
+                    ? `${amount(held.balance, token.decimals, token.decimals)} ${symbolOf(token)}`
+                    : null;
+                })
+                .filter((value) => value !== null),
+              `${amount(holdings.data.accountNative, 18, 18)} tBNB`,
+            ].join(" · ")}`
+          : holdings.isError
+            ? "ACCOUNT HOLDINGS UNAVAILABLE"
+            : "READING ACCOUNT HOLDINGS"}
+      </p>
       {examples.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <Label className="mr-1">Within your limits</Label>

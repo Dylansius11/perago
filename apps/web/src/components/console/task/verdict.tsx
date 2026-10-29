@@ -4,6 +4,7 @@ import type { TaskDetail } from "@perago/sdk";
 import { duration, utc } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
+  Button,
   ButtonLink,
   Fact,
   Glyph,
@@ -111,12 +112,16 @@ export function VerdictHero({
   verdict,
   executionHref,
   suggestedGoal,
+  onCheckAgain,
+  checking = false,
 }: {
   task: TaskDetail;
   verdict: Verdict;
   /** Explorer base for transactions, or null when no public explorer applies. */
   executionHref: string | null;
   suggestedGoal: string | null;
+  onCheckAgain: () => void;
+  checking?: boolean;
 }) {
   const dark = verdict.kind === "succeeded";
   const { tone, label, glyph, live } = verdict.standing;
@@ -182,6 +187,8 @@ export function VerdictHero({
             verdict={verdict}
             suggestedGoal={suggestedGoal}
             explorerUrl={explorerUrl}
+            onCheckAgain={onCheckAgain}
+            checking={checking}
           />
         </div>
         <aside
@@ -245,13 +252,32 @@ function VerdictActions({
   verdict,
   suggestedGoal,
   explorerUrl,
+  onCheckAgain,
+  checking,
 }: {
   task: TaskDetail;
   verdict: Verdict;
   suggestedGoal: string | null;
   explorerUrl: string | null;
+  onCheckAgain: () => void;
+  checking: boolean;
 }) {
   const goalHref = (goal: string) => `/app?goal=${encodeURIComponent(goal)}`;
+  if (verdict.kind === "simulation-blocked") {
+    return (
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <ButtonLink arrow href="/app#wrap">
+          Wrap more WBNB
+        </ButtonLink>
+        <ButtonLink variant="ghost" href={goalHref(task.goal)}>
+          Change the goal
+        </ButtonLink>
+        <Button variant="ghost" busy={checking} onClick={onCheckAgain}>
+          Check again
+        </Button>
+      </div>
+    );
+  }
   if (verdict.kind === "blocked") {
     return (
       <div className="mt-8">

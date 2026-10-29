@@ -1,4 +1,8 @@
-import type { PolicyRuleResult, TaskDetail } from "@perago/sdk";
+import {
+  type PolicyRuleResult,
+  REASON_MESSAGES,
+  type TaskDetail,
+} from "@perago/sdk";
 import { describe, expect, it } from "vitest";
 import {
   deriveVerdict,
@@ -203,6 +207,116 @@ describe("policy rules in plain language", () => {
       }),
     });
     expect(suggestedGoal(daily, tokens)).toBe("Swap 0.005 WBNB to CAKE");
+  });
+});
+
+const awaitingSimulation = task({
+  status: "READY_TO_SIMULATE",
+  decision: decision(),
+  plan: {
+    action: {
+      kind: "SWAP",
+      inputToken: wbnb,
+      outputToken: cake,
+      inputAmount: "1000000000000000",
+    },
+  },
+});
+const balanceRefusal = {
+  taskId: awaitingSimulation.taskId,
+  simulationId: null,
+  code: "INSUFFICIENT_BALANCE",
+  detail: "holds 400000000000000; the plan spends 1000000000000000",
+};
+
+describe("simulation preflight refusals", () => {
+  it("blocks the verdict with token-formatted account holdings and spend", () => {
+    const verdict = deriveVerdict(
+      awaitingSimulation,
+      tokens,
+      [],
+      balanceRefusal,
+    );
+    expect(verdict.kind).toBe("simulation-blocked");
+    expect(verdict.standing).toMatchObject({
+      label: "Blocked",
+      tone: "fail",
+      live: false,
+    });
+    expect(plain(verdict.headline)).toBe("Not enough WBNB to run this.");
+    expect(verdict.detail).toBe(
+      "Your account holds 0.0004 WBNB. This task spends 0.001 WBNB. Nothing was signed.",
+    );
+  });
+
+  it.each([
+    "QUOTE_UNAVAILABLE",
+    "SESSION_EXPIRES_FIRST",
+    "MINIMUM_OUTPUT_ZERO",
+  ] as const)(
+    "uses the published reason copy for %s, not raw refusal detail",
+    (code) => {
+      const verdict = deriveVerdict(awaitingSimulation, tokens, [], {
+        ...balanceRefusal,
+        code,
+        detail: "raw protocol detail",
+      });
+      expect(verdict.kind).toBe("simulation-blocked");
+      expect(verdict.detail).toBe(REASON_MESSAGES[code]);
+      expect(verdict.reasons[0]?.code).toBe(code);
+      expect(verdict.note).toBe("Nothing was signed.");
+    },
+  );
+
+  it("keeps the running verdict when no refusal was received", () => {
+    const verdict = deriveVerdict(awaitingSimulation, tokens, []);
+    expect(verdict.kind).toBe("preparing");
+    expect(plain(verdict.headline)).toBe(
+      "Policy passed. Running the exact simulation.",
+    );
+  });
+
+  it("does not carry a refusal into a different task", () => {
+    expect(
+      deriveVerdict(
+        { ...awaitingSimulation, taskId: "another-task" },
+        tokens,
+        [],
+        balanceRefusal,
+      ).kind,
+    ).toBe("preparing");
+  });
+
+  it("clears the blocked verdict and rail after a later passing simulation", () => {
+    const passed = task({
+      ...awaitingSimulation,
+      status: "SIMULATED",
+      simulation: { simulationId: "new-pass", status: "PASSED", result: {} },
+    });
+    expect(deriveVerdict(passed, tokens, [], balanceRefusal).kind).toBe(
+      "preparing",
+    );
+    expect(lifecycle(passed, balanceRefusal)[3]).toMatchObject({
+      state: "done",
+      detail: "Passed",
+    });
+  });
+
+  it("marks Simulation blocked, without a running lifecycle step", () => {
+    const steps = lifecycle(awaitingSimulation, balanceRefusal);
+    expect(steps[3]).toMatchObject({
+      state: "failed",
+      detail: "Blocked",
+      live: false,
+    });
+    expect(steps.some((step) => step.live)).toBe(false);
+    expect(steps[4]?.detail).toBe("Not reached");
+  });
+
+  it("does not expose base units when token metadata is unavailable", () => {
+    const verdict = deriveVerdict(awaitingSimulation, [], [], balanceRefusal);
+    expect(verdict.kind).toBe("simulation-blocked");
+    expect(verdict.detail).toBe(REASON_MESSAGES.INSUFFICIENT_BALANCE);
   });
 });
 

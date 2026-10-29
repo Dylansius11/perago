@@ -9,9 +9,9 @@ import { amount, compact, duration, short } from "../../../lib/format";
 import type { GlyphName, Tone } from "../ui";
 
 /*
- * What a task page says, derived only from the API's task detail and the public
- * config. Nothing here reads a wallet, a clock, or a cache: the same payload
- * always yields the same verdict, so pending can never be drawn as success.
+ * What a task page says, derived from the API's task detail, the latest local
+ * simulation refusal, and the public config. Nothing here reads a wallet, a
+ * clock, or a cache: pending can never be drawn as success.
  */
 
 export type Token = PublicConfig["tokens"][number];
@@ -592,6 +592,7 @@ export type VerdictKind =
   | "authorized"
   | "signed"
   | "ready"
+  | "simulation-blocked"
   | "simulation-failed"
   | "simulation-stale"
   | "preparing"
@@ -671,10 +672,33 @@ function codeReasons(code: string | null, detail: string | null): Reason[] {
   ];
 }
 
+/** A refused attempt is local to this task, not a persisted task status. */
+export type SimulationRefusal = {
+  taskId: string;
+  code: string;
+  detail: string | null;
+  /** The simulation visible before this attempt; a new result supersedes it. */
+  simulationId: string | null;
+};
+
+function simulationBlocked(
+  task: TaskDetail,
+  refusal: SimulationRefusal | null,
+): refusal is SimulationRefusal {
+  return (
+    refusal !== null &&
+    refusal.taskId === task.taskId &&
+    task.mandate === null &&
+    (task.simulation?.simulationId ?? null) === refusal.simulationId &&
+    ["READY_TO_SIMULATE", "SIMULATED", "READY_TO_SIGN"].includes(task.status)
+  );
+}
+
 export function deriveVerdict(
   task: TaskDetail,
   tokens: readonly Token[],
   adapters: readonly Adapter[],
+  refusal: SimulationRefusal | null = null,
 ): Verdict {
   const base = standingOf(task);
   const outcome = outcomeOf(task);
@@ -683,7 +707,7 @@ export function deriveVerdict(
   const make = (
     kind: VerdictKind,
     headline: Rich,
-    extra: Partial<Omit<Verdict, "kind" | "standing" | "headline">> = {},
+    extra: Partial<Omit<Verdict, "kind" | "headline">> = {},
   ): Verdict => ({
     kind,
     standing: base,
@@ -770,6 +794,34 @@ export function deriveVerdict(
       detail:
         "The API is reconciling the chain before the mandate is authorized. Nothing has executed.",
     });
+  }
+
+  if (simulationBlocked(task, refusal)) {
+    const input = inputTokenOf(task, tokens);
+    const balance = /^holds (\d+); the plan spends (\d+)$/u.exec(
+      refusal.detail ?? "",
+    );
+    const insufficient = refusal.code === "INSUFFICIENT_BALANCE";
+    const formatted = insufficient && input && balance;
+    return make(
+      "simulation-blocked",
+      insufficient && input
+        ? [`Not enough ${symbolOf(input)} to run this.`]
+        : ["Simulation is blocked."],
+      {
+        standing: {
+          label: "Blocked",
+          tone: "fail",
+          glyph: "block",
+          live: false,
+        },
+        detail: formatted
+          ? `Your account holds ${plain([money(balance[1] ?? "", input)])}. This task spends ${plain([money(balance[2] ?? "", input)])}. Nothing was signed.`
+          : reasonSentence(refusal.code),
+        reasons: codeReasons(refusal.code, null),
+        note: formatted ? null : "Nothing was signed.",
+      },
+    );
   }
 
   if (task.simulation?.status === "REVERTED") {
@@ -862,12 +914,16 @@ export type Step = {
   live: boolean;
 };
 
-export function lifecycle(task: TaskDetail): Step[] {
+export function lifecycle(
+  task: TaskDetail,
+  refusal: SimulationRefusal | null = null,
+): Step[] {
   const outcome = outcomeOf(task);
   const decision = task.decision;
   const simulation = task.simulation;
   const signed = task.mandate !== null;
   const rejected = task.status === "REJECTED_POLICY";
+  const blocked = simulationBlocked(task, refusal);
   const raw: Array<{ key: StepKey; label: string; done: StepState }> = [
     { key: "goal", label: "Goal", done: "done" },
     {
@@ -886,7 +942,7 @@ export function lifecycle(task: TaskDetail): Step[] {
       key: "simulation",
       label: "Simulation",
       done:
-        simulation?.status === "REVERTED" && !signed
+        (blocked || simulation?.status === "REVERTED") && !signed
           ? "failed"
           : simulation && (simulation.status === "PASSED" || signed)
             ? "done"
@@ -940,7 +996,9 @@ export function lifecycle(task: TaskDetail): Step[] {
           step.key === "policy"
             ? "Blocked"
             : step.key === "simulation"
-              ? "Reverted"
+              ? blocked
+                ? "Blocked"
+                : "Reverted"
               : outcome === "REVOKED"
                 ? "Revoked"
                 : outcome === "EXPIRED"
