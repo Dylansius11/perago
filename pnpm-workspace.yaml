@@ -11,3 +11,6 @@ minimumReleaseAgeExclude:
   - viem@2.56.7
 
 onlyBuiltDependencies: []
+
+patchedDependencies:
+  '@wagmi/core@3.6.5': patches/@wagmi__core@3.6.5.patch
