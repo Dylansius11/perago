@@ -8,8 +8,8 @@ import {
   readinessOf,
   type Section,
   SectionNav,
-  WrapNative,
 } from "@/components/console/account";
+import { FundsSection } from "@/components/console/funds";
 import { PolicySection } from "@/components/console/policy";
 import { TaskComposer, TaskLedger } from "@/components/console/tasks";
 import {
@@ -61,18 +61,12 @@ function AccountConsole() {
         <Scan />
       </div>
     );
-  const wbnb = config.data.tokens.find((token) => token.symbol === "WBNB");
   const ready = readinessOf(holdings.data, policies.data);
-  const canWrap =
-    ready.deployed &&
-    wbnb !== undefined &&
-    holdings.data !== undefined &&
-    holdings.data.accountNative > 0n;
 
   const sections: Section[] = [
     ...(!ready.deployed ? [{ id: "account", label: "Account" }] : []),
     ...(ready.deployed && !ready.funded ? [{ id: "fund", label: "Fund" }] : []),
-    ...(canWrap ? [{ id: "wrap", label: "Wrap" }] : []),
+    ...(ready.deployed ? [{ id: "funds", label: "Funds" }] : []),
     ...(ready.deployed ? [{ id: "policy", label: "Policy" }] : []),
     ...(ready.policy ? [{ id: "goal", label: "Goal" }] : []),
     { id: "ledger", label: "Ledger" },
@@ -184,22 +178,14 @@ function AccountConsole() {
                   </Link>
                 </Panel>
               ) : null}
-              {canWrap && wbnb && holdings.data ? (
-                <Panel
-                  id="wrap"
-                  label={`${numberOf("wrap")} / Prepare input`}
-                  className="scroll-mt-28 !border-0"
-                >
-                  <h2 className="mb-3 text-2xl font-semibold">
-                    Turn testnet BNB into swap input.
-                  </h2>
-                  <WrapNative
-                    owner={owner}
-                    account={account}
-                    wbnb={wbnb.address}
-                    available={holdings.data.accountNative}
-                  />
-                </Panel>
+              {ready.deployed && holdings.data ? (
+                <FundsSection
+                  owner={owner}
+                  account={account}
+                  config={config.data}
+                  holdings={holdings.data}
+                  number={numberOf("funds")}
+                />
               ) : null}
               {ready.deployed ? (
                 <PolicySection

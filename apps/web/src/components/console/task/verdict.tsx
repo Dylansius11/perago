@@ -266,7 +266,7 @@ function VerdictActions({
   if (verdict.kind === "simulation-blocked") {
     return (
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <ButtonLink arrow href="/app#wrap">
+        <ButtonLink arrow href="/app#funds">
           Wrap more WBNB
         </ButtonLink>
         <ButtonLink variant="ghost" href={goalHref(task.goal)}>

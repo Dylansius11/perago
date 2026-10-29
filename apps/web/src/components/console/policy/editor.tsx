@@ -97,8 +97,10 @@ export function AmountField({
   error,
   disabled,
   hint,
+  hideLabel = false,
   inputMode = "decimal",
   onChange,
+  onMax,
 }: {
   label: string;
   unit: string;
@@ -106,19 +108,24 @@ export function AmountField({
   error?: string | undefined;
   disabled: boolean;
   hint?: string | undefined;
+  /** Keep the label for assistive tech only, when the row already names the field. */
+  hideLabel?: boolean;
   inputMode?: "decimal" | "numeric";
   onChange: (value: string) => void;
+  /** Adds a MAX control that fills the field with the largest allowed value. */
+  onMax?: () => void;
 }) {
   const id = useId();
   const note = `${id}-note`;
   return (
     <div className="min-w-0">
-      <label htmlFor={id} className="block">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "block"}>
         <Label>{label}</Label>
       </label>
       <div
         className={cn(
-          "mt-1.5 flex items-stretch border focus-within:border-ink",
+          hideLabel ? "" : "mt-1.5",
+          "flex items-stretch border focus-within:border-ink",
           error ? "border-fail-ink" : "border-rule",
           disabled && "bg-ink/[0.03]",
         )}
@@ -135,6 +142,17 @@ export function AmountField({
           onChange={(event) => onChange(event.target.value.trim())}
           className="min-w-0 flex-1 bg-transparent px-3 py-2.5 font-mono text-[15px] tabular-nums outline-none disabled:text-fog"
         />
+        {onMax ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onMax}
+            aria-label={`Use the full ${unit} balance`}
+            className="pressable border-l border-rule px-3 font-mono text-[11px] uppercase tracking-[0.16em] text-fog hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Max
+          </button>
+        ) : null}
         <span className="flex items-center border-l border-rule px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fog">
           {unit}
         </span>
