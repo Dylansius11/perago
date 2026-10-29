@@ -96,7 +96,11 @@ export function WithdrawToWallet({
   };
 
   const submit = () => {
+    if (busy) return;
     void action.run(async (advance) => {
+      // Enter the running state before the first await, so every control is
+      // locked while the chain reads and the gas estimate are in flight.
+      advance("prepare");
       if (!plan.ready) throw new Error("Enter an amount to withdraw.");
       const entries = plan.entries;
       const result = await sendRootOperation({
@@ -120,6 +124,12 @@ export function WithdrawToWallet({
   };
 
   const steps = [
+    {
+      id: "prepare",
+      title: "Check the account and prepare the operation",
+      detail:
+        "The console re-reads the chain, builds the transfers above, and asks the bundler for gas limits. Nothing is signed yet.",
+    },
     {
       id: "sign",
       title: "Sign the UserOperation hash",
