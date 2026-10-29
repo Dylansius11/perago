@@ -69,8 +69,8 @@ export function FundsSection({
         Add to the account, or take funds back.
       </h2>
       <p className="mt-3 max-w-[62ch] text-fog">
-        The smart account holds what Perago works with. Your wallet owns it, so
-        only your wallet can move funds out.
+        The smart account holds what Perago works with. Your wallet owns it and
+        signs every withdrawal.
       </p>
       <Segmented
         className="mt-6 max-w-md"
