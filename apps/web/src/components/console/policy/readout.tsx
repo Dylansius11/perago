@@ -8,6 +8,7 @@ import { Button, Hash, Label, Panel, Status, useSecondsUntil } from "../ui";
 import { describePolicy, joinList } from "./describe";
 import { diffPolicies } from "./diff";
 import { Evidence } from "./evidence";
+import { renewState } from "./renew";
 
 /*
  * "Your policy": what the active Wallet Policy lets Perago do, in plain words,
@@ -66,37 +67,65 @@ function Limit({
   );
 }
 
+/** What the owner can do about a session that ended or is about to. */
+export type RenewControl = {
+  busy: boolean;
+  disabled: boolean;
+  onRenew: () => void;
+};
+
 function ActiveReadout({
   config,
   policy,
   holdings,
+  renew,
 }: {
   config: PublicConfig;
   policy: PolicyView;
   holdings: Holdings | undefined;
+  renew: RenewControl;
 }) {
   const facts = describePolicy(policy.policy, config);
   const sessionEnds =
     policy.validUntil === null ? null : Number(policy.validUntil);
   const left = useSecondsUntil(sessionEnds);
   const ended = left !== null && left <= 0;
+  const renewal = renewState(left);
   const explorer = config.explorer;
   const services =
     facts.services.charAt(0).toUpperCase() + facts.services.slice(1);
 
   return (
     <div>
-      {ended ? (
+      {renewal ? (
         <div
           role="status"
-          className="mb-6 border-l-2 border-fail-ink py-1 pl-4"
+          className={
+            ended
+              ? "mb-6 border-l-2 border-fail-ink py-1 pl-4"
+              : "mb-6 border-l-2 border-statuspending py-1 pl-4"
+          }
         >
-          <Status tone="fail">Session ended</Status>
+          <Status tone={ended ? "fail" : "pending"}>
+            {ended ? "Session ended" : "Session ends soon"}
+          </Status>
           <p className="mt-1.5 max-w-[64ch] text-[15px] leading-snug text-ink">
-            The 24-hour session for this policy has ended, so Perago cannot
-            execute anything until you activate a policy again. Your standing
-            allowances stay set until you revoke or replace them.
+            {ended
+              ? "The 24-hour session for this policy has ended, so Perago cannot execute anything until you renew it. Your standing allowances stay set until you revoke or replace them."
+              : "Less than 2 hours remain in this 24-hour session. When it ends, Perago cannot execute anything until you renew it."}
           </p>
+          <p className="mt-1.5 max-w-[64ch] text-[14px] leading-snug text-fog">
+            Renewing keeps these exact limits and starts a new 24-hour session.
+            You review what your wallet signs first.
+          </p>
+          <Button
+            className="mt-4"
+            busy={renew.busy}
+            disabled={renew.disabled}
+            onClick={renew.onRenew}
+          >
+            Renew session
+          </Button>
         </div>
       ) : null}
 
@@ -331,6 +360,7 @@ export function PolicyReadout({
   holdings,
   onResumeDraft,
   resumeDisabled,
+  renew,
   actions,
 }: {
   id: string;
@@ -343,6 +373,7 @@ export function PolicyReadout({
   holdings: Holdings | undefined;
   onResumeDraft: () => void;
   resumeDisabled: boolean;
+  renew: RenewControl;
   actions: ReactNode;
 }) {
   const draftChanges = draft
@@ -364,7 +395,12 @@ export function PolicyReadout({
       }
     >
       {active ? (
-        <ActiveReadout config={config} policy={active} holdings={holdings} />
+        <ActiveReadout
+          config={config}
+          policy={active}
+          holdings={holdings}
+          renew={renew}
+        />
       ) : (
         <EmptyReadout revoked={revoked} />
       )}
