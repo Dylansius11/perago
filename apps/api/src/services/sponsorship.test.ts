@@ -516,6 +516,88 @@ describe("sponsored gas estimation", () => {
 });
 
 describe("sponsored submission", () => {
+  it("reserves the hourly slot before concurrent owner withdrawals reach the bundler", async () => {
+    const { calls, rpc } = recordingRpc(() => hash);
+    const service = createSponsorship({ ...scope, hourlySendLimit: 1 }, rpc);
+    const callData = encodeOwnerWithdrawal({
+      owner,
+      legs: [{ kind: "NATIVE", amount: 1n }],
+    });
+    const results = await Promise.allSettled([
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ callData, nonce: "0x1" }),
+      }),
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ callData, nonce: "0x2" }),
+      }),
+    ]);
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toEqual([
+      expect.objectContaining({
+        reason: expect.objectContaining({
+          code: "SPONSORSHIP_UNAVAILABLE",
+          detail: expect.stringContaining("last hour"),
+        }),
+      }),
+    ]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each([
+    { label: "an unreadable send answer", answer: () => "accepted" },
+    {
+      label: "a bundler refusal",
+      answer: () => {
+        throw new BundlerError("policy refused the submission");
+      },
+    },
+    {
+      label: "a transport failure with unknown inclusion",
+      answer: () => {
+        throw new TypeError("connection closed");
+      },
+    },
+  ])("counts the attempt after $label", async ({ answer }) => {
+    const { calls, rpc } = recordingRpc(answer);
+    const service = createSponsorship({ ...scope, hourlySendLimit: 1 }, rpc);
+    await expect(
+      service.submit({ account, owner, userOperation: operation() }),
+    ).rejects.toBeInstanceOf(Error);
+    await expect(
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ nonce: "0x2" }),
+      }),
+    ).rejects.toMatchObject({
+      code: "SPONSORSHIP_UNAVAILABLE",
+      detail: expect.stringContaining("last hour"),
+    });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not consume a send slot for a call refused before bundler submission", async () => {
+    const { calls, rpc } = recordingRpc(() => hash);
+    const service = createSponsorship({ ...scope, hourlySendLimit: 1 }, rpc);
+    await expect(
+      service.submit({
+        account,
+        owner,
+        userOperation: operation({ callData: execute(stranger, 1n, "0x") }),
+      }),
+    ).rejects.toMatchObject({ code: "SPONSORSHIP_REFUSED" });
+    await expect(
+      service.submit({ account, owner, userOperation: operation() }),
+    ).resolves.toEqual({ userOperationHash: hash });
+    expect(calls).toHaveLength(1);
+  });
+
   it("shares the existing rolling hourly limit between withdrawals and other root sends", async () => {
     let now = 1_000_000;
     const { calls, rpc } = recordingRpc(() => hash);

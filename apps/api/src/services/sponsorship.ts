@@ -263,7 +263,7 @@ export type SponsorshipService = {
 export type SponsorshipServiceConfig = {
   /** Defaults to the pinned Alchemy EntryPoint v0.7 deployment. */
   entryPoint?: Address;
-  /** Sponsored sends per smart account in a rolling hour; defaults to 20. */
+  /** Sponsored send attempts per smart account in a rolling hour; defaults to 20. */
   hourlySendLimit?: number;
   mandateExecutor: Address;
   now?: () => number;
@@ -462,7 +462,7 @@ export function createSponsorship(
     tokens: config.tokens,
     wbnb: config.wbnb,
   };
-  /** Sponsored send timestamps per smart account, this process only. */
+  /** Sponsored send-attempt timestamps per smart account, this process only. */
   const sends = new Map<string, number[]>();
 
   async function call(method: string, params: unknown[]): Promise<unknown> {
@@ -474,12 +474,18 @@ export function createSponsorship(
     }
   }
 
-  function withinHourlyLimit(account: Address): boolean {
+  function reserveHourlySend(account: Address): boolean {
     const key = account.toLowerCase();
-    const cutoff = now() - HOUR_MS;
-    const recent = (sends.get(key) ?? []).filter((at) => at > cutoff);
+    const at = now();
+    const cutoff = at - HOUR_MS;
+    const recent = (sends.get(key) ?? []).filter((sentAt) => sentAt > cutoff);
     sends.set(key, recent);
-    return recent.length < hourlySendLimit;
+    if (recent.length >= hourlySendLimit) return false;
+    // Reserve before any await so concurrent submissions cannot share a slot.
+    // Count every RPC attempt, even a refusal: transport failures cannot prove
+    // nothing was sent, and repeated rejected calls also consume provider work.
+    recent.push(at);
+    return true;
   }
 
   return {
@@ -530,7 +536,7 @@ export function createSponsorship(
         BigInt(userOperation.maxPriorityFeePerGas) !== 0n
       )
         refused("a sponsored operation must carry zero fees");
-      if (!withinHourlyLimit(input.account))
+      if (!reserveHourlySend(input.account))
         throw new ReasonError(
           "SPONSORSHIP_UNAVAILABLE",
           "this smart account reached its sponsored send limit for the last hour",
@@ -540,7 +546,6 @@ export function createSponsorship(
         userOperation,
         entryPoint,
       ]);
-      sends.get(input.account.toLowerCase())?.push(now());
       // The operation may already be pending, so an unreadable answer must not
       // be a refusal that invites an owner-paid resend of the same operation.
       const parsed = hashSchema.safeParse(userOperationHash);
