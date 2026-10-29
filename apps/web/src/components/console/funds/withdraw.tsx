@@ -128,7 +128,7 @@ export function WithdrawToWallet({
       id: "prepare",
       title: "Check the account and prepare the operation",
       detail:
-        "The console re-reads the chain, builds the transfers above, and asks the bundler for gas limits. Nothing is signed yet.",
+        "The console checks your wallet network and prepares the transfers above. Nothing is signed yet.",
     },
     {
       id: "sign",
