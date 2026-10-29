@@ -55,6 +55,7 @@ import {
   validateEditor,
 } from "./policy/editor-model";
 import { PolicyReadout } from "./policy/readout";
+import { renewedPolicy } from "./policy/renew";
 import { RevokeAccess } from "./policy/revoke";
 import { Button, FailureNotice, Panel, Status } from "./ui";
 
@@ -260,20 +261,17 @@ export function PolicySection({
   );
 
   /**
-   * Prepares the activation review. A renewal passes the active policy's own
-   * state, so the same limits go through the same prepare, sign, and confirm
-   * path as any change, only with a new 24-hour session.
+   * Prepares the activation review. A renewal passes the active policy itself
+   * (see `renewedPolicy`), so exactly the same limits go through the same
+   * prepare, sign, and confirm path as any change, only with a new 24-hour
+   * session.
    */
-  const reviewPolicy = (renewal?: EditorState) => {
+  const reviewPolicy = (renewal?: WalletPolicy) => {
     void prepare.run(async (advance) => {
       if (!session || !owner || !account) throw new Error("Sign in first.");
       advance("draft");
       const reviewed = renewal ? null : resume;
-      const policy =
-        reviewed?.policy ??
-        (renewal
-          ? buildPolicy({ account, config, policies, state: renewal })
-          : policyOf());
+      const policy = renewal ?? reviewed?.policy ?? policyOf();
       const policyId =
         reviewed?.policyId ??
         (await api.createPolicy(session.token, policy)).policyId;
@@ -321,15 +319,19 @@ export function PolicySection({
 
   const renewSession = () => {
     if (!active) return;
-    const same = initialEditorState(active.policy, config);
-    setState(same);
+    setState(initialEditorState(active.policy, config));
     setEditing(false);
     setResume(null);
     setReview(null);
     setRenewing(true);
     prepare.reset();
     activate.reset();
-    reviewPolicy(same);
+    reviewPolicy(
+      renewedPolicy(
+        active.policy,
+        policies.map((row) => row.version),
+      ),
+    );
   };
 
   const activatePolicy = () => {
