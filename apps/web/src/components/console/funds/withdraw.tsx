@@ -66,6 +66,7 @@ export function WithdrawToWallet({
   );
   const [form, setForm] = useState<WithdrawForm>(emptyForm);
   const [prefilled, setPrefilled] = useState<string | null>(null);
+  const [effective, setEffective] = useState<boolean | null>(null);
 
   // A link from a refused task fills one row once. It never signs anything.
   // biome-ignore lint/correctness/useExhaustiveDependencies: apply the link once, not on every balance poll
@@ -80,8 +81,10 @@ export function WithdrawToWallet({
   const plan = useMemo(() => planWithdrawal(assets, form), [assets, form]);
   const everything = withdrawsEverything(assets, plan);
   const sponsor = sponsorFor(config, session);
+  // Offered until the operation reports the path it really took.
+  const sponsoredNow = effective ?? sponsor !== null;
   const gas = gasLine({
-    sponsored: sponsor !== null,
+    sponsored: sponsoredNow,
     ownerNative: holdings.ownerNative,
     floor: OWNER_GAS_FLOOR,
   });
@@ -92,7 +95,10 @@ export function WithdrawToWallet({
   const edit = (next: WithdrawForm) => {
     setForm(next);
     setPrefilled(null);
-    if (action.state.phase === "failed") action.reset();
+    if (action.state.phase === "failed") {
+      setEffective(null);
+      action.reset();
+    }
   };
 
   const submit = () => {
@@ -100,6 +106,7 @@ export function WithdrawToWallet({
     void action.run(async (advance) => {
       // Enter the running state before the first await, so every control is
       // locked while the chain reads and the gas estimate are in flight.
+      setEffective(null);
       advance("prepare");
       if (!plan.ready) throw new Error("Enter an amount to withdraw.");
       const entries = plan.entries;
@@ -110,7 +117,10 @@ export function WithdrawToWallet({
           owner,
           legs: entries.map((entry) => entry.leg),
         }),
-        onStage: (stage) => advance(stage),
+        onStage: (stage, detail) => {
+          if (detail.sponsored !== undefined) setEffective(detail.sponsored);
+          advance(stage);
+        },
         sponsor,
       });
       await queryClient.invalidateQueries({ queryKey: ["chain"] });
@@ -139,13 +149,13 @@ export function WithdrawToWallet({
     },
     {
       id: "send",
-      title: sponsor
+      title: sponsoredNow
         ? "Submit it to the bundler"
         : "Send it through the EntryPoint",
-      detail: sponsor
+      detail: sponsoredNow
         ? "Perago sponsors the gas. If sponsorship is refused, your wallet sends the same signed operation and pays."
         : "Your wallet submits handleOps and pays the fee; the account pays nothing.",
-      prompt: !sponsor,
+      prompt: !sponsoredNow,
     },
     {
       id: "confirm",
@@ -350,7 +360,10 @@ export function WithdrawToWallet({
               <FailureNotice
                 dark
                 failure={action.state.failure}
-                onRetry={() => action.reset()}
+                onRetry={() => {
+                  setEffective(null);
+                  action.reset();
+                }}
                 retryLabel="Dismiss"
               />
             </div>
