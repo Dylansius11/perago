@@ -488,6 +488,42 @@ describe("moving funds to your own wallet", () => {
     ).toBeNull();
   });
 
+  it("stays silent when any named recipient is foreign, whichever side names it", () => {
+    for (const observed of [
+      `planner ${owner}; intent ${stranger}`,
+      `planner ${stranger}; intent ${owner}`,
+      `planner ${owner}; intent ${owner}; also ${stranger}`,
+    ]) {
+      expect(selfWithdrawHint(refused(observed), owner, tokens)).toBeNull();
+    }
+  });
+
+  it("lets a foreign plan recipient override a rule that names the owner", () => {
+    const conflicting = refused(`planner ${owner}; intent ${account}`, {
+      plan: {
+        account,
+        action: {
+          kind: "SWAP",
+          inputToken: wbnb,
+          outputToken: cake,
+          inputAmount: "5000000000000000",
+          recipient: stranger,
+        },
+      },
+    });
+    expect(selfWithdrawHint(conflicting, owner, tokens)).toBeNull();
+  });
+
+  it("treats the smart account as the allowed context beside the owner", () => {
+    expect(
+      selfWithdrawHint(
+        refused(`planner ${owner}; intent ${account}`),
+        owner,
+        tokens,
+      ),
+    ).not.toBeNull();
+  });
+
   it("stays silent when the recipient rule did not fail, or failed for another reason", () => {
     expect(selfWithdrawHint(rejected, owner, tokens)).toBeNull();
     expect(selfWithdrawHint(refused(owner), null, tokens)).toBeNull();

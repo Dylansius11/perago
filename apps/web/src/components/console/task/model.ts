@@ -1076,9 +1076,13 @@ function namedSpend(
 
 /**
  * Shown under a policy refusal when the output was headed for the connected
- * owner wallet. The recipient comes from the decision's own evidence, then
- * the plan; only when neither names an address does the goal text decide
- * whether a generic hint is worth showing. It never builds calldata.
+ * owner wallet. Every recipient the evidence names (both sides of the RECIPIENT
+ * rule's observed value, and the plan's recipient) is collected. Each must be
+ * the owner or the task's own smart account, which is the policy's SELF and
+ * only context; any other address vetoes the hint, whichever side names it.
+ * At least one must be the owner. Only when no address is named anywhere does
+ * the goal text decide whether a generic hint is worth showing. It never
+ * builds calldata.
  */
 export function selfWithdrawHint(
   task: TaskDetail,
@@ -1086,22 +1090,38 @@ export function selfWithdrawHint(
   tokens: readonly Token[],
 ): SelfWithdrawHint | null {
   if (!owner) return null;
-  const refused = task.decision?.rules.find(
+  const rules = task.decision?.rules ?? [];
+  const refused = rules.find(
     (rule) =>
       rule.rule === "RECIPIENT" &&
       rule.outcome === "FAIL" &&
       rule.reasonCode === "RECIPIENT_NOT_ALLOWED",
   );
   if (!refused) return null;
-  const named = refused.observed.match(ADDRESS) ?? [];
-  const recipients =
-    named.length > 0 ? named : task.plan ? [task.plan.action.recipient] : null;
-  const toOwner =
-    recipients === null
-      ? OWN_WALLET_GOAL.test(task.goal)
-      : recipients.some((address) => sameAddress(address, owner));
-  if (!toOwner) return null;
-  return recipients === null
-    ? { symbol: null, amount: null }
-    : namedSpend(task, tokens);
+  const own = [
+    ...(refused.limit.match(ADDRESS) ?? []),
+    ...rules
+      .filter((rule) => rule.rule === "ACCOUNT")
+      .flatMap((rule) => [
+        ...(rule.observed.match(ADDRESS) ?? []),
+        ...(rule.limit.match(ADDRESS) ?? []),
+      ]),
+    ...(task.plan ? [task.plan.account] : []),
+  ];
+  const named = [
+    ...(refused.observed.match(ADDRESS) ?? []),
+    ...(task.plan ? [task.plan.action.recipient] : []),
+  ];
+  if (named.length === 0)
+    return OWN_WALLET_GOAL.test(task.goal)
+      ? { symbol: null, amount: null }
+      : null;
+  const foreign = named.some(
+    (address) =>
+      !sameAddress(address, owner) &&
+      !own.some((account) => sameAddress(account, address)),
+  );
+  if (foreign || !named.some((address) => sameAddress(address, owner)))
+    return null;
+  return namedSpend(task, tokens);
 }
