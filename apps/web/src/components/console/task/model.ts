@@ -1044,3 +1044,64 @@ export function lifecycle(
     };
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Moving funds to the owner's own wallet                              */
+/* ------------------------------------------------------------------ */
+
+/** What a task page can pre-fill on the Funds withdrawal form; null means the form just opens. */
+export type SelfWithdrawHint = { symbol: string | null; amount: string | null };
+
+const OWN_WALLET_GOAL =
+  /\b(?:my|own)\s+(?:own\s+)?(?:wallet|metamask|phantom|eoa|address)\b|\bback to me\b|\bto me\b/iu;
+
+/** The spend the task named: the plan when it exists, else the rules' own evidence. */
+function namedSpend(
+  task: TaskDetail,
+  tokens: readonly Token[],
+): SelfWithdrawHint {
+  const token = inputTokenOf(task, tokens);
+  const base =
+    task.plan?.action.inputAmount ??
+    /\((\d+) base units\)/u.exec(
+      task.decision?.rules.find((rule) => rule.rule === "INPUT_AMOUNT")
+        ?.observed ?? "",
+    )?.[1];
+  if (!token || !base) return { symbol: null, amount: null };
+  return {
+    symbol: token.symbol,
+    amount: amount(base, token.decimals, token.decimals).replaceAll(",", ""),
+  };
+}
+
+/**
+ * Shown under a policy refusal when the output was headed for the connected
+ * owner wallet. The recipient comes from the decision's own evidence, then
+ * the plan; only when neither names an address does the goal text decide
+ * whether a generic hint is worth showing. It never builds calldata.
+ */
+export function selfWithdrawHint(
+  task: TaskDetail,
+  owner: string | null,
+  tokens: readonly Token[],
+): SelfWithdrawHint | null {
+  if (!owner) return null;
+  const refused = task.decision?.rules.find(
+    (rule) =>
+      rule.rule === "RECIPIENT" &&
+      rule.outcome === "FAIL" &&
+      rule.reasonCode === "RECIPIENT_NOT_ALLOWED",
+  );
+  if (!refused) return null;
+  const named = refused.observed.match(ADDRESS) ?? [];
+  const recipients =
+    named.length > 0 ? named : task.plan ? [task.plan.action.recipient] : null;
+  const toOwner =
+    recipients === null
+      ? OWN_WALLET_GOAL.test(task.goal)
+      : recipients.some((address) => sameAddress(address, owner));
+  if (!toOwner) return null;
+  return recipients === null
+    ? { symbol: null, amount: null }
+    : namedSpend(task, tokens);
+}

@@ -10,6 +10,7 @@ import {
   lifecycle,
   percent,
   plain,
+  selfWithdrawHint,
   standing,
   stoppedAt,
   suggestedGoal,
@@ -435,5 +436,114 @@ describe("a draft that never compiled", () => {
     expect(steps.some((step) => step.state === "current")).toBe(false);
     expect(steps[1]?.detail).toBe("Not run");
     expect(steps[2]?.detail).toBe("Not reached");
+  });
+});
+
+describe("moving funds to your own wallet", () => {
+  const owner = "0x1111111111111111111111111111111111111111";
+  const stranger = "0x2222222222222222222222222222222222222222";
+  const refused = (observed: string, over: Record<string, unknown> = {}) =>
+    task({
+      status: "REJECTED_POLICY",
+      goal: "Send 0.01 WBNB to my wallet",
+      decision: decision({
+        RECIPIENT: rule(
+          "RECIPIENT",
+          `SELF (${account})`,
+          observed,
+          "RECIPIENT_NOT_ALLOWED",
+        ),
+      }),
+      ...over,
+    });
+
+  it("points at Funds when the refused recipient is the owner wallet", () => {
+    const hint = selfWithdrawHint(
+      refused(`planner ${owner}; intent ${account}`),
+      owner,
+      tokens,
+    );
+    expect(hint).toEqual({ symbol: "WBNB", amount: "0.01" });
+  });
+
+  it("compares addresses without caring about case", () => {
+    expect(
+      selfWithdrawHint(
+        refused(
+          `planner ${owner.toUpperCase().replace("0X", "0x")}; intent ${account}`,
+        ),
+        owner,
+        tokens,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("stays silent for any other recipient", () => {
+    expect(
+      selfWithdrawHint(
+        refused(`planner ${stranger}; intent ${account}`),
+        owner,
+        tokens,
+      ),
+    ).toBeNull();
+  });
+
+  it("stays silent when the recipient rule did not fail, or failed for another reason", () => {
+    expect(selfWithdrawHint(rejected, owner, tokens)).toBeNull();
+    expect(selfWithdrawHint(refused(owner), null, tokens)).toBeNull();
+    const other = task({
+      status: "REJECTED_POLICY",
+      goal: "send it to my wallet",
+      decision: overCap,
+    });
+    expect(selfWithdrawHint(other, owner, tokens)).toBeNull();
+  });
+
+  it("reads the recipient from the plan when the rule shows none", () => {
+    const withPlan = refused("another address", {
+      plan: {
+        action: {
+          kind: "SWAP",
+          inputToken: wbnb,
+          outputToken: cake,
+          inputAmount: "5000000000000000",
+          recipient: owner,
+        },
+      },
+    });
+    expect(selfWithdrawHint(withPlan, owner, tokens)).toEqual({
+      symbol: "WBNB",
+      amount: "0.005",
+    });
+  });
+
+  it("falls back to the goal text only to show a generic hint", () => {
+    const generic = refused("another address", {
+      goal: "send my WBNB back to my wallet",
+      decision: decision({
+        RECIPIENT: rule(
+          "RECIPIENT",
+          `SELF (${account})`,
+          "another address",
+          "RECIPIENT_NOT_ALLOWED",
+        ),
+        INPUT_AMOUNT: rule(
+          "INPUT_AMOUNT",
+          "> 0 with at most 18 decimals",
+          "unparsed",
+        ),
+      }),
+    });
+    expect(selfWithdrawHint(generic, owner, tokens)).toEqual({
+      symbol: null,
+      amount: null,
+    });
+    expect(
+      selfWithdrawHint(
+        { ...generic, goal: "send my WBNB to a friend" },
+        owner,
+        tokens,
+      ),
+    ).toBeNull();
   });
 });

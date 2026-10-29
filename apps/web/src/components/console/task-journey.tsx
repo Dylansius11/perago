@@ -57,6 +57,7 @@ import {
   money,
   outcomeOf,
   type SimulationRefusal,
+  selfWithdrawHint,
   standingOf,
   stoppedAt,
   suggestedGoal,
@@ -1628,6 +1629,7 @@ function Journey({ taskId }: { taskId: string }) {
         verdict={verdict}
         executionHref={explorerBase}
         suggestedGoal={suggestedGoal(current, tokens)}
+        selfWithdraw={selfWithdrawHint(current, owner, tokens)}
         onCheckAgain={runSimulation}
         checking={simulate.busy}
       />
