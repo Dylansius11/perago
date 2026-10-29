@@ -1,5 +1,6 @@
 import type { Address, PublicConfig, WithdrawalLeg } from "@perago/sdk";
 import { formatUnits } from "viem";
+import type { Failure } from "../../../lib/failure";
 import { amount } from "../../../lib/format";
 import type { Holdings } from "../../../lib/queries";
 import { parseAmountField } from "../policy/editor-model";
@@ -239,4 +240,23 @@ export function parseFundsIntent(
     symbol,
     amount: symbol && typed && /^\d+(\.\d+)?$/u.test(typed) ? typed : null,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Failures                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A declined wallet prompt at the send step is not "nothing was signed": the
+ * UserOperation hash was already signed and only the transaction that submits
+ * it was refused. Other failures and the sign step keep their own sentence.
+ */
+export function withdrawalFailure(failure: Failure, step: string): Failure {
+  return failure.code === "WALLET_REJECTED" && step === "send"
+    ? {
+        ...failure,
+        sentence:
+          "The UserOperation was signed. You declined the transaction that would submit it.",
+      }
+    : failure;
 }

@@ -11,6 +11,7 @@ import {
   planWithdrawal,
   settledGas,
   withdrawAssets,
+  withdrawalFailure,
   withdrawsEverything,
 } from "./model";
 
@@ -392,5 +393,32 @@ describe("withdrawsEverything", () => {
     expect(
       withdrawsEverything([], planWithdrawal([], everythingForm([], false))),
     ).toBe(false);
+  });
+});
+
+describe("withdrawalFailure", () => {
+  const rejected = {
+    code: "WALLET_REJECTED",
+    sentence:
+      "You declined the request in your wallet. Nothing was signed or sent.",
+    detail: null,
+    retry: true,
+  };
+
+  it("keeps the sign-step sentence", () => {
+    expect(withdrawalFailure(rejected, "sign")).toEqual(rejected);
+  });
+
+  it("says the operation was signed when the send prompt is declined", () => {
+    expect(withdrawalFailure(rejected, "send")).toEqual({
+      ...rejected,
+      sentence:
+        "The UserOperation was signed. You declined the transaction that would submit it.",
+    });
+  });
+
+  it("leaves other failures alone at the send step", () => {
+    const other = { ...rejected, code: "CHAIN_ERROR", sentence: "Reverted." };
+    expect(withdrawalFailure(other, "send")).toEqual(other);
   });
 });

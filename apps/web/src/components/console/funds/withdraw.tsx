@@ -28,6 +28,7 @@ import {
   settledGas,
   type WithdrawForm,
   withdrawAssets,
+  withdrawalFailure,
   withdrawsEverything,
 } from "./model";
 
@@ -359,7 +360,10 @@ export function WithdrawToWallet({
             <div className="mt-5">
               <FailureNotice
                 dark
-                failure={action.state.failure}
+                failure={withdrawalFailure(
+                  action.state.failure,
+                  action.state.step,
+                )}
                 onRetry={() => {
                   setEffective(null);
                   action.reset();
